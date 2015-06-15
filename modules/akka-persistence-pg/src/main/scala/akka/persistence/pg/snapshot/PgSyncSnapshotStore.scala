@@ -1,6 +1,7 @@
 package akka.persistence.pg.snapshot
 
 import akka.actor.{ActorLogging, ActorSystem}
+import akka.persistence.pg.journal.Partitioner
 import akka.persistence.pg.{PgExtension, PgPostgresDriver}
 import akka.persistence.serialization.Snapshot
 import akka.persistence.{SelectedSnapshot, SnapshotMetadata, SnapshotSelectionCriteria}
@@ -19,6 +20,7 @@ class PgSyncSnapshotStore extends akka.persistence.snapshot.SnapshotStore
 
   override val serialization: Serialization = SerializationExtension(context.system)
   override val pluginConfig = PgExtension(context.system).pluginConfig
+  override def partitioner: Partitioner = pluginConfig.journalPartitioner
 
   import PgPostgresDriver.api._
 

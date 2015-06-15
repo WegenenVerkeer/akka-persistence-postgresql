@@ -8,6 +8,7 @@ import akka.persistence.pg.journal.{NotPartitioned, Partitioner}
 import com.typesafe.config.Config
 import org.postgresql.ds.PGSimpleDataSource
 import slick.jdbc.JdbcBackend
+import slick.util.AsyncExecutor
 
 object PluginConfig {
   def apply(system: ActorSystem) = new PluginConfig(system)
@@ -27,26 +28,38 @@ class PluginConfig(system: ActorSystem) {
   val snapshotSchemaName: Option[String] = PluginConfig.asOption(config.getString("snapshotSchemaName"))
   val snapshotTableName = config.getString("snapshotTableName")
 
-  val pgDataSource: DataSource = {
-    val simpleDataSource = new PGSimpleDataSource()
-    simpleDataSource.setUrl(config.getString("url"))
-    simpleDataSource.setUser(config.getString("username"))
-    simpleDataSource.setPassword(config.getString("password"))
-    //enable prepared statement caching on the server side =>
-    simpleDataSource.setPrepareThreshold(1)
-    simpleDataSource
-  }
-
   def shutdownDataSource() = {
     database.close()
   }
 
-  //TODO configure AsyncExecutor
   lazy val database = {
-    PluginConfig.asOption(config.getString("jndiName")) match {
-      case Some(jndiName) => JdbcBackend.Database.forName(jndiName)
-      case None           => JdbcBackend.Database.forDataSource(pgDataSource)
+    val dbConfig = config.getConfig("db")
+
+    def asyncExecutor(name: String): AsyncExecutor = {
+      AsyncExecutor(s"$name executor", dbConfig.getInt("numThreads"), dbConfig.getInt("queueSize"))
     }
+
+    val db = PluginConfig.asOption(dbConfig.getString("jndiName")) match {
+      case Some(jndiName) =>
+        JdbcBackend.Database.forName(jndiName, asyncExecutor(jndiName))
+
+      case None           =>
+        dbConfig.getString("connectionPool") match {
+
+          case "disabled" =>
+            val simpleDataSource = new PGSimpleDataSource()
+            simpleDataSource.setUrl(dbConfig.getString("url"))
+            simpleDataSource.setUser(dbConfig.getString("user"))
+            simpleDataSource.setPassword(dbConfig.getString("password"))
+            simpleDataSource.setPrepareThreshold(1)
+            JdbcBackend.Database.forDataSource(simpleDataSource, asyncExecutor("unpooled"))
+
+          case _ =>
+            JdbcBackend.Database.forConfig("", dbConfig)
+        }
+
+    }
+    db
   }
 
 

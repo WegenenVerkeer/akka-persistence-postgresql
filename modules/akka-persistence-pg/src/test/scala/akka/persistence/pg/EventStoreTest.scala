@@ -3,7 +3,7 @@ package akka.persistence.pg
 import akka.actor.{ActorLogging, ActorRef, ActorSystem, Props}
 import akka.persistence.pg.TestActor.{Alter, GetState, Snap, TheState}
 import akka.persistence.pg.event.{DefaultTagger, EventStore, JsonEncoder}
-import akka.persistence.pg.journal.JournalStore
+import akka.persistence.pg.journal.{NotPartitioned, JournalStore}
 import akka.persistence.pg.snapshot.PgSnapshotStore
 import akka.persistence.pg.util.RecreateSchema
 import akka.persistence.{PersistentActor, SaveSnapshotFailure, SaveSnapshotSuccess, SnapshotOffer}
@@ -37,6 +37,8 @@ class EventStoreTest extends TestKit(ActorSystem("TestCluster", EventStoreTest.c
   override val eventStoreConfig = pluginConfig.eventStoreConfig
   override val eventEncoder = new TestEventEncoder()
   override val eventTagger = DefaultTagger
+  override val partitioner = NotPartitioned
+
 
   val testProbe = TestProbe()
 

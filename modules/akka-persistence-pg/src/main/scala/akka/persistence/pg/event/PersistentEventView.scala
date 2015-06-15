@@ -62,7 +62,7 @@ trait PersistentEventView extends PersistentActor with PgActorConfig with ActorL
 
   def processEvent(event: Event) = {
     val clazz = pgExtension.getClassFor[Any](event.className)
-    val decoded = eventEncoder.fromJson((Json.parse(event.event.value), clazz))
+    val decoded = eventEncoder.fromJson((event.event, clazz))
     receiveEvent(event.persistenceId, decoded)
   }
 

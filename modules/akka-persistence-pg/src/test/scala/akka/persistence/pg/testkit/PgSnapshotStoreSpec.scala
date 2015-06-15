@@ -1,5 +1,6 @@
 package akka.persistence.pg.testkit
 
+import akka.persistence.pg.journal.NotPartitioned
 import akka.persistence.pg.snapshot.PgSnapshotStore
 import akka.persistence.pg.PluginConfig
 import akka.persistence.pg.util.RecreateSchema
@@ -20,6 +21,7 @@ class PgSnapshotStoreSpec extends SnapshotStoreSpec
   override val schemaName = config.getString("postgres.schema")
   override val pluginConfig = PluginConfig(system)
   override val serialization: Serialization = SerializationExtension(system)
+  override val partitioner = NotPartitioned
 
   import akka.persistence.pg.PgPostgresDriver.api._
 

@@ -2,7 +2,7 @@ package akka.persistence.pg.testkit
 
 import akka.persistence.journal.JournalSpec
 import akka.persistence.pg.event.{DefaultTagger, JsonEncoder, NoneJsonEncoder}
-import akka.persistence.pg.journal.JournalStore
+import akka.persistence.pg.journal.{NotPartitioned, JournalStore}
 import akka.persistence.pg.util.RecreateSchema
 import akka.persistence.pg.{PgExtension, PluginConfig}
 import akka.serialization.{Serialization, SerializationExtension}
@@ -21,6 +21,7 @@ class PgAsyncJournalSpec extends JournalSpec with JournalStore with RecreateSche
   override val pgExtension: PgExtension = PgExtension(system)
   override val eventEncoder: JsonEncoder = NoneJsonEncoder
   override val eventTagger = DefaultTagger
+  override val partitioner = NotPartitioned
 
   import akka.persistence.pg.PgPostgresDriver.api._
 

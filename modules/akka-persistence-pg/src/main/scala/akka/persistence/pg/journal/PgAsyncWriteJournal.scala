@@ -21,7 +21,7 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgAct
   override val pluginConfig = pgExtension.pluginConfig
   override val eventEncoder: JsonEncoder = pluginConfig.eventStoreConfig.eventEncoder
   override val eventTagger: EventTagger = pluginConfig.eventStoreConfig.eventTagger
-  override val journalEntryPartitioner: Partitioner = pluginConfig.journalPartitioner
+  override val partitioner: Partitioner = pluginConfig.journalPartitioner
 
   val eventStore: Option[EventStore] = pluginConfig.eventStore
 
@@ -61,7 +61,7 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgAct
     db.run {
       journals
         .filter(_.persistenceId === persistenceId)
-        .filter(_.partitionKey === journalEntryPartitioner.partitionKey(persistenceId))
+//        .filter(_.partitionKey === partitioner.partitionKey(persistenceId))
         .map((table: JournalTable) => table.sequenceNr)
         .max
         .result
@@ -76,8 +76,8 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgAct
     db.run {
       journals.filter((table: JournalTable) => table.persistenceId === persistenceId
         && table.sequenceNr >= fromSequenceNr
-        && table.sequenceNr <= toSequenceNr
-        && table.partitionKey === journalEntryPartitioner.partitionKey(persistenceId))
+        && table.sequenceNr <= toSequenceNr)
+//        && table.partitionKey === partitioner.partitionKey(persistenceId))
         .sortBy(_.sequenceNr)
         .take(max)
         .result
@@ -90,7 +90,7 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgAct
     val selectedEntries = journals
       .filter(_.persistenceId === persistenceId)
       .filter(_.sequenceNr <= toSequenceNr)
-      .filter(_.partitionKey === journalEntryPartitioner.partitionKey(persistenceId))
+//      .filter(_.partitionKey === partitioner.partitionKey(persistenceId))
 
     val action = if (permanent) {
         selectedEntries.delete

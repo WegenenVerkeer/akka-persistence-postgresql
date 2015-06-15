@@ -39,7 +39,7 @@ trait JournalStore {
   def pluginConfig: PluginConfig
   def eventEncoder: JsonEncoder
   def eventTagger: EventTagger
-  def journalEntryPartitioner: Partitioner
+  def partitioner: Partitioner
   def db = pluginConfig.database
 
   import akka.persistence.pg.PgPostgresDriver.MappedJdbcType
@@ -67,7 +67,7 @@ trait JournalStore {
     def pIdSeqNrIndex = index(s"idx_${pluginConfig.journalTableName}_pid_seq", (persistenceId, sequenceNr), unique = true)
     def uuidIndex = index(s"idx_${pluginConfig.journalTableName}_uuid", uuid, unique = true)
 
-    def * = (id.?, persistenceId, sequenceNr, deleted, sender, payload, payloadManifest, uuid, created, tags, event) <>
+    def * = (id.?, persistenceId, sequenceNr, partitionKey, deleted, sender, payload, payloadManifest, uuid, created, tags, event) <>
       (JournalEntry.tupled, JournalEntry.unapply _)
 
   }
@@ -123,7 +123,7 @@ trait JournalStore {
       JournalEntryWithEvent(JournalEntry(None,
         message.persistenceId,
         message.sequenceNr,
-        journalEntryPartitioner.partitionKey(message.persistenceId),
+        partitioner.partitionKey(message.persistenceId),
         deleted = false,
         message.sender,
         payloadAsBytes,
@@ -142,7 +142,7 @@ trait JournalStore {
 
     (entry.payload, entry.json) match {
       case (Some(payload), _) => toRepr(serialization.deserialize(payload, clazz).get)
-      case (_, Some(event))   => toRepr(eventEncoder.fromJson(event.value, clazz))
+      case (_, Some(event))   => toRepr(eventEncoder.fromJson((event.value, clazz)))
       case (None, None)       => sys.error(s"""both payload and event are null for journal table entry
             with id=${entry.id}, (persistenceid='${entry.persistenceId}' and sequencenr='${entry.sequenceNr}')
             This should NEVER happen!""")
