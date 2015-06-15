@@ -1,0 +1,49 @@
+package akka.persistence.pg.util
+
+import java.util.concurrent.TimeUnit
+
+import akka.actor.ActorSystem
+import akka.testkit.TestProbe
+import akka.util.Timeout
+import com.typesafe.config.Config
+import org.scalatest._
+import slick.jdbc.JdbcBackend
+
+import scala.util.Try
+
+/**
+ * Base class for testing a persistent actor
+ * db sessions are rolled back after each test, maintaining a clean db state
+ * This also means the actorsystem needs to be recreated for each test
+ */
+trait PersistentActorTest extends fixture.FunSuiteLike
+  with BeforeAndAfterEach {
+
+  def config: Config
+
+  implicit val defaultTimeout = Timeout(10, TimeUnit.SECONDS)
+
+  implicit var system: ActorSystem = _
+  var testProbe: TestProbe = _
+
+  override protected def beforeEach(): Unit = {
+    system = ActorSystem("PersistentActorTest", config)
+    testProbe = TestProbe()
+  }
+
+  case class FixtureParam(db: JdbcBackend.DatabaseDef)
+
+  override protected def withFixture(test: OneArgTest): Outcome = {
+    val possibleOutcome = Try {
+      PgPluginTestUtil.withTransactionRollback { db =>
+        withFixture(test.toNoArgTest(FixtureParam(db)))
+      }
+    }
+    //akka shutdown must be done in this way instead of using afterEach
+    system.shutdown()
+    system.awaitTermination()
+    possibleOutcome.get
+  }
+
+
+}
