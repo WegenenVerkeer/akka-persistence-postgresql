@@ -55,11 +55,9 @@ class PluginConfig(system: ActorSystem) {
     journalTableName)
 
   lazy val eventStore: Option[EventStore] = {
-    PluginConfig.asOption(eventStoreConfig.cfg.getString("class")) match {
-      case None => None
-      case Some(storeName) =>
-        val storeClazz = Class.forName(storeName).asInstanceOf[Class[_ <: EventStore]]
-        Some(storeClazz.getConstructor(classOf[EventStoreConfig]).newInstance(eventStoreConfig))
+    PluginConfig.asOption(eventStoreConfig.cfg.getString("class")) map { storeName =>
+      val storeClazz = Class.forName(storeName).asInstanceOf[Class[_ <: EventStore]]
+      storeClazz.getConstructor(classOf[EventStoreConfig]).newInstance(eventStoreConfig)
     }
   }
 
@@ -67,8 +65,6 @@ class PluginConfig(system: ActorSystem) {
     case None => NotPartitioned
     case Some(clazz) => Class.forName(clazz).asInstanceOf[Class[_ <: Partitioner]].newInstance()
   }
-
-
 
 }
 
