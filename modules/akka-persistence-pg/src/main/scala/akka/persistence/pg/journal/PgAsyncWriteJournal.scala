@@ -61,7 +61,7 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgAct
     db.run {
       journals
         .filter(_.persistenceId === persistenceId)
-//        .filter(_.partitionKey === partitioner.partitionKey(persistenceId))
+        .filter(byPartitionKey(persistenceId))
         .map((table: JournalTable) => table.sequenceNr)
         .max
         .result
@@ -70,19 +70,26 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgAct
     }
   }
 
+  private[this] def byPartitionKey(persistenceId: String): (JournalTable) => Rep[Option[Boolean]] = {
+    j =>
+      val partitionKey = partitioner.partitionKey(persistenceId)
+      j.partitionKey.isEmpty && partitionKey.isEmpty || j.partitionKey === partitionKey
+  }
+
   override def asyncReplayMessages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)
                                   (replayCallback: (PersistentRepr) => Unit): Future[Unit] = {
     log.debug(s"Async replay for processorId [$persistenceId], from sequenceNr: [$fromSequenceNr], to sequenceNr: [$toSequenceNr] with max records: [$max]")
     db.run {
-      journals.filter((table: JournalTable) => table.persistenceId === persistenceId
-        && table.sequenceNr >= fromSequenceNr
-        && table.sequenceNr <= toSequenceNr)
-//        && table.partitionKey === partitioner.partitionKey(persistenceId))
+      journals
+        .filter(_.persistenceId === persistenceId)
+        .filter(_.sequenceNr >= fromSequenceNr)
+        .filter(_.sequenceNr <= toSequenceNr)
+        .filter(byPartitionKey(persistenceId))
         .sortBy(_.sequenceNr)
         .take(max)
         .result
     } map {
-      _.map { toPersistentRepr } foreach { replayCallback }
+      _.map(toPersistentRepr).foreach(replayCallback)
     }
   }
 
@@ -90,7 +97,7 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgAct
     val selectedEntries = journals
       .filter(_.persistenceId === persistenceId)
       .filter(_.sequenceNr <= toSequenceNr)
-//      .filter(_.partitionKey === partitioner.partitionKey(persistenceId))
+      .filter(byPartitionKey(persistenceId))
 
     val action = if (permanent) {
         selectedEntries.delete

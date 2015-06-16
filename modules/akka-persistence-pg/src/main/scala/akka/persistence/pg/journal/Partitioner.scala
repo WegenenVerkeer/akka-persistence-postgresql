@@ -1,5 +1,7 @@
 package akka.persistence.pg.journal
 
+import scala.util.matching.Regex
+
 trait Partitioner {
 
   /**
@@ -19,14 +21,16 @@ object NotPartitioned extends Partitioner {
 
 }
 
-object SimplePartitioned extends Partitioner {
-
-  val extractPartitionKeyRe = "([^_]+.*".r
+class RegexPartitioner(regexp: Regex) extends Partitioner {
 
   override def partitionKey(persistenceId: String): Option[String] = {
     persistenceId match {
-      case extractPartitionKeyRe(partitionKey) => Option(partitionKey)
+      case regexp(partitionKey) => Option(partitionKey)
       case _ => None
     }
   }
+
 }
+
+object DefaultRegexPartitioner extends RegexPartitioner("([^_]+.*".r)
+

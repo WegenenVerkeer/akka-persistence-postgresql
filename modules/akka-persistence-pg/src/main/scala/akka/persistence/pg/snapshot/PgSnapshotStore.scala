@@ -49,7 +49,7 @@ trait PgSnapshotStore {
       snapshots
         .filter(_.persistenceId === metadata.persistenceId)
         .filter(_.sequenceNr === metadata.sequenceNr)
-        .filter(_.partitionKey === partitioner.partitionKey(metadata.persistenceId))
+        .filter(byPartitionKey(metadata.persistenceId))
         .delete
     }
   }
@@ -70,7 +70,14 @@ trait PgSnapshotStore {
     snapshots
       .filter(_.persistenceId === persistenceId)
       .filter(_.sequenceNr <= criteria.maxSequenceNr)
-      .filter(_.partitionKey === partitioner.partitionKey(persistenceId))
+      .filter(byPartitionKey(persistenceId))
       .filter(_.timestamp <= criteria.maxTimestamp)
+  }
+
+  private[this] def byPartitionKey(persistenceId: String): (SnapshotTable) => Rep[Option[Boolean]] = {
+    s => {
+      val partitionKey = partitioner.partitionKey(persistenceId)
+      s.partitionKey.isEmpty && partitionKey.isEmpty || s.partitionKey === partitionKey
+    }
   }
 }

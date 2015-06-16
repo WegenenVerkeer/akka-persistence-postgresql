@@ -4,7 +4,7 @@ import javax.sql.DataSource
 
 import akka.actor.ActorSystem
 import akka.persistence.pg.event._
-import akka.persistence.pg.journal.{NotPartitioned, Partitioner}
+import akka.persistence.pg.journal.{DefaultRegexPartitioner, NotPartitioned, Partitioner}
 import com.typesafe.config.Config
 import org.postgresql.ds.PGSimpleDataSource
 import slick.jdbc.JdbcBackend
@@ -76,6 +76,7 @@ class PluginConfig(system: ActorSystem) {
 
   lazy val journalPartitioner: Partitioner = PluginConfig.asOption(config.getString("partitioner")) match {
     case None => NotPartitioned
+    case Some("default") => DefaultRegexPartitioner
     case Some(clazz) => Class.forName(clazz).asInstanceOf[Class[_ <: Partitioner]].newInstance()
   }
 

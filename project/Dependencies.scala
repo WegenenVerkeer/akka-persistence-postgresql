@@ -13,7 +13,7 @@ trait Dependencies { this: Build =>
   val akkaRequester         = "org.querki"                 %%    "requester"                      % "1.0"
   val playJson              = "com.typesafe.play"          %%    "play-json"                      % "2.4.0"
 
-  val scalaTest              = "org.scalatest"            %%    "scalatest"               % "2.2.0"     % "test"
+  val scalaTest              = "org.scalatest"            %%    "scalatest"               % "2.2.4"     % "test"
   val akkaTest               = "com.typesafe.akka"        %%    "akka-testkit"            % akkaVersion % "test"
   val akkaPersistenceTestkit = "com.github.krasserm"      %% "akka-persistence-testkit"   % "0.3.4"     % "test"
 

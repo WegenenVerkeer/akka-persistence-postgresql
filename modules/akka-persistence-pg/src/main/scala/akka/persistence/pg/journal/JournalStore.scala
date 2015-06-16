@@ -65,7 +65,6 @@ trait JournalStore {
     def event               = column[Option[JsValue]]("event")
 
     def pIdSeqNrIndex = index(s"idx_${pluginConfig.journalTableName}_pid_seq", (persistenceId, sequenceNr), unique = true)
-    def uuidIndex = index(s"idx_${pluginConfig.journalTableName}_uuid", uuid, unique = true)
 
     def * = (id.?, persistenceId, sequenceNr, partitionKey, deleted, sender, payload, payloadManifest, uuid, created, tags, event) <>
       (JournalEntry.tupled, JournalEntry.unapply _)
