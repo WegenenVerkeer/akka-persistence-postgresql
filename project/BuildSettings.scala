@@ -31,10 +31,26 @@ trait BuildSettings { this: Build =>
         Resolver.typesafeRepo("releases"),
         "krasserm at bintray" at "http://dl.bintray.com/krasserm/maven"
         ),
-      updateOptions := updateOptions.value.withCachedResolution(true)
+      credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
+      updateOptions := updateOptions.value.withCachedResolution(true),
+      organization := "be.wegenenverkeer",
+      version      := "0.0.1-SNAPSHOT",
+      scalaVersion := "2.11.6"
     )
 
-    Defaults.coreDefaultSettings ++ projectSettings
+    Defaults.coreDefaultSettings ++ projectSettings ++ publishSettings
   }
+
+  def publishSettings: Seq[Setting[_]] = Seq(
+    publishTo <<= version { (v: String) =>
+      val nexus = "https://collab.mow.vlaanderen.be/nexus/content/repositories/"
+      if (v.trim.endsWith("SNAPSHOT"))
+        Some("collab snapshots" at nexus + "snapshots")
+      else
+        Some("collab releases"  at nexus + "releases")
+    },
+    publishMavenStyle := true
+  )
+
 
 }
