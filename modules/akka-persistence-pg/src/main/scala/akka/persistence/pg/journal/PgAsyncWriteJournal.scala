@@ -29,9 +29,9 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgAct
 
   override def asyncWriteMessages(messages: immutable.Seq[PersistentRepr]): Future[Unit] = {
     val entries = toJournalEntries(messages)
-    val storeActions: Seq[DBIOAction[_, NoStream, _]] = Seq(journals ++= entries.map(_.entry))
+    val storeActions: Seq[DBIO[_]] = Seq(journals ++= entries.map(_.entry))
 
-    val actions: Seq[DBIOAction[_, NoStream, _]] = eventStore match {
+    val actions: Seq[DBIO[_]] = eventStore match {
       case None        => storeActions
       case Some(store) => storeActions ++ store.postStoreActions(entries
           .filter { _.entry.json.isDefined }

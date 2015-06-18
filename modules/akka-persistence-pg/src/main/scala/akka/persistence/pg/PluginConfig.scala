@@ -1,7 +1,5 @@
 package akka.persistence.pg
 
-import javax.sql.DataSource
-
 import akka.actor.ActorSystem
 import akka.persistence.pg.event._
 import akka.persistence.pg.journal.{DefaultRegexPartitioner, NotPartitioned, Partitioner}

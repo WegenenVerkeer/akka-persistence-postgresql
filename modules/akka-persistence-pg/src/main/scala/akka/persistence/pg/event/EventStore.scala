@@ -51,7 +51,7 @@ trait EventStore {
    * strict consistency between your read and write model
    * @param events a sequence of (persistenceId, event object) tuples
    */
-  def postStoreActions(events: Seq[StoredEvent]): Seq[DBIOAction[_, NoStream, _]] = Seq.empty
+  def postStoreActions(events: Seq[StoredEvent]): Seq[DBIO[_]] = Seq.empty
 
   /**
    * find all events for a specific persistenceId
