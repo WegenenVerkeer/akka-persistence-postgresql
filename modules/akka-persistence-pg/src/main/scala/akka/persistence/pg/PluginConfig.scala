@@ -67,7 +67,7 @@ class PluginConfig(system: ActorSystem) {
 
   lazy val eventStore: Option[EventStore] = {
     PluginConfig.asOption(eventStoreConfig.cfg.getString("class")) map { storeName =>
-      val storeClazz = Class.forName(storeName).asInstanceOf[Class[_ <: EventStore]]
+      val storeClazz = Thread.currentThread.getContextClassLoader.loadClass(storeName).asInstanceOf[Class[_ <: EventStore]]
       storeClazz.getConstructor(classOf[JdbcBackend.Database], classOf[EventStoreConfig]).newInstance(database, eventStoreConfig)
     }
   }
@@ -75,7 +75,7 @@ class PluginConfig(system: ActorSystem) {
   lazy val journalPartitioner: Partitioner = PluginConfig.asOption(config.getString("partitioner")) match {
     case None => NotPartitioned
     case Some("default") => DefaultRegexPartitioner
-    case Some(clazz) => Class.forName(clazz).asInstanceOf[Class[_ <: Partitioner]].newInstance()
+    case Some(clazz) => Thread.currentThread.getContextClassLoader.loadClass(clazz).asInstanceOf[Class[_ <: Partitioner]].newInstance()
   }
 
 }
@@ -101,14 +101,14 @@ case class EventStoreConfig(cfg: Config,
   val eventEncoder: JsonEncoder = {
     PluginConfig.asOption(cfg.getString("encoder")) match {
       case None => NoneJsonEncoder
-      case Some(clazz) => Class.forName(clazz).asInstanceOf[Class[_ <: JsonEncoder]].newInstance()
+      case Some(clazz) => Thread.currentThread().getContextClassLoader.loadClass(clazz).asInstanceOf[Class[_ <: JsonEncoder]].newInstance()
     }
   }
 
   val eventTagger: EventTagger = {
     PluginConfig.asOption(cfg.getString("tagger")) match {
       case None => DefaultTagger
-      case Some(clazz) => Class.forName(clazz).asInstanceOf[Class[_ <: EventTagger]].newInstance()
+      case Some(clazz) => Thread.currentThread().getContextClassLoader.loadClass(clazz).asInstanceOf[Class[_ <: EventTagger]].newInstance()
     }
   }
 
