@@ -1,9 +1,9 @@
 package akka.persistence.pg.event
 
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
 
 trait Created {
 
-  def created: ZonedDateTime
+  def created: OffsetDateTime
 
 }

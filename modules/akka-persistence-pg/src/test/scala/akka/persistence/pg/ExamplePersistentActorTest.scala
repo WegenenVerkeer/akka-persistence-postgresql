@@ -20,7 +20,7 @@ class ExamplePersistentActorTest extends PersistentActorTest
     with Eventually
     with ShouldMatchers {
 
-  override val config: Config = ConfigFactory.load("actor-test.conf")
+  override val config: Config = ConfigFactory.load("example-actor-test.conf")
   val schemaName = config.getString("postgres.schema")
 
   override implicit val patienceConfig = PatienceConfig(timeout = scaled(Span(2, Seconds)))
@@ -31,9 +31,9 @@ class ExamplePersistentActorTest extends PersistentActorTest
   val countEvents = sql"""select count(*) from "#$schemaName".journal where persistenceid = $id""".as[Long]
   val countSnapshots = sql"""select count(*) from "#$schemaName".snapshot where persistenceid = $id""".as[Long]
 
-  test("check journal entries are stored") { param =>
-    param.db.run(countEvents).futureValue.head shouldEqual 0
-    param.db.run(countSnapshots).futureValue.head shouldEqual 0
+  test("check journal entries are stored") { db =>
+    db.run(countEvents).futureValue.head shouldEqual 0
+    db.run(countSnapshots).futureValue.head shouldEqual 0
 
     val actor = system.actorOf(Props(new ExamplePA(id)))
 
@@ -49,20 +49,20 @@ class ExamplePersistentActorTest extends PersistentActorTest
     testProbe.send(actor, GetMessage)
     testProbe.expectMsg[String]("bar")
 
-    param.db.run(countEvents).futureValue.head shouldEqual 2
-    param.db.run(countSnapshots).futureValue.head shouldEqual 0
+    db.run(countEvents).futureValue.head shouldEqual 2
+    db.run(countSnapshots).futureValue.head shouldEqual 0
   }
 
-  test("check recovery of events") { param =>
-    param.db.run(countEvents).futureValue.head shouldEqual 0
-    param.db.run(countSnapshots).futureValue.head shouldEqual 0
+  test("check recovery of events") { db =>
+    db.run(countEvents).futureValue.head shouldEqual 0
+    db.run(countSnapshots).futureValue.head shouldEqual 0
 
     val actor = system.actorOf(Props(new ExamplePA(id)))
 
     testProbe.send(actor, Command("foo"))
     testProbe.expectMsg[String]("oof")
 
-    param.db.run(countEvents).futureValue.head shouldEqual 1
+    db.run(countEvents).futureValue.head shouldEqual 1
 
     //stop the actor
     system.stop(actor)
@@ -77,13 +77,13 @@ class ExamplePersistentActorTest extends PersistentActorTest
     testProbe.send(recovered, GetMessage)
     testProbe.expectMsg[String]("foo")
 
-    param.db.run(countEvents).futureValue.head shouldEqual 1
-    param.db.run(countSnapshots).futureValue.head shouldEqual 0
+    db.run(countEvents).futureValue.head shouldEqual 1
+    db.run(countSnapshots).futureValue.head shouldEqual 0
   }
 
-  test("check snapshot is stored") { param =>
-    param.db.run(countEvents).futureValue.head shouldEqual 0
-    param.db.run(countSnapshots).futureValue.head shouldEqual 0
+  test("check snapshot is stored") { db =>
+    db.run(countEvents).futureValue.head shouldEqual 0
+    db.run(countSnapshots).futureValue.head shouldEqual 0
 
     val actor = system.actorOf(Props(new ExamplePA(id)))
 
@@ -95,9 +95,9 @@ class ExamplePersistentActorTest extends PersistentActorTest
     testProbe.expectNoMsg
 
     eventually {
-      param.db.run(countSnapshots).futureValue.head shouldEqual 1
+      db.run(countSnapshots).futureValue.head shouldEqual 1
     }
-    param.db.run(countEvents).futureValue.head shouldEqual 1
+    db.run(countEvents).futureValue.head shouldEqual 1
 
     //stop the actor
     system.stop(actor)
@@ -124,7 +124,7 @@ class ExamplePersistentActorTest extends PersistentActorTest
         sender ! message.reverse
       }
       case GetMessage => sender ! currentMessage.getOrElse(sys.error("message is not yet set"))
-      case TakeSnapshot => println("saving snapshot"); saveSnapshot(currentMessage)
+      case TakeSnapshot => saveSnapshot(currentMessage)
     }
 
   }

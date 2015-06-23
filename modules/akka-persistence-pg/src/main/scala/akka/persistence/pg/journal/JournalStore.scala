@@ -1,6 +1,6 @@
 package akka.persistence.pg.journal
 
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
 import java.util.UUID
 
 import akka.actor.ActorRef
@@ -21,7 +21,7 @@ case class JournalEntry(id: Option[Long],
                         payload: Option[Array[Byte]],
                         payloadManifest: String,
                         uuid: String,
-                        created: ZonedDateTime,
+                        created: OffsetDateTime,
                         tags: Map[String, String],
                         json: Option[JsValue])
 
@@ -60,7 +60,7 @@ trait JournalStore {
     def payload             = column[Option[Array[Byte]]]("payload")
     def payloadManifest     = column[String]("payloadmf")
     def uuid                = column[String]("uuid")
-    def created             = column[ZonedDateTime]("created", O.Default(ZonedDateTime.now()))
+    def created             = column[OffsetDateTime]("created", O.Default(OffsetDateTime.now()))
     def tags                = column[Map[String, String]]("tags", O.Default(Map.empty))
     def event               = column[Option[JsValue]]("event")
 
@@ -105,9 +105,9 @@ trait JournalStore {
     }
   }
 
-  private[this] def getCreated(event: Any): ZonedDateTime = event match {
+  private[this] def getCreated(event: Any): OffsetDateTime = event match {
     case e: Created => e.created
-    case _ => ZonedDateTime.now()
+    case _ => OffsetDateTime.now()
   }
 
   private[this] def getUuid(event: Any): String = {
@@ -116,8 +116,8 @@ trait JournalStore {
 
   def toJournalEntries(messages: Seq[PersistentRepr]): Seq[JournalEntryWithEvent] = {
     messages map { message =>
-      val tags = eventTagger.tag(message.persistenceId, message.payload)
-      val (payloadAsJson, payloadAsBytes) = serializePayload(message.payload)
+      val (tags, event) = eventTagger.tag(message.persistenceId, message.payload)
+      val (payloadAsJson, payloadAsBytes) = serializePayload(event)
 
       JournalEntryWithEvent(JournalEntry(None,
         message.persistenceId,
@@ -126,11 +126,11 @@ trait JournalStore {
         deleted = false,
         message.sender,
         payloadAsBytes,
-        message.payload.getClass.getName,
+        event.getClass.getName,
         getUuid(message.payload),
         getCreated(message.payload),
         tags,
-        payloadAsJson), message.payload)
+        payloadAsJson), event)
     }
   }
 

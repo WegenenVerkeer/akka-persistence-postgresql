@@ -39,7 +39,7 @@ class PgEventReader extends Actor with EventStore with ActorLogging with PgActor
 
   private val extension = Persistence(context.system)
   private val publish = extension.settings.internal.publishPluginCommands
-  private val db = pluginConfig.database
+  val db = pluginConfig.database
 
   override def receive: Receive = {
     case r @ ReplayEvents(fromId, tags, max) =>

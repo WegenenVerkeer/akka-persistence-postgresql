@@ -1,5 +1,6 @@
 package akka.persistence.pg.testkit
 
+import akka.actor.ActorLogging
 import akka.persistence.pg.journal.NotPartitioned
 import akka.persistence.pg.snapshot.PgSnapshotStore
 import akka.persistence.pg.PluginConfig

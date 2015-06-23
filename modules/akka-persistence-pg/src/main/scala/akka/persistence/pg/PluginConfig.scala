@@ -68,7 +68,7 @@ class PluginConfig(system: ActorSystem) {
   lazy val eventStore: Option[EventStore] = {
     PluginConfig.asOption(eventStoreConfig.cfg.getString("class")) map { storeName =>
       val storeClazz = Class.forName(storeName).asInstanceOf[Class[_ <: EventStore]]
-      storeClazz.getConstructor(classOf[EventStoreConfig]).newInstance(eventStoreConfig)
+      storeClazz.getConstructor(classOf[JdbcBackend.Database], classOf[EventStoreConfig]).newInstance(database, eventStoreConfig)
     }
   }
 

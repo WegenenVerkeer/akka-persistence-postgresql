@@ -11,6 +11,8 @@ import akka.serialization.{Serialization, SerializationExtension}
 
 import scala.collection.immutable
 import scala.concurrent.Future
+import scala.util.Failure
+import scala.util.control.NonFatal
 
 class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgActorConfig with JournalStore {
 
@@ -28,6 +30,7 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgAct
   import akka.persistence.pg.PgPostgresDriver.api._
 
   override def asyncWriteMessages(messages: immutable.Seq[PersistentRepr]): Future[Unit] = {
+    log.debug(s"asyncWriteMessages of ${messages.size} messages")
     val entries = toJournalEntries(messages)
     val storeActions: Seq[DBIO[_]] = Seq(journals ++= entries.map(_.entry))
 
@@ -42,7 +45,10 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgAct
     val r = db.run {
       DBIO.seq(actions:_*).transactionally
     }
-    r.onFailure { case t: BatchUpdateException => println(t.getNextException) }
+    r.onFailure {
+      case t: BatchUpdateException => log.error(t.getNextException, "problem storing events")
+      case NonFatal (t) => log.error(t, "problem storing events")
+    }
     r
   }
 

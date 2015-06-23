@@ -13,6 +13,7 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import play.api.libs.json._
+import slick.jdbc.JdbcBackend
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -186,7 +187,7 @@ class TestActor(testProbe: ActorRef) extends PersistentActor with ActorLogging {
   }
 }
 
-class TestEventStore(override val eventStoreConfig: EventStoreConfig) extends EventStore {
+class TestEventStore(override val db: JdbcBackend.Database, override val eventStoreConfig: EventStoreConfig) extends EventStore {
 
 }
 

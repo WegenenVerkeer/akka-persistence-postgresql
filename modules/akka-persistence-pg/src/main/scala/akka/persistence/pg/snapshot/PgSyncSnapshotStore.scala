@@ -31,10 +31,21 @@ class PgSyncSnapshotStore extends akka.persistence.snapshot.SnapshotStore
 
   override def saveAsync(metadata: SnapshotMetadata, snapshot: Any): Future[Unit] = {
     log.debug(s"saving snapshot for metadata: $metadata")
-    writeSnapshot(metadata, Snapshot(snapshot))
+    db.run(
+      snapshots += ((metadata.persistenceId, metadata.sequenceNr,
+        partitioner.partitionKey(metadata.persistenceId),
+        metadata.timestamp, serialization.serialize(Snapshot(snapshot)).get))
+    ) map { _  =>
+      log.debug(s"snapshot saved $metadata")
+      ()
+    }
   }
 
-  override def saved(metadata: SnapshotMetadata): Unit = log.debug(s"Saved: $metadata")
+  override def saved(metadata: SnapshotMetadata): Unit = {
+    log.debug(s"Saved: $metadata")
+    db.run(snapshots.length.result)
+    ()
+  }
 
   override def delete(metadata: SnapshotMetadata): Unit = {
     log.debug(s"deleting: $metadata")

@@ -1,5 +1,6 @@
 package akka.persistence.pg.snapshot
 
+import akka.actor.{Actor, ActorLogging}
 import akka.persistence.pg.PluginConfig
 import akka.persistence.pg.journal.Partitioner
 import akka.persistence.serialization.Snapshot
@@ -35,14 +36,6 @@ trait PgSnapshotStore {
   val snapshots = TableQuery[SnapshotTable]
 
   import scala.concurrent.ExecutionContext.Implicits.global
-
-  def writeSnapshot(metadata: SnapshotMetadata, snapshot: Snapshot): Future[Unit]  = {
-    db.run {
-      snapshots += ((metadata.persistenceId, metadata.sequenceNr, 
-        partitioner.partitionKey(metadata.persistenceId),
-        metadata.timestamp, serialization.serialize(snapshot).get))
-    } map { _  => () }
-  }
 
   def deleteSnapshot(metadata: SnapshotMetadata): Future[Int] = {
     db.run {
