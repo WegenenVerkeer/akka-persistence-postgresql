@@ -9,7 +9,7 @@ trait BuildSettings { this: Build =>
     Project(
       id = moduleName,
       base = file("modules/" + moduleName),
-      settings = projectSettings()
+      settings = projectSettings() ++ publishSettings
     )
   }
 
@@ -17,9 +17,8 @@ trait BuildSettings { this: Build =>
     Project(
       id = projectName,
       base = file("."),
-      settings = projectSettings()
-    ).settings(publishArtifact := false)
-      .aggregate(modules: _*)
+      settings = projectSettings() ++ Seq(publishLocal := {}, publish := { })
+    ).aggregate(modules: _*)
   }
 
   private def projectSettings() = {
@@ -38,7 +37,7 @@ trait BuildSettings { this: Build =>
       scalaVersion := "2.11.6"
     )
 
-    Defaults.coreDefaultSettings ++ projectSettings ++ publishSettings
+    Defaults.coreDefaultSettings ++ projectSettings
   }
 
   def publishSettings: Seq[Setting[_]] = Seq(
@@ -49,7 +48,9 @@ trait BuildSettings { this: Build =>
       else
         Some("collab releases"  at nexus + "releases")
     },
-    publishMavenStyle := true
+//    publishMavenStyle := true,
+    publishArtifact in Compile := true,
+    publishArtifact in Test := true
   )
 
 

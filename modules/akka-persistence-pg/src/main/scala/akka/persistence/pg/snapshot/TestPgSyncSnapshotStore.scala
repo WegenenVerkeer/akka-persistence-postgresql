@@ -1,7 +1,6 @@
 package akka.persistence.pg.snapshot
 
 import akka.persistence.pg.util.PgPluginTestUtil
-import slick.jdbc.JdbcBackend
 
 class TestPgSyncSnapshotStore extends PgSyncSnapshotStore {
 
