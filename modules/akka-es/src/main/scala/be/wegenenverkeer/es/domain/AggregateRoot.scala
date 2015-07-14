@@ -56,9 +56,6 @@ object AggregateRoot {
    */
   trait Event {
     def metadata: Metadata
-    def eventName: String = s"Onbekend event ${getClass.getName}"
-    def eventOmschrijving: String = s"Onbekend event $toString"
-    def eventOnderwerp: String = s"Onbekend event $toString"
   }
 
   case class Metadata(aggregateId: String,
