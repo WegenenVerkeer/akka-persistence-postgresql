@@ -1,12 +1,16 @@
 package akka.persistence.pg
 
+import java.util.Properties
+
 import akka.actor.ActorSystem
 import akka.persistence.pg.event._
 import akka.persistence.pg.journal.{DefaultRegexPartitioner, NotPartitioned, Partitioner}
-import com.typesafe.config.Config
+import com.typesafe.config.{ConfigFactory, Config}
 import org.postgresql.ds.PGSimpleDataSource
 import slick.jdbc.JdbcBackend
 import slick.util.AsyncExecutor
+
+import scala.collection.JavaConverters._
 
 object PluginConfig {
   def apply(system: ActorSystem) = new PluginConfig(system)
@@ -53,7 +57,17 @@ class PluginConfig(system: ActorSystem) {
             JdbcBackend.Database.forDataSource(simpleDataSource, asyncExecutor("unpooled"))
 
           case _ =>
-            JdbcBackend.Database.forConfig("", dbConfig)
+            //Slick's Database.forConfig does NOT use the 'url' when also configuring using a JDBC DataSource instead of
+            // a JDBC Driver class
+            val props = new Properties()
+            org.postgresql.Driver.parseURL(dbConfig.getString("url"), new Properties()).asScala foreach {
+              case ("PGDBNAME", v) => props.put("databaseName", v)
+              case ("PGHOST", v)   => props.put("serverName", v)
+              case ("PGPORT", v)   => props.put("portNumber", v)
+              case (k, v)          => props.put(k, v)
+            }
+            val urlConfig = ConfigFactory.parseProperties(props).atPath("properties")
+            JdbcBackend.Database.forConfig("", dbConfig.withFallback(urlConfig))
         }
 
     }
