@@ -105,12 +105,12 @@ trait JournalStore {
     }
   }
 
-  private[this] def getCreated(event: Any): OffsetDateTime = event match {
+  def getCreated(event: Any): OffsetDateTime = event match {
     case e: Created => e.created
     case _ => OffsetDateTime.now()
   }
 
-  private[this] def getUuid(event: Any): String = {
+  def getUuid(event: Any): String = {
     UUID.randomUUID.toString
   }
 
