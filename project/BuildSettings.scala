@@ -33,7 +33,7 @@ trait BuildSettings { this: Build =>
       credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
       updateOptions := updateOptions.value.withCachedResolution(true),
       organization := "be.wegenenverkeer",
-      version      := "0.0.1-SNAPSHOT",
+      version      := "0.0.2-SNAPSHOT",
       scalaVersion := "2.11.6"
     )
 
