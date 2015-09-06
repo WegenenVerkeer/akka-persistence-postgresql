@@ -3,14 +3,10 @@ package akka.persistence.pg
 import java.util.UUID
 
 import akka.actor.Props
-import akka.persistence.pg.event.{NoneJsonEncoder, DefaultTagger, JsonEncoder, EventTagger}
-import akka.persistence.pg.journal.{NotPartitioned, Partitioner, JournalStore}
-import akka.persistence.pg.snapshot.PgSnapshotStore
 import akka.persistence.pg.util.{RecreateSchema, PersistentActorTest}
 import akka.persistence.{SnapshotOffer, PersistentActor}
-import akka.serialization.{SerializationExtension, Serialization}
 import com.typesafe.config.{ConfigFactory, Config}
-import org.scalatest.ShouldMatchers
+import org.scalatest.{BeforeAndAfterAll, ShouldMatchers}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.{Seconds, Span}
 
@@ -27,50 +23,56 @@ case object TakeSnapshot
 class ExamplePersistentActorTest extends PersistentActorTest
     with ScalaFutures
     with Eventually
+    with RecreateSchema
     with ShouldMatchers
-    with RecreateSchema {
+    with BeforeAndAfterAll
+    with PgConfig {
 
   override val config: Config = ConfigFactory.load("example-actor-test.conf")
+  override val pluginConfig = PluginConfig(config)
   val schemaName = config.getString("postgres.schema")
-  var schemaCreated = false
 
   override implicit val patienceConfig = PatienceConfig(timeout = scaled(Span(2, Seconds)))
 
-  import akka.persistence.pg.PgPostgresDriver.api._
+  import driver.api._
 
   val id = UUID.randomUUID().toString
   val countEvents = sql"""select count(*) from "#$schemaName".journal where persistenceid = $id""".as[Long]
   val countSnapshots = sql"""select count(*) from "#$schemaName".snapshot where persistenceid = $id""".as[Long]
 
+  val createJournal = sqlu"""create table "#$schemaName".journal (
+                           "id" BIGSERIAL NOT NULL PRIMARY KEY,
+                           "persistenceid" VARCHAR(254) NOT NULL,
+                           "sequencenr" INT NOT NULL,
+                           "partitionkey" VARCHAR(254) DEFAULT NULL,
+                           "deleted" BOOLEAN DEFAULT false,
+                           "sender" VARCHAR(512),
+                           "payload" BYTEA,
+                           "payloadmf" VARCHAR(512),
+                           "uuid" VARCHAR(254) NOT NULL,
+                           "created" timestamptz NOT NULL,
+                           "tags" HSTORE,
+                           "event" JSON,
+                           constraint "cc_journal_payload_event" check (payload IS NOT NULL OR event IS NOT NULL))"""
+
+  val createSnapshot = sqlu"""create table "#$schemaName".snapshot ("persistenceid" VARCHAR(254) NOT NULL,
+                            "sequencenr" INT NOT NULL,
+                            "partitionkey" VARCHAR(254) DEFAULT NULL,
+                            "timestamp" bigint NOT NULL,
+                            "snapshot" BYTEA,
+                            PRIMARY KEY (persistenceid, sequencenr))"""
+
+
   /**
-   * we can't do this in beforeAll because we need actorSystem to access the PluginConfig and to get
-   * the database and the 'journal' and 'snapshot' table DDL
-   *
-   * In a real test scenario it is best to create the schema and tables in a beforeAll or even before running your tests
-   * and you should best do this through database evolutions scripts
+   * recreate schema and tables before running the tests
    */
-  override def beforeEach() {
-    super.beforeEach() //this creates the actorSystem
-    if (!schemaCreated) {
-      new JournalStore with PgSnapshotStore {
-        override val serialization: Serialization = SerializationExtension(system)
-        override val pgExtension: PgExtension = PgExtension(system)
-        override val pluginConfig = PluginConfig(system)
-        override val eventEncoder = NoneJsonEncoder
-        override val eventTagger = DefaultTagger
-        override val partitioner = NotPartitioned
-
-        override val db = pluginConfig.database
-
-        Await.result(db.run(
-          recreateSchema
-            .andThen((journals.schema ++ snapshots.schema).create)
-        ), 10 seconds)
-      }
-      schemaCreated = true
-    }
+  override def beforeAll() {
+    Await.result(database.run(
+      recreateSchema
+        .andThen(createJournal).andThen(createSnapshot)
+    ), 10 seconds)
+    ()
   }
-
 
   test("check journal entries are stored") { db =>
     db.run(countEvents).futureValue.head shouldEqual 0

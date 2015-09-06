@@ -8,9 +8,6 @@ trait PgPostgresDriver extends ExPostgresDriver
   with PgPlayJsonSupport
   with PgHStoreSupport {
 
-  //TODO make configurable
-  override val pgjson = "json"
-
   override val api = new API with ArrayImplicits
     with DateTimeImplicits
     with PlayJsonImplicits
@@ -18,4 +15,5 @@ trait PgPostgresDriver extends ExPostgresDriver
 
 }
 
-object PgPostgresDriver extends PgPostgresDriver
+class PgPostgresDriverImpl(override val pgjson: String) extends PgPostgresDriver
+

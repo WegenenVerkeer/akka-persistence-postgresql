@@ -1,9 +1,9 @@
 package be.wegenenverkeer.es.domain
 
 import akka.actor._
-import akka.event.{DiagnosticLoggingAdapter, Logging}
 import akka.persistence._
 import akka.persistence.pg.event.Tagged
+import be.wegenenverkeer.es.actor.GracefulPassivation
 import be.wegenenverkeer.es.domain.AggregateRoot._
 import play.api.libs.json.Json
 
@@ -11,7 +11,6 @@ object AggregateRoot {
 
   /**
    * state of Aggregate Root
-   * TODO: sealed of niet
    */
   trait State
   case object Uninitialized extends State
@@ -81,13 +80,11 @@ object AggregateRoot {
 }
 
 /**
- * Base class for aggregates.
+ * Base class for aggregate roots.
  * It includes such functionality as: snapshot management, publishing applied events to Event Bus, 
  * handling actor recovery (i.e. replaying events).
- *
  */
-//TODO: GracefulPassivation => actor shutdown na xx minuten inactief
-trait AggregateRoot[D <: Data] extends /*GracefulPassivation with */ PersistentActor with ActorLogging {
+trait AggregateRoot[D <: Data] extends GracefulPassivation with PersistentActor with ActorLogging {
 
   /**
    * Id of the persistent entity for which messages should be replayed.
@@ -95,12 +92,12 @@ trait AggregateRoot[D <: Data] extends /*GracefulPassivation with */ PersistentA
   override def persistenceId: String
 
   /**
-   * the lifecycle of the aggegrate, by default [[Uninitialized]]
+   * the lifecycle of the aggregate, by default [[Uninitialized]]
    */
   protected var state: State = Uninitialized
 
   /**
-   * The data of the aggregate, is only valid when aggregate's state is [[Initialized]]
+   * The data of the aggregate, is only valid when the aggregate state is [[Initialized]]
    * So it can be null when the aggregate is in another state
    */
   protected var data: D = _
@@ -157,7 +154,7 @@ trait AggregateRoot[D <: Data] extends /*GracefulPassivation with */ PersistentA
    * It will:
    * - check if a snapshot needs to be saved.
    * - update the internal aggregate state, by calling updateState
-   * - send a response with the aggregate's state to `replyTo` actor
+   * - send a response with the aggregate state to `replyTo` actor
    * - publish an event on the Akka event bus
    *
    * @param replyTo optional actorRef to send reply to, default is the current sender
@@ -184,7 +181,7 @@ trait AggregateRoot[D <: Data] extends /*GracefulPassivation with */ PersistentA
   }
 
   /**
-   * publish event to akka's eventstream
+   * publish event to akka eventstream
    * @param event the AR event to publish
    */
   protected def publish(event: AggregateRoot.Event) =
@@ -215,14 +212,14 @@ trait AggregateRoot[D <: Data] extends /*GracefulPassivation with */ PersistentA
     case SaveSnapshotSuccess(metadata) =>
       log.debug("snapshot saved")
     case RecoveryCompleted =>
-      log.debug(s"aggegrate '$persistenceId' has recovered, state = '$state'")
+      log.debug(s"aggregate '$persistenceId' has recovered, state = '$state'")
     case RecoveryFailure(t) =>
       throw new RuntimeException("Recovery failed, will be retried", t)
 
   }
 
   /**
-   * restore the lifecyle and state of the aggregate from a snapshot 
+   * restore the lifecycle and state of the aggregate from a snapshot
    * @param metadata snapshot metadata
    * @param state the state of the aggregate
    * @param data the data of the aggregate

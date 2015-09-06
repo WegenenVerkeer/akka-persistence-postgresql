@@ -1,7 +1,6 @@
 package akka.persistence.pg.snapshot
 
-import akka.actor.{Actor, ActorLogging}
-import akka.persistence.pg.PluginConfig
+import akka.persistence.pg.{PgConfig, PluginConfig}
 import akka.persistence.pg.journal.Partitioner
 import akka.persistence.serialization.Snapshot
 import akka.persistence.{SelectedSnapshot, SnapshotMetadata, SnapshotSelectionCriteria}
@@ -11,13 +10,12 @@ import scala.concurrent.Future
 import scala.language.postfixOps
 
 trait PgSnapshotStore {
+  self: PgConfig =>
 
   def serialization: Serialization
-  def pluginConfig: PluginConfig
-  def db = pluginConfig.database
   def partitioner: Partitioner
 
-  import akka.persistence.pg.PgPostgresDriver.api._
+  import driver.api._
 
   class SnapshotTable(tag: Tag) extends Table[(String, Long, Option[String], Long, Array[Byte])](tag,
     pluginConfig.snapshotSchemaName, pluginConfig.snapshotTableName) {
@@ -38,7 +36,7 @@ trait PgSnapshotStore {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   def deleteSnapshot(metadata: SnapshotMetadata): Future[Int] = {
-    db.run {
+    database.run {
       snapshots
         .filter(_.persistenceId === metadata.persistenceId)
         .filter(_.sequenceNr === metadata.sequenceNr)
@@ -48,7 +46,7 @@ trait PgSnapshotStore {
   }
 
   def selectSnapshotsFor(persistenceId: String, criteria: SnapshotSelectionCriteria): Future[List[SelectedSnapshot]] = {
-    db.run {
+    database.run {
       selectSnapshotsQuery(persistenceId, criteria)
         .sortBy(_.sequenceNr.desc)
         .result

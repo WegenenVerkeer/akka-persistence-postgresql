@@ -4,17 +4,19 @@ import java.sql.BatchUpdateException
 
 import akka.actor.ActorLogging
 import akka.persistence.journal.AsyncWriteJournal
-import akka.persistence.pg.{PgActorConfig, PgExtension}
+import akka.persistence.pg.{PgConfig, PgExtension}
 import akka.persistence.pg.event.{EventStore, EventTagger, JsonEncoder, StoredEvent}
 import akka.persistence.{PersistentConfirmation, PersistentId, PersistentRepr}
 import akka.serialization.{Serialization, SerializationExtension}
 
 import scala.collection.immutable
 import scala.concurrent.Future
-import scala.util.Failure
 import scala.util.control.NonFatal
 
-class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgActorConfig with JournalStore {
+class PgAsyncWriteJournal extends AsyncWriteJournal
+  with ActorLogging
+  with PgConfig
+  with JournalStore {
 
   implicit val executionContext = context.system.dispatcher
 
@@ -27,7 +29,7 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgAct
 
   val eventStore: Option[EventStore] = pluginConfig.eventStore
 
-  import akka.persistence.pg.PgPostgresDriver.api._
+  import driver.api._
 
   override def asyncWriteMessages(messages: immutable.Seq[PersistentRepr]): Future[Unit] = {
     log.debug(s"asyncWriteMessages of ${messages.size} messages")
@@ -42,7 +44,7 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgAct
         )
     }
 
-    val r = db.run {
+    val r = database.run {
       DBIO.seq(actions:_*).transactionally
     }
     r.onFailure {
@@ -64,7 +66,7 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgAct
 
   override def asyncReadHighestSequenceNr(persistenceId: String, fromSequenceNr: Long): Future[Long] = {
     log.debug(s"Async read for highest sequence number for processorId: [$persistenceId] (hint, seek from  nr: [$fromSequenceNr])")
-    db.run {
+    database.run {
       journals
         .filter(_.persistenceId === persistenceId)
         .filter(byPartitionKey(persistenceId))
@@ -85,7 +87,7 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgAct
   override def asyncReplayMessages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)
                                   (replayCallback: (PersistentRepr) => Unit): Future[Unit] = {
     log.debug(s"Async replay for processorId [$persistenceId], from sequenceNr: [$fromSequenceNr], to sequenceNr: [$toSequenceNr] with max records: [$max]")
-    db.run {
+    database.run {
       journals
         .filter(_.persistenceId === persistenceId)
         .filter(_.sequenceNr >= fromSequenceNr)
@@ -110,7 +112,7 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgAct
     } else {
         selectedEntries.map(_.deleted).update(true)
     }
-    db.run(action).map(_ => ())
+    database.run(action).map(_ => ())
   }
 
 }

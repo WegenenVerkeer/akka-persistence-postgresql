@@ -6,7 +6,7 @@ import java.util.UUID
 import akka.actor.ActorRef
 import akka.persistence.PersistentRepr
 import akka.persistence.pg.event.{Created, EventTagger, JsonEncoder}
-import akka.persistence.pg.{PgExtension, PluginConfig}
+import akka.persistence.pg.{PgConfig, PgExtension}
 import akka.serialization.Serialization
 import play.api.libs.json.JsValue
 
@@ -33,19 +33,18 @@ case class JournalEntryWithEvent(entry: JournalEntry, event: Any)
  * Either payload or event must be NOT NULL
  */
 trait JournalStore {
+  self: PgConfig =>
 
   def serialization: Serialization
   def pgExtension: PgExtension
-  def pluginConfig: PluginConfig
   def eventEncoder: JsonEncoder
   def eventTagger: EventTagger
   def partitioner: Partitioner
-  def db = pluginConfig.database
 
-  import akka.persistence.pg.PgPostgresDriver.MappedJdbcType
-  import akka.persistence.pg.PgPostgresDriver.api._
+  import driver.MappedJdbcType
+  import driver.api._
 
-  implicit val actorRefMapper = MappedJdbcType.base[ActorRef, String](Serialization.serializedActorPath,
+  implicit lazy val actorRefMapper = MappedJdbcType.base[ActorRef, String](Serialization.serializedActorPath,
     pgExtension.actorRefOf(_))
 
   class JournalTable(tag: Tag) extends Table[JournalEntry](
@@ -76,7 +75,7 @@ trait JournalStore {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   def selectMessage(persistenceId: String, sequenceNr: Long): Future[Option[PersistentRepr]] = {
-    db.run(
+    database.run(
       journals
         .filter(_.persistenceId === persistenceId)
         .filter(_.sequenceNr === sequenceNr)
@@ -85,7 +84,7 @@ trait JournalStore {
   }
 
   def deleteMessageRange(persistenceId: String, toSequenceNr: Long): Future[Int] = {
-    db.run(
+    database.run(
       journals
         .filter(_.persistenceId === persistenceId)
         .filter(_.sequenceNr <= toSequenceNr)
@@ -127,8 +126,8 @@ trait JournalStore {
         message.sender,
         payloadAsBytes,
         event.getClass.getName,
-        getUuid(message.payload),
-        getCreated(message.payload),
+        getUuid(event),
+        getCreated(event),
         tags,
         payloadAsJson), event)
     }

@@ -34,7 +34,7 @@ trait BuildSettings { this: Build =>
       updateOptions := updateOptions.value.withCachedResolution(true),
       organization := "be.wegenenverkeer",
       version      := "0.0.2-SNAPSHOT",
-      scalaVersion := "2.11.6"
+      scalaVersion := "2.11.7"
     )
 
     Defaults.coreDefaultSettings ++ projectSettings

@@ -2,9 +2,8 @@ package akka.persistence.pg.event
 
 import java.time.OffsetDateTime
 
-import akka.persistence.pg.EventStoreConfig
+import akka.persistence.pg.{PgConfig, EventStoreConfig}
 import play.api.libs.json.JsValue
-
 
 case class Event(id: Long,
                  persistenceId: String,
@@ -18,15 +17,13 @@ case class Event(id: Long,
 case class StoredEvent(persistenceId: String, event: Any)
 
 trait EventStore {
+  self: PgConfig =>
 
-  import akka.persistence.pg.PgPostgresDriver.api._
-
-  def eventStoreConfig: EventStoreConfig
-  def db: Database
+  import driver.api._
 
   //This is basically just a another mapping on the same journal table, ideally you would create a DB view
   class EventsTable(tag: Tag) extends Table[Event](
-    tag, eventStoreConfig.schemaName, eventStoreConfig.tableName) {
+    tag, pluginConfig.eventStoreConfig.schemaName, pluginConfig.eventStoreConfig.tableName) {
 
     def id                  = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def persistenceId       = column[String]("persistenceid")

@@ -4,6 +4,6 @@ import akka.persistence.pg.util.PgPluginTestUtil
 
 class TestPgSyncSnapshotStore extends PgSyncSnapshotStore {
 
-  override val db = PgPluginTestUtil.initialize(pluginConfig.database, context.system)
+  override lazy val database = PgPluginTestUtil.initialize(pluginConfig.database, context.system)
 
 }

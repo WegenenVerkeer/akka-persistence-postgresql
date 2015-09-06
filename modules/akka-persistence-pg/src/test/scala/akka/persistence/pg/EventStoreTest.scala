@@ -1,8 +1,11 @@
 package akka.persistence.pg
 
+import java.time.format.DateTimeFormatter
+import java.time.OffsetDateTime
+
 import akka.actor.{ActorLogging, ActorRef, ActorSystem, Props}
-import akka.persistence.pg.TestActor.{Alter, GetState, Snap, TheState}
-import akka.persistence.pg.event.{DefaultTagger, EventStore, JsonEncoder}
+import akka.persistence.pg.TestActor._
+import akka.persistence.pg.event._
 import akka.persistence.pg.journal.{NotPartitioned, JournalStore}
 import akka.persistence.pg.snapshot.PgSnapshotStore
 import akka.persistence.pg.util.RecreateSchema
@@ -13,7 +16,6 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import play.api.libs.json._
-import slick.jdbc.JdbcBackend
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -28,6 +30,7 @@ class EventStoreTest extends TestKit(ActorSystem("TestCluster", EventStoreTest.c
   with FunSuiteLike with BeforeAndAfterEach with ShouldMatchers
   with BeforeAndAfterAll with JournalStore with EventStore with RecreateSchema
   with PgSnapshotStore
+  with PgConfig
   with ScalaFutures {
 
   override val schemaName = EventStoreTest.config.getString("postgres.schema")
@@ -35,7 +38,6 @@ class EventStoreTest extends TestKit(ActorSystem("TestCluster", EventStoreTest.c
   override val serialization: Serialization = SerializationExtension(system)
   override val pgExtension: PgExtension = PgExtension(system)
   override val pluginConfig = PluginConfig(system)
-  override val eventStoreConfig = pluginConfig.eventStoreConfig
   override val eventEncoder = new TestEventEncoder()
   override val eventTagger = DefaultTagger
   override val partitioner = NotPartitioned
@@ -43,7 +45,7 @@ class EventStoreTest extends TestKit(ActorSystem("TestCluster", EventStoreTest.c
 
   val testProbe = TestProbe()
 
-  import akka.persistence.pg.PgPostgresDriver.api._
+  import driver.api._
 
   test("generate events"){
     val test = system.actorOf(Props(new TestActor(testProbe.ref)))
@@ -58,8 +60,7 @@ class EventStoreTest extends TestKit(ActorSystem("TestCluster", EventStoreTest.c
     testProbe.send(test, GetState)
     testProbe.expectMsg(TheState(id = "bar"))
 
-    db.run(events.size.result).futureValue shouldBe 2
-    db.run(journals.size.result).futureValue shouldBe 2
+    database.run(journals.size.result).futureValue shouldBe 2
 
     // kill the actor
     system.stop(test)
@@ -77,6 +78,32 @@ class EventStoreTest extends TestKit(ActorSystem("TestCluster", EventStoreTest.c
     ()
   }
 
+  test("events implementing created use this as event's creation time"){
+    val test = system.actorOf(Props(new TestActor(testProbe.ref)))
+
+    testProbe.send(test, Alter("foo"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, GetState)
+    testProbe.expectMsg(TheState(id = "foo"))
+
+    database.run(events.size.result).futureValue shouldBe 1
+    val storedEvent = database.run(events.result.head).futureValue
+    (storedEvent.event \ "created").as[String] shouldBe DateTimeFormatter.ISO_DATE_TIME.format(storedEvent.created)
+  }
+
+  test("events NOT implementing created don't use this as event's creation time"){
+    val test = system.actorOf(Props(new TestActor(testProbe.ref)))
+
+    testProbe.send(test, Increment(5))
+    testProbe.expectMsg("j")
+    testProbe.send(test, GetState)
+    testProbe.expectMsg(TheState(count = 5))
+
+    database.run(events.size.result).futureValue shouldBe 1
+    val storedEvent = database.run(events.result.head).futureValue
+    (storedEvent.event \ "created").as[String] shouldNot be(DateTimeFormatter.ISO_DATE_TIME.format(storedEvent.created))
+  }
+
   test("generate snapshots"){
     val test = system.actorOf(Props(new TestActor(testProbe.ref)))
 
@@ -88,18 +115,18 @@ class EventStoreTest extends TestKit(ActorSystem("TestCluster", EventStoreTest.c
     testProbe.send(test, Snap)
     testProbe.expectMsg("s")
 
-    db.run(events.size.result).futureValue shouldBe 1    //1 Alter event total
-    db.run(snapshots.size.result).futureValue shouldBe 1 //1 snapshot stored
-    db.run(journals.size.result).futureValue shouldBe 1  //1 journal message after the snapshot
+    database.run(events.size.result).futureValue shouldBe 1    //1 Alter event total
+    database.run(snapshots.size.result).futureValue shouldBe 1 //1 snapshot stored
+    database.run(journals.size.result).futureValue shouldBe 1  //1 journal message after the snapshot
 
     testProbe.send(test, Alter("foobar"))
     testProbe.expectMsg("j")
     testProbe.send(test, GetState)
     testProbe.expectMsg(TheState(id = "foobar"))
 
-    db.run(events.size.result).futureValue shouldBe 2    //2 Alter events total
-    db.run(snapshots.size.result).futureValue shouldBe 1 //1 snapshot stored
-    db.run(journals.size.result).futureValue shouldBe 2  //2 journal message
+    database.run(events.size.result).futureValue shouldBe 2    //2 Alter events total
+    database.run(snapshots.size.result).futureValue shouldBe 1 //1 snapshot stored
+    database.run(journals.size.result).futureValue shouldBe 2  //2 journal message
 
     // kill the actor
     system.stop(test)
@@ -117,11 +144,8 @@ class EventStoreTest extends TestKit(ActorSystem("TestCluster", EventStoreTest.c
     ()
   }
 
-  import akka.persistence.pg.PgPostgresDriver.api._
-  override val db = pluginConfig.database
-
   override def beforeAll() {
-    Await.result(db.run(
+    Await.result(database.run(
       recreateSchema
         .andThen((journals.schema ++ snapshots.schema).create)
     ), 10 seconds)
@@ -129,7 +153,7 @@ class EventStoreTest extends TestKit(ActorSystem("TestCluster", EventStoreTest.c
   }
 
   override protected def beforeEach(): Unit = {
-    Await.result(db.run(DBIO.seq(
+    Await.result(database.run(DBIO.seq(
       journals.delete,
       snapshots.delete
     )), 10 seconds)
@@ -142,19 +166,34 @@ object TestActor {
   case object Snap
   case object GetState
   case class Alter(id: String)
-  case class TheState(id: String = "")
+  case class Increment(count: Int)
+
+  case class Altered(id: String, created: OffsetDateTime) extends Created
+  case class Incremented(count: Int, created: OffsetDateTime)
+  case class TheState(id: String = "", count: Int = 0)
 
 }
 
 class TestEventEncoder extends JsonEncoder {
 
-  val A = classOf[Alter]
+  val A = classOf[Altered]
+  val I = classOf[Incremented]
+
   override def toJson = {
-    case a: Alter => JsObject(Seq("type" -> JsString("altered"), "id" -> JsString(a.id)))
+    case a: Altered => JsObject(Seq("type" -> JsString("altered"),
+      "id" -> JsString(a.id),
+      "created" -> JsString(DateTimeFormatter.ISO_DATE_TIME.format(a.created))))
+    case i: Incremented => JsObject(Seq("count" -> JsNumber(i.count),
+      "created" -> JsString(DateTimeFormatter.ISO_DATE_TIME.format(i.created))))
+  }
+
+  def parseDateTime(json: JsValue): OffsetDateTime = {
+    OffsetDateTime.from(DateTimeFormatter.ISO_DATE_TIME.parse((json \ "created").as[String]))
   }
 
   override def fromJson = {
-    case(json, A) => Alter((json \ "id").as[String])
+    case(json, A) => Altered((json \ "id").as[String], parseDateTime(json))
+    case(json, I) => Incremented((json \ "count").as[Int], parseDateTime(json))
   }
 
 }
@@ -169,15 +208,23 @@ class TestActor(testProbe: ActorRef) extends PersistentActor with ActorLogging {
     case SnapshotOffer(_, snap: TheState) =>
       log.info("Recovering snapshot: {}", snap)
       state = snap
-    case m: Alter =>
+    case m: Altered =>
       log.info("Recovering journal: {}", m)
       state = state.copy(id = m.id)
+    case i: Incremented =>
+      log.info("Recovering journal: {}", i)
+      state = state.copy(count = state.count + i.count)
   }
 
   override def receiveCommand: Receive = {
-    case a: Alter => persist(a) {
-      case Alter(m) =>
+    case a: Alter => persist(Altered(a.id, OffsetDateTime.now())) {
+      case Altered(m, _) =>
         state = state.copy(id = m)
+        testProbe ! "j"
+    }
+    case i: Increment => persist(Incremented(i.count, OffsetDateTime.now())) {
+      case Incremented(c, _) =>
+        state = state.copy(count = state.count + c)
         testProbe ! "j"
     }
     case Snap => saveSnapshot(state)
@@ -187,7 +234,7 @@ class TestActor(testProbe: ActorRef) extends PersistentActor with ActorLogging {
   }
 }
 
-class TestEventStore(override val db: JdbcBackend.Database, override val eventStoreConfig: EventStoreConfig) extends EventStore {
+class TestEventStore(override val pluginConfig: PluginConfig) extends EventStore with PgConfig {
 
 }
 

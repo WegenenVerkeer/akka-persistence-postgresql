@@ -1,6 +1,7 @@
 package akka.persistence.pg
 
 import java.util.Properties
+import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
 import akka.persistence.pg.event._
@@ -11,18 +12,21 @@ import slick.jdbc.JdbcBackend
 import slick.util.AsyncExecutor
 
 import scala.collection.JavaConverters._
+import scala.concurrent.duration.FiniteDuration
 
 object PluginConfig {
-  def apply(system: ActorSystem) = new PluginConfig(system)
+  def apply(system: ActorSystem) = new PluginConfig(system.settings.config)
+
+  def apply(config: Config) = new PluginConfig(config)
 
   def asOption(s: String): Option[String] = {
     if (s.isEmpty) None else Some(s)
   }
 }
 
-class PluginConfig(system: ActorSystem) {
+class PluginConfig(systemConfig: Config) {
 
-  private[this] val config = system.settings.config.getConfig("pg-persistence")
+  private[this] val config = systemConfig.getConfig("pg-persistence")
 
   val journalSchemaName: Option[String] = PluginConfig.asOption(config.getString("journalSchemaName"))
   val journalTableName = config.getString("journalTableName")
@@ -33,6 +37,12 @@ class PluginConfig(system: ActorSystem) {
   def shutdownDataSource() = {
     database.close()
   }
+
+  val pgPostgresDriver = new PgPostgresDriverImpl(config.getString("pgjson") match {
+        case "jsonb"   => "jsonb"
+        case "json"    => "json"
+        case a: String => sys.error(s"unsupported value for pgjson '$a'. Only 'json' or 'jsonb' supported")
+      })
 
   lazy val database = {
     val dbConfig = config.getConfig("db")
@@ -74,7 +84,6 @@ class PluginConfig(system: ActorSystem) {
     db
   }
 
-
   lazy val eventStoreConfig = new EventStoreConfig(config.getConfig("eventstore"),
     journalSchemaName,
     journalTableName)
@@ -82,7 +91,7 @@ class PluginConfig(system: ActorSystem) {
   lazy val eventStore: Option[EventStore] = {
     PluginConfig.asOption(eventStoreConfig.cfg.getString("class")) map { storeName =>
       val storeClazz = Thread.currentThread.getContextClassLoader.loadClass(storeName).asInstanceOf[Class[_ <: EventStore]]
-      storeClazz.getConstructor(classOf[JdbcBackend.Database], classOf[EventStoreConfig]).newInstance(database, eventStoreConfig)
+      storeClazz.getConstructor(classOf[PluginConfig]).newInstance(this)
     }
   }
 
@@ -90,6 +99,11 @@ class PluginConfig(system: ActorSystem) {
     case None => NotPartitioned
     case Some("default") => DefaultRegexPartitioner
     case Some(clazz) => Thread.currentThread.getContextClassLoader.loadClass(clazz).asInstanceOf[Class[_ <: Partitioner]].newInstance()
+  }
+
+  lazy val snapshotDeleteAwaitDuration: FiniteDuration = {
+    val duration = config.getDuration("snapshotDeleteAwaitDuration")
+    FiniteDuration(duration.toMillis, TimeUnit.MILLISECONDS)
   }
 
 }

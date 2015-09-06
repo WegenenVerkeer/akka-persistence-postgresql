@@ -2,13 +2,12 @@ package akka.persistence.pg.event
 
 import akka.actor.{ActorLogging, ActorRef, Cancellable}
 import akka.persistence._
-import akka.persistence.pg.{PluginConfig, PgExtension, PgActorConfig}
-import play.api.libs.json.Json
+import akka.persistence.pg.{PluginConfig, PgExtension, PgConfig}
 
 import scala.concurrent.duration.FiniteDuration
 
 //TODO implement stashing if Update with await=true
-trait PersistentEventView extends PersistentActor with PgActorConfig with ActorLogging {
+trait PersistentEventView extends PersistentActor with PgConfig with ActorLogging {
 
   import context.dispatcher
 

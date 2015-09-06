@@ -4,7 +4,7 @@ import akka.persistence.journal.JournalSpec
 import akka.persistence.pg.event.{DefaultTagger, JsonEncoder, NoneJsonEncoder}
 import akka.persistence.pg.journal.{NotPartitioned, JournalStore}
 import akka.persistence.pg.util.RecreateSchema
-import akka.persistence.pg.{PgExtension, PluginConfig}
+import akka.persistence.pg.{PgConfig, PgExtension, PluginConfig}
 import akka.serialization.{Serialization, SerializationExtension}
 import com.typesafe.config.ConfigFactory
 
@@ -12,7 +12,11 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-class PgAsyncJournalSpec extends JournalSpec with JournalStore with RecreateSchema {
+class PgAsyncJournalSpec extends JournalSpec
+  with JournalStore
+  with RecreateSchema
+  with PgConfig {
+
   lazy val config = ConfigFactory.load("pg-application.conf")
 
   override val schemaName = config.getString("postgres.schema")
@@ -23,7 +27,7 @@ class PgAsyncJournalSpec extends JournalSpec with JournalStore with RecreateSche
   override val eventTagger = DefaultTagger
   override val partitioner = NotPartitioned
 
-  import akka.persistence.pg.PgPostgresDriver.api._
+  import driver.api._
 
   override def beforeAll() {
     Await.result(pluginConfig.database.run(recreateSchema.andThen(journals.schema.create)), 10 seconds)

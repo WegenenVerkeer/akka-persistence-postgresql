@@ -1,9 +1,8 @@
 package akka.persistence.pg
 
-import akka.actor.Actor
-
-trait PgActorConfig { self: Actor =>
+trait PgConfig {
 
   def pluginConfig: PluginConfig
+  lazy val driver = pluginConfig.pgPostgresDriver
   lazy val database = pluginConfig.database
 }
