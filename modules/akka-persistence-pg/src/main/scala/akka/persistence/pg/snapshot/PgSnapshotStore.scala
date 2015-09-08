@@ -26,7 +26,7 @@ trait PgSnapshotStore {
     def timestamp           = column[Long]("timestamp")
     def snapshot            = column[Array[Byte]]("snapshot")
 
-    def pk = primaryKey("pk_${pluginConfig.snapshotTableName}", (persistenceId, sequenceNr))
+    def pk = primaryKey(s"pk_${pluginConfig.snapshotTableName}", (persistenceId, sequenceNr))
 
     def * = (persistenceId, sequenceNr, partitionKey, timestamp, snapshot)
   }
