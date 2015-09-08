@@ -3,11 +3,11 @@
 import com.typesafe.sbt.SbtGit.GitKeys._
 
 git.useGitDescribe := true
-git.baseVersion := "0.1.0"
+git.baseVersion := "0.1.1"
 
 
 git.gitDescribedVersion := gitReader.value.withGit(_.describedVersion).flatMap(v =>
-  Option(v).orElse(git.formattedShaVersion.value).orElse(Some(git.baseVersion.value))
+  Option(v).map(_.drop(1)).orElse(formattedShaVersion.value).orElse(Some(baseVersion.value))
 )
 
 val VersionRegex = "v([0-9]+.[0-9]+.[0-9]+)-?(.*)?".r

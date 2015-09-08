@@ -19,6 +19,8 @@ case class StoredEvent(persistenceId: String, event: Any)
 trait EventStore {
   self: PgConfig =>
 
+  def eventStoreConfig: EventStoreConfig = pluginConfig.eventStoreConfig
+
   import driver.api._
 
   //This is basically just a another mapping on the same journal table, ideally you would create a DB view
