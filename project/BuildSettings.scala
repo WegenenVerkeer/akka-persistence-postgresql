@@ -1,3 +1,4 @@
+import com.typesafe.sbt.{GitVersioning, GitBranchPrompt}
 import sbt.Keys._
 import sbt._
 
@@ -19,6 +20,7 @@ trait BuildSettings { this: Build =>
       base = file("."),
       settings = projectSettings() ++ Seq(publishLocal := {}, publish := { })
     ).aggregate(modules: _*)
+     .enablePlugins(GitVersioning, GitBranchPrompt)
   }
 
   private def projectSettings() = {
@@ -33,7 +35,6 @@ trait BuildSettings { this: Build =>
       credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
       updateOptions := updateOptions.value.withCachedResolution(true),
       organization := "be.wegenenverkeer",
-      version      := "0.0.2-SNAPSHOT",
       scalaVersion := "2.11.7"
     )
 
