@@ -1,6 +1,7 @@
 package akka.persistence.pg.journal
 
 import java.sql.BatchUpdateException
+import java.util.concurrent.locks.{ReentrantLock, Lock}
 
 import akka.actor.ActorLogging
 import akka.persistence.journal.AsyncWriteJournal
@@ -29,27 +30,30 @@ class PgAsyncWriteJournal extends AsyncWriteJournal
 
   val eventStore: Option[EventStore] = pluginConfig.eventStore
 
+  val writeStrategy = pluginConfig.writeStrategy(this.context)
+
   import driver.api._
 
-  override def asyncWriteMessages(messages: immutable.Seq[PersistentRepr]): Future[Unit] = {
-    log.debug(s"asyncWriteMessages of ${messages.size} messages")
+  def storeActions(messages: immutable.Seq[PersistentRepr]): Seq[DBIO[_]] = {
     val entries = toJournalEntries(messages)
     val storeActions: Seq[DBIO[_]] = Seq(journals ++= entries.map(_.entry))
 
     val actions: Seq[DBIO[_]] = eventStore match {
       case None        => storeActions
       case Some(store) => storeActions ++ store.postStoreActions(entries
-          .filter { _.entry.json.isDefined }
-          .map { entryWithEvent: JournalEntryWithEvent => StoredEvent(entryWithEvent.entry.persistenceId, entryWithEvent.event) }
-        )
+        .filter { _.entry.json.isDefined }
+        .map { entryWithEvent: JournalEntryWithEvent => StoredEvent(entryWithEvent.entry.persistenceId, entryWithEvent.event) }
+      )
     }
+    actions
+  }
 
-    val r = database.run {
-      DBIO.seq(actions:_*).transactionally
-    }
+  override def asyncWriteMessages(messages: immutable.Seq[PersistentRepr]): Future[Unit] = {
+    log.debug(s"asyncWriteMessages {} messages", messages.size)
+    val r = writeStrategy.store(storeActions(messages))
     r.onFailure {
       case t: BatchUpdateException => log.error(t.getNextException, "problem storing events")
-      case NonFatal (t) => log.error(t, "problem storing events")
+      case NonFatal(t) => log.error(t, "problem storing events")
     }
     r
   }

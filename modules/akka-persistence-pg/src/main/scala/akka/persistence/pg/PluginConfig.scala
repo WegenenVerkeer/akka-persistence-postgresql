@@ -3,9 +3,9 @@ package akka.persistence.pg
 import java.util.Properties
 import java.util.concurrent.TimeUnit
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorContext, ActorSystem}
 import akka.persistence.pg.event._
-import akka.persistence.pg.journal.{DefaultRegexPartitioner, NotPartitioned, Partitioner}
+import akka.persistence.pg.journal.{WriteStrategy, DefaultRegexPartitioner, NotPartitioned, Partitioner}
 import com.typesafe.config.{ConfigFactory, Config}
 import org.postgresql.ds.PGSimpleDataSource
 import slick.jdbc.JdbcBackend
@@ -30,6 +30,19 @@ class PluginConfig(systemConfig: Config) {
 
   val journalSchemaName: Option[String] = PluginConfig.asOption(config.getString("journalSchemaName"))
   val journalTableName = config.getString("journalTableName")
+
+  val fullJournalTableName: String = journalSchemaName match {
+    case None => journalTableName
+    case Some(s) => '"' + s + '"' + '.' + journalTableName
+  }
+
+  val rowIdSequenceName: String = s"${journalTableName}_rowid_seq"
+
+  val fullRowIdSequenceName: String = journalSchemaName match {
+    case None => rowIdSequenceName
+    case Some(s) => '"' + s + '"' + '.' + '"' + rowIdSequenceName + '"'
+  }
+
 
   val snapshotSchemaName: Option[String] = PluginConfig.asOption(config.getString("snapshotSchemaName"))
   val snapshotTableName = config.getString("snapshotTableName")
@@ -106,12 +119,19 @@ class PluginConfig(systemConfig: Config) {
     FiniteDuration(duration.toMillis, TimeUnit.MILLISECONDS)
   }
 
+  def writeStrategy(context: ActorContext): WriteStrategy = {
+    val clazz = config.getString("writestrategy")
+    val writeStrategyClazz = Thread.currentThread().getContextClassLoader.loadClass(clazz).asInstanceOf[Class[_ <: WriteStrategy]]
+    writeStrategyClazz.getConstructor(classOf[PluginConfig], classOf[ActorSystem]).newInstance(this, context.system)
+  }
+
 }
 
 case class EventStoreConfig(cfg: Config,
                             journalSchemaName: Option[String],
                             journalTableName: String) {
 
+  val idColumnName: String = cfg.getString("idColumnName")
   val useView: Boolean = cfg.getBoolean("useView")
 
   val schemaName: Option[String] = if (useView) {

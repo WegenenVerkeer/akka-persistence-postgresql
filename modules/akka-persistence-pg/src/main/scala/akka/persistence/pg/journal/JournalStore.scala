@@ -13,6 +13,7 @@ import play.api.libs.json.JsValue
 import scala.concurrent.Future
 
 case class JournalEntry(id: Option[Long],
+                        rowid: Option[Long],
                         persistenceId: String,
                         sequenceNr: Long,
                         partitionKey: Option[String],
@@ -50,7 +51,8 @@ trait JournalStore {
   class JournalTable(tag: Tag) extends Table[JournalEntry](
     tag, pluginConfig.journalSchemaName, pluginConfig.journalTableName) {
 
-    def id                  = column[Long]("id", O.PrimaryKey, O.AutoInc)
+    def id                  = column[Long]("id", O.AutoInc)
+    def rowid               = column[Option[Long]]("rowid")
     def persistenceId       = column[String]("persistenceid")
     def sequenceNr          = column[Long]("sequencenr")
     def partitionKey        = column[Option[String]]("partitionkey")
@@ -63,14 +65,15 @@ trait JournalStore {
     def tags                = column[Map[String, String]]("tags", O.Default(Map.empty))
     def event               = column[Option[JsValue]]("event")
 
-    def pIdSeqNrIndex = index(s"idx_${pluginConfig.journalTableName}_pid_seq", (persistenceId, sequenceNr), unique = true)
+    def pk                  = primaryKey(s"${pluginConfig.journalTableName}_pk", (persistenceId, sequenceNr))
 
-    def * = (id.?, persistenceId, sequenceNr, partitionKey, deleted, sender, payload, payloadManifest, uuid, created, tags, event) <>
+    def * = (id.?, rowid, persistenceId, sequenceNr, partitionKey, deleted, sender, payload, payloadManifest, uuid, created, tags, event) <>
       (JournalEntry.tupled, JournalEntry.unapply _)
 
   }
 
   val journals = TableQuery[JournalTable]
+  lazy val rowIdSequence = Sequence[Long](pluginConfig.fullRowIdSequenceName)
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -119,6 +122,7 @@ trait JournalStore {
       val (payloadAsJson, payloadAsBytes) = serializePayload(event)
 
       JournalEntryWithEvent(JournalEntry(None,
+        None,
         message.persistenceId,
         message.sequenceNr,
         partitioner.partitionKey(message.persistenceId),

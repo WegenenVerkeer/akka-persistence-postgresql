@@ -15,6 +15,8 @@ trait Dependencies { this: Build =>
   val scalaTest              = "org.scalatest"            %%    "scalatest"               % "2.2.5"     % "test"
   val akkaTest               = "com.typesafe.akka"        %%    "akka-testkit"            % akkaVersion % "test"
   val akkaPersistenceTestkit = "com.github.krasserm"      %% "akka-persistence-testkit"   % "0.3.4"     % "test"
+  val gatlinHighcharts       = "io.gatling.highcharts"     % "gatling-charts-highcharts"  % "2.1.5"     //% "test"
+  val gatling                = "io.gatling"                % "gatling-test-framework"     % "2.1.5"     //% "test"
 
   val hikariCp               = "com.zaxxer"                 % "HikariCP"                  % "2.4.1"
 

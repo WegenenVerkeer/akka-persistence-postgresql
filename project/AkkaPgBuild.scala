@@ -22,9 +22,22 @@ object AkkaPgBuild extends Build with BuildSettings with Dependencies {
 
   }
 
+  lazy val benchmarkModule = {
+
+    val mainDeps = Seq(gatling, gatlinHighcharts)
+
+    import io.gatling.sbt.GatlingPlugin
+
+    project("benchmark")
+      .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies)
+      .dependsOn(akkaPersistencePgModule % "test->test;compile->compile", akkaEsModule)
+      .enablePlugins(GatlingPlugin)
+  }
+
   lazy val main = mainProject(
     akkaPersistencePgModule,
-    akkaEsModule
+    akkaEsModule,
+    benchmarkModule
   )
 
 }
