@@ -35,13 +35,16 @@ trait PgSnapshotStore {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
+  def snapshotsQuery(metadata: SnapshotMetadata) = {
+    snapshots
+      .filter(_.persistenceId === metadata.persistenceId)
+      .filter(_.sequenceNr === metadata.sequenceNr)
+      .filter(byPartitionKey(metadata.persistenceId))
+  }
+
   def deleteSnapshot(metadata: SnapshotMetadata): Future[Int] = {
     database.run {
-      snapshots
-        .filter(_.persistenceId === metadata.persistenceId)
-        .filter(_.sequenceNr === metadata.sequenceNr)
-        .filter(byPartitionKey(metadata.persistenceId))
-        .delete
+      snapshotsQuery(metadata).delete
     }
   }
 

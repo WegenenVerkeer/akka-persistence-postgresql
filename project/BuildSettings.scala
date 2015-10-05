@@ -30,7 +30,7 @@ trait BuildSettings { this: Build =>
       resolvers ++= Seq(
         "Local Maven" at Path.userHome.asFile.toURI.toURL + ".m2/repository",
         Resolver.typesafeRepo("releases"),
-        "krasserm at bintray" at "http://dl.bintray.com/krasserm/maven"
+        "akka snapshots"at "http://repo.akka.io/snapshots"
         ),
       credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
       updateOptions := updateOptions.value.withCachedResolution(true),

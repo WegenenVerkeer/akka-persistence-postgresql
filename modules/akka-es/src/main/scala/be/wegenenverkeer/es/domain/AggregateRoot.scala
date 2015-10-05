@@ -196,10 +196,7 @@ trait AggregateRoot[D <: Data] extends GracefulPassivation with PersistentActor 
    * should not perform actions that may fail, such as interacting with external services,
    * for example.
    *
-   * If recovery fails, the actor will be stopped. This can be customized by
-   * handling [[RecoveryFailure]].
-   *
-   * @see [[Recover]]
+   * @see [[Recovery]]
    */
   override val receiveRecover: Receive = {
     case evt: AggregateRoot.Event =>
@@ -213,8 +210,6 @@ trait AggregateRoot[D <: Data] extends GracefulPassivation with PersistentActor 
       log.debug("snapshot saved")
     case RecoveryCompleted =>
       log.debug(s"aggregate '$persistenceId' has recovered, state = '$state'")
-    case RecoveryFailure(t) =>
-      throw new RuntimeException("Recovery failed, will be retried", t)
 
   }
 

@@ -40,7 +40,7 @@ trait PersistentActorTest extends fixture.FunSuiteLike
       }
     }
     //akka shutdown must be done in this way instead of using afterEach
-    system.shutdown()
+    system.terminate()
     system.awaitTermination()
     possibleOutcome.get
   }

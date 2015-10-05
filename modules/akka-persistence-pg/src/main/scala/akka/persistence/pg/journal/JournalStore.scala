@@ -1,8 +1,10 @@
 package akka.persistence.pg.journal
 
+import java.io.NotSerializableException
 import java.time.OffsetDateTime
 import java.util.UUID
 
+import akka.ConfigurationException
 import akka.actor.ActorRef
 import akka.persistence.PersistentRepr
 import akka.persistence.pg.event.{Created, EventTagger, JsonEncoder}
@@ -11,6 +13,8 @@ import akka.serialization.Serialization
 import play.api.libs.json.JsValue
 
 import scala.concurrent.Future
+import scala.util.control.NonFatal
+import scala.util.{Failure, Success, Try}
 
 case class JournalEntry(id: Option[Long],
                         rowid: Option[Long],
@@ -18,10 +22,11 @@ case class JournalEntry(id: Option[Long],
                         sequenceNr: Long,
                         partitionKey: Option[String],
                         deleted: Boolean,
-                        sender: ActorRef,
                         payload: Option[Array[Byte]],
                         payloadManifest: String,
+                        manifest: String,
                         uuid: String,
+                        writerUuid: String,
                         created: OffsetDateTime,
                         tags: Map[String, String],
                         json: Option[JsValue])
@@ -45,9 +50,6 @@ trait JournalStore {
   import driver.MappedJdbcType
   import driver.api._
 
-  implicit lazy val actorRefMapper = MappedJdbcType.base[ActorRef, String](Serialization.serializedActorPath,
-    pgExtension.actorRefOf(_))
-
   class JournalTable(tag: Tag) extends Table[JournalEntry](
     tag, pluginConfig.journalSchemaName, pluginConfig.journalTableName) {
 
@@ -57,17 +59,18 @@ trait JournalStore {
     def sequenceNr          = column[Long]("sequencenr")
     def partitionKey        = column[Option[String]]("partitionkey")
     def deleted             = column[Boolean]("deleted", O.Default(false))
-    def sender              = column[ActorRef]("sender")
     def payload             = column[Option[Array[Byte]]]("payload")
     def payloadManifest     = column[String]("payloadmf")
+    def manifest            = column[String]("manifest")
     def uuid                = column[String]("uuid")
+    def writerUuid          = column[String]("writeruuid")
     def created             = column[OffsetDateTime]("created", O.Default(OffsetDateTime.now()))
     def tags                = column[Map[String, String]]("tags", O.Default(Map.empty))
     def event               = column[Option[JsValue]]("event")
 
     def pk                  = primaryKey(s"${pluginConfig.journalTableName}_pk", (persistenceId, sequenceNr))
 
-    def * = (id.?, rowid, persistenceId, sequenceNr, partitionKey, deleted, sender, payload, payloadManifest, uuid, created, tags, event) <>
+    def * = (id.?, rowid, persistenceId, sequenceNr, partitionKey, deleted, payload, payloadManifest, manifest, uuid, writerUuid, created, tags, event) <>
       (JournalEntry.tupled, JournalEntry.unapply _)
 
   }
@@ -116,31 +119,38 @@ trait JournalStore {
     UUID.randomUUID.toString
   }
 
-  def toJournalEntries(messages: Seq[PersistentRepr]): Seq[JournalEntryWithEvent] = {
-    messages map { message =>
-      val (tags, event) = eventTagger.tag(message.persistenceId, message.payload)
-      val (payloadAsJson, payloadAsBytes) = serializePayload(event)
-
-      JournalEntryWithEvent(JournalEntry(None,
-        None,
-        message.persistenceId,
-        message.sequenceNr,
-        partitioner.partitionKey(message.persistenceId),
-        deleted = false,
-        message.sender,
-        payloadAsBytes,
-        event.getClass.getName,
-        getUuid(event),
-        getCreated(event),
-        tags,
-        payloadAsJson), event)
+  def toJournalEntries(messages: Seq[PersistentRepr]): Try[Seq[JournalEntryWithEvent]] = {
+    try {
+      Success(messages map { message =>
+        val (tags, event) = eventTagger.tag(message.persistenceId, message.payload)
+        val (payloadAsJson, payloadAsBytes) = serializePayload(event)
+        JournalEntryWithEvent(JournalEntry(None,
+          None,
+          message.persistenceId,
+          message.sequenceNr,
+          partitioner.partitionKey(message.persistenceId),
+          deleted = false,
+          payloadAsBytes,
+          event.getClass.getName,
+          message.manifest,
+          getUuid(event),
+          message.writerUuid,
+          getCreated(event),
+          tags,
+          payloadAsJson), event)
+      })
+    } catch {
+      case NonFatal(t) => println("!!!!!!! not serializable"); Failure(t)
     }
   }
 
   def toPersistentRepr(entry : JournalEntry): PersistentRepr = {
-    def toRepr(a: Any) = PersistentRepr(a, entry.sequenceNr, entry.persistenceId,
-      entry.deleted, sender = entry.sender)
+    def toRepr(a: Any) = PersistentRepr(a, entry.sequenceNr, entry.persistenceId, entry.manifest,
+      entry.deleted, null, entry.writerUuid)
+
     val clazz = pgExtension.getClassFor[Any](entry.payloadManifest)
+
+
 
     (entry.payload, entry.json) match {
       case (Some(payload), _) => toRepr(serialization.deserialize(payload, clazz).get)
