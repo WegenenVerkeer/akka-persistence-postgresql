@@ -1,25 +1,27 @@
 package akka.persistence.pg.writestrategy
 
 import java.util.UUID
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{Executors, TimeUnit}
 import java.util.concurrent.atomic.{AtomicLong, AtomicInteger}
 
 import akka.pattern.{ask, pipe}
 import akka.actor._
 import akka.persistence.pg.event._
-import akka.persistence.pg.journal.{JournalStore, NotPartitioned}
+import akka.persistence.pg.journal.{PgAsyncWriteJournal, JournalStore, NotPartitioned}
 import akka.persistence.pg.perf.{PerfEventEncoder, PerfActor}
 import akka.persistence.pg.util.RecreateSchema
 import akka.persistence.pg.{PgConfig, PgExtension, PluginConfig}
-import akka.persistence.PersistentActor
+import akka.persistence.{AtomicWrite, PersistentActor}
 import akka.serialization.{Serialization, SerializationExtension}
 import akka.util.Timeout
 import com.typesafe.config.Config
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import play.api.libs.json._
+import slick.jdbc.{PositionedResult, GetResult}
 
-import scala.concurrent.{Promise, Future, Await}
+import scala.collection.immutable
+import scala.concurrent.{ExecutionContext, Promise, Future, Await}
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Try, Random}
@@ -48,8 +50,8 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
   import scala.concurrent.ExecutionContext.Implicits.global
 
   implicit val timeOut = Timeout(1, TimeUnit.MINUTES)
-  val actors = 1 to 10 map { _ => system.actorOf(PerfActor.props) }
-  val expected = 500
+  var actors: Seq[ActorRef] = _
+  val expected = 1000
 
 
   def writeEvents(): Seq[Long] = {
@@ -62,7 +64,7 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
       }
     }
 
-    while (received.get() != expected) Thread.sleep(100L)
+    while (received.get() != expected) { Thread.sleep(100L) }
 
     //just sleep a bit so the EventReader has seen the last events
     Thread.sleep(1000)
@@ -88,7 +90,7 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
     Await.result(database.run(
       recreateSchema.andThen(journals.schema.create).andThen(sqlu"""create sequence #${pluginConfig.fullRowIdSequenceName}""")
     ), 10 seconds)
-    super.beforeAll()
+    actors = 1 to 10 map { _ => system.actorOf(PerfActor.props) }
   }
 
   override protected def beforeEach(): Unit = {
@@ -131,14 +133,11 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
 class RandomDelayStore(override val pluginConfig: PluginConfig) extends EventStore with PgConfig {
 
   import driver.api._
-  import scala.concurrent.ExecutionContext.Implicits.global
-
-  def delay() = {
-    Try(Await.ready(Promise().future, Random.nextInt(50) millis))
-  }
 
   override def postStoreActions(events: Seq[StoredEvent]): Seq[driver.api.DBIO[_]] = {
-    Seq(DBIO.from(Future { delay(); () }))
+    val sleepMillis = Random.nextInt(150)
+    implicit object GetUnit extends GetResult[Unit] { def apply(rs: PositionedResult) = { rs.nextObject(); () } }
+    Seq(sql"""select pg_sleep(${sleepMillis/1000})""".as[Unit])
   }
 }
 
