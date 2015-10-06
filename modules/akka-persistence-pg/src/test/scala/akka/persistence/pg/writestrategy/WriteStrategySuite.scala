@@ -51,7 +51,7 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
 
   implicit val timeOut = Timeout(1, TimeUnit.MINUTES)
   var actors: Seq[ActorRef] = _
-  val expected = 1000
+  val expected = 5000
 
 
   def writeEvents(): Seq[Long] = {

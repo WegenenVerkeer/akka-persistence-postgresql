@@ -1,5 +1,6 @@
 package gatlin
 
+import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.persistence.pg.perf.PerfActor
 import PerfActor.Alter
@@ -17,9 +18,10 @@ abstract class MultiActorPerfSimulation(override val config: Config) extends Abs
 {
 
   val numActors = 100
-  val actors = 1 to numActors map { _ => system.actorOf(PerfActor.props) }
+  var actors: Seq[ActorRef] = _
 
   override def warmup() = {
+    actors = 1 to numActors map { _ => system.actorOf(PerfActor.props) }
     implicit val timeout = Timeout(2 seconds)
     import scala.concurrent.ExecutionContext.Implicits.global
     val f = actors map { _ ? Alter("warmup") }
