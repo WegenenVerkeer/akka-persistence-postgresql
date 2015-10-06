@@ -51,7 +51,7 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
 
   implicit val timeOut = Timeout(1, TimeUnit.MINUTES)
   var actors: Seq[ActorRef] = _
-  val expected = 5000
+  val expected = 1000
 
 
   def writeEvents(): Seq[Long] = {
@@ -64,7 +64,14 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
       }
     }
 
-    while (received.get() != expected) { Thread.sleep(100L) }
+    var noProgressCount = 0
+    var numEvents = received.get()
+    while (numEvents != expected && noProgressCount < 10) {
+      Thread.sleep(100L)
+      val numExtra = received.get() - numEvents
+      if (numExtra == 0) noProgressCount += 1
+      else numEvents += numExtra
+    }
 
     //just sleep a bit so the EventReader has seen the last events
     Thread.sleep(1000)
