@@ -1,9 +1,9 @@
 package akka.persistence.pg.snapshot
 
-import akka.persistence.pg.util.PgPluginTestUtil
+import akka.persistence.pg.util.PluginTestConfig
 
 class TestPgAsyncSnapshotStore extends PgAsyncSnapshotStore {
 
-  override lazy val database = PgPluginTestUtil.initialize(pluginConfig.database, context.system)
+  override val pluginConfig = new PluginTestConfig(context.system)
 
 }

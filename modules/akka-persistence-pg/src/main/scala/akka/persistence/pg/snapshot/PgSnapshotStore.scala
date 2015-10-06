@@ -1,6 +1,6 @@
 package akka.persistence.pg.snapshot
 
-import akka.persistence.pg.{PgConfig, PluginConfig}
+import akka.persistence.pg.PgConfig
 import akka.persistence.pg.journal.Partitioner
 import akka.persistence.serialization.Snapshot
 import akka.persistence.{SelectedSnapshot, SnapshotMetadata, SnapshotSelectionCriteria}
@@ -13,7 +13,7 @@ trait PgSnapshotStore {
   self: PgConfig =>
 
   def serialization: Serialization
-  def partitioner: Partitioner
+  def partitioner: Partitioner = pluginConfig.journalPartitioner
 
   import driver.api._
 

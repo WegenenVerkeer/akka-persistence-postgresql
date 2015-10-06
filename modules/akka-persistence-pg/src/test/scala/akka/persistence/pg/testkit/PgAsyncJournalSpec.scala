@@ -28,7 +28,9 @@ class PgAsyncJournalSpec extends JournalSpec(ConfigFactory.load("pg-application.
   import driver.api._
 
   override def beforeAll() {
-    Await.result(pluginConfig.database.run(recreateSchema.andThen(journals.schema.create)), 10 seconds)
+    Await.result(pluginConfig.database.run(recreateSchema
+      .andThen(journals.schema.create)
+      .andThen(sqlu"""create sequence #${pluginConfig.fullRowIdSequenceName}""")), 10 seconds)
     super.beforeAll()
   }
 

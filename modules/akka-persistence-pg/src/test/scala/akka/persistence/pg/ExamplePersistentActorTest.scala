@@ -58,6 +58,8 @@ class ExamplePersistentActorTest extends PersistentActorTest
                            "event" JSON,
                            constraint "cc_journal_payload_event" check (payload IS NOT NULL OR event IS NOT NULL))"""
 
+
+
   val createSnapshot = sqlu"""create table "#$schemaName".snapshot ("persistenceid" VARCHAR(254) NOT NULL,
                             "sequencenr" INT NOT NULL,
                             "partitionkey" VARCHAR(254) DEFAULT NULL,
@@ -72,7 +74,7 @@ class ExamplePersistentActorTest extends PersistentActorTest
   override def beforeAll() {
     Await.result(database.run(
       recreateSchema
-        .andThen(createJournal).andThen(createSnapshot)
+        .andThen(createJournal).andThen(createSnapshot).andThen(sqlu"""create sequence #${pluginConfig.fullRowIdSequenceName}""")
     ), 10 seconds)
     ()
   }

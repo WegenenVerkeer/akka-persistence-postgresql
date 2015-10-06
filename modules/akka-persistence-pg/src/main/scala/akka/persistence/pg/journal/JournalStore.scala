@@ -1,11 +1,8 @@
 package akka.persistence.pg.journal
 
-import java.io.NotSerializableException
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import akka.ConfigurationException
-import akka.actor.ActorRef
 import akka.persistence.PersistentRepr
 import akka.persistence.pg.event.{Created, EventTagger, JsonEncoder}
 import akka.persistence.pg.{PgConfig, PgExtension}
@@ -43,9 +40,9 @@ trait JournalStore {
 
   def serialization: Serialization
   def pgExtension: PgExtension
-  def eventEncoder: JsonEncoder
-  def eventTagger: EventTagger
-  def partitioner: Partitioner
+  def eventEncoder: JsonEncoder = pluginConfig.eventStoreConfig.eventEncoder
+  def eventTagger: EventTagger = pluginConfig.eventStoreConfig.eventTagger
+  def partitioner: Partitioner = pluginConfig.journalPartitioner
 
   import driver.MappedJdbcType
   import driver.api._
@@ -140,7 +137,7 @@ trait JournalStore {
           payloadAsJson), event)
       })
     } catch {
-      case NonFatal(t) => println("!!!!!!! not serializable"); Failure(t)
+      case NonFatal(t) => Failure(t)
     }
   }
 
