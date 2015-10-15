@@ -39,9 +39,13 @@ trait JournalStore {
   self: PgConfig =>
 
   def serialization: Serialization
+
   def pgExtension: PgExtension
+
   def eventEncoder: JsonEncoder = pluginConfig.eventStoreConfig.eventEncoder
+
   def eventTagger: EventTagger = pluginConfig.eventStoreConfig.eventTagger
+
   def partitioner: Partitioner = pluginConfig.journalPartitioner
 
   import driver.MappedJdbcType
@@ -50,25 +54,39 @@ trait JournalStore {
   class JournalTable(tag: Tag) extends Table[JournalEntry](
     tag, pluginConfig.journalSchemaName, pluginConfig.journalTableName) {
 
-    def id                  = column[Long]("id", O.AutoInc)
-    def rowid               = column[Option[Long]]("rowid")
-    def persistenceId       = column[String]("persistenceid")
-    def sequenceNr          = column[Long]("sequencenr")
-    def partitionKey        = column[Option[String]]("partitionkey")
-    def deleted             = column[Boolean]("deleted", O.Default(false))
-    def payload             = column[Option[Array[Byte]]]("payload")
-    def payloadManifest     = column[String]("payloadmf")
-    def manifest            = column[String]("manifest")
-    def uuid                = column[String]("uuid")
-    def writerUuid          = column[String]("writeruuid")
-    def created             = column[OffsetDateTime]("created", O.Default(OffsetDateTime.now()))
-    def tags                = column[Map[String, String]]("tags", O.Default(Map.empty))
-    def event               = column[Option[JsValue]]("event")
+    def id = column[Long]("id", O.AutoInc)
 
-    def pk                  = primaryKey(s"${pluginConfig.journalTableName}_pk", (persistenceId, sequenceNr))
+    def rowid = column[Option[Long]]("rowid")
 
-    def * = (id.?, rowid, persistenceId, sequenceNr, partitionKey, deleted, payload, payloadManifest, manifest, uuid, writerUuid, created, tags, event) <>
-      (JournalEntry.tupled, JournalEntry.unapply _)
+    def persistenceId = column[String]("persistenceid")
+
+    def sequenceNr = column[Long]("sequencenr")
+
+    def partitionKey = column[Option[String]]("partitionkey")
+
+    def deleted = column[Boolean]("deleted", O.Default(false))
+
+    def payload = column[Option[Array[Byte]]]("payload")
+
+    def payloadManifest = column[String]("payloadmf")
+
+    def manifest = column[String]("manifest")
+
+    def uuid = column[String]("uuid")
+
+    def writerUuid = column[String]("writeruuid")
+
+    def created = column[OffsetDateTime]("created", O.Default(OffsetDateTime.now()))
+
+    def tags = column[Map[String, String]]("tags", O.Default(Map.empty))
+
+    def event = column[Option[JsValue]]("event")
+
+    def pk = primaryKey(s"${pluginConfig.journalTableName}_pk", (persistenceId, sequenceNr))
+
+    def * = (id
+      .?, rowid, persistenceId, sequenceNr, partitionKey, deleted, payload, payloadManifest, manifest, uuid, writerUuid, created, tags, event) <>
+      (JournalEntry.tupled, JournalEntry.unapply)
 
   }
 
@@ -83,7 +101,9 @@ trait JournalStore {
         .filter(_.persistenceId === persistenceId)
         .filter(_.sequenceNr === sequenceNr)
         .result
-    ) map { _.headOption.map(toPersistentRepr)}
+    ) map {
+      _.headOption.map(toPersistentRepr)
+    }
   }
 
   def deleteMessageRange(persistenceId: String, toSequenceNr: Long): Future[Int] = {
@@ -98,7 +118,7 @@ trait JournalStore {
   private[this] def serializePayload(payload: Any): (Option[JsValue], Option[Array[Byte]]) = {
     if (eventEncoder.toJson.isDefinedAt(payload)) {
       val json = eventEncoder.toJson(payload)
-      require (eventEncoder.fromJson.isDefinedAt((json, payload.getClass)),
+      require(eventEncoder.fromJson.isDefinedAt((json, payload.getClass)),
         s"You MUST always be able to decode what you encoded, fromJson method is incomplete for ${payload.getClass}")
       (Some(json), None)
     } else {
@@ -117,33 +137,45 @@ trait JournalStore {
   }
 
   def toJournalEntries(messages: Seq[PersistentRepr]): Try[Seq[JournalEntryWithEvent]] = {
-    try {
-      Success(messages map { message =>
+    Try {
+      messages map { message =>
+
         val (tags, event) = eventTagger.tag(message.persistenceId, message.payload)
         val (payloadAsJson, payloadAsBytes) = serializePayload(event)
-        JournalEntryWithEvent(JournalEntry(None,
-          None,
-          message.persistenceId,
-          message.sequenceNr,
-          partitioner.partitionKey(message.persistenceId),
-          deleted = false,
-          payloadAsBytes,
-          event.getClass.getName,
-          message.manifest,
-          getUuid(event),
-          message.writerUuid,
-          getCreated(event),
-          tags,
-          payloadAsJson), event)
-      })
-    } catch {
-      case NonFatal(t) => Failure(t)
+
+        JournalEntryWithEvent(
+          JournalEntry(
+            None,
+            None,
+            message.persistenceId,
+            message.sequenceNr,
+            partitioner.partitionKey(message.persistenceId),
+            deleted = false,
+            payloadAsBytes,
+            event.getClass.getName,
+            message.manifest,
+            getUuid(event),
+            message.writerUuid,
+            getCreated(event),
+            tags,
+            payloadAsJson),
+          event
+        )
+      }
     }
   }
 
-  def toPersistentRepr(entry : JournalEntry): PersistentRepr = {
-    def toRepr(a: Any) = PersistentRepr(a, entry.sequenceNr, entry.persistenceId, entry.manifest,
-      entry.deleted, null, entry.writerUuid)
+  def toPersistentRepr(entry: JournalEntry): PersistentRepr = {
+    def toRepr(a: Any) =
+      PersistentRepr(
+        payload = a,
+        sequenceNr = entry.sequenceNr,
+        persistenceId = entry.persistenceId,
+        manifest = entry.manifest,
+        deleted = entry.deleted,
+        sender = null, // sender ActorRef
+        writerUuid = entry.writerUuid
+      )
 
     val clazz = pgExtension.getClassFor[Any](entry.payloadManifest)
 
@@ -151,8 +183,8 @@ trait JournalStore {
 
     (entry.payload, entry.json) match {
       case (Some(payload), _) => toRepr(serialization.deserialize(payload, clazz).get)
-      case (_, Some(event))   => toRepr(eventEncoder.fromJson((event.value, clazz)))
-      case (None, None)       => sys.error(s"""both payload and event are null for journal table entry
+      case (_, Some(event)) => toRepr(eventEncoder.fromJson((event.value, clazz)))
+      case (None, None) => sys.error( s"""both payload and event are null for journal table entry
             with id=${entry.id}, (persistenceid='${entry.persistenceId}' and sequencenr='${entry.sequenceNr}')
             This should NEVER happen!""")
     }
