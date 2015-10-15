@@ -37,8 +37,8 @@ class LiveEventsByTagsPublisher(tags: Set[EventTag],
 
   def init: Receive = {
     case _: Request => receiveInitialRequest()
-    case Continue => // skip, wait for first Request
-    case Cancel => context.stop(self)
+    case Continue   => // skip, wait for first Request
+    case Cancel     => context.stop(self)
   }
 
   def receiveInitialRequest(): Unit = {
@@ -52,12 +52,13 @@ class LiveEventsByTagsPublisher(tags: Set[EventTag],
     // reset flag
     newEventsWhileReplaying = false
     val limit = maxBufSize - buf.size
-    log.debug("request replay for tag [{}] from [{}] to [{}] limit [{}]", tags, currOffset, toOffset, limit)
+    log.debug(s"request replay for tag [{}] from [{}] to [{}]", tags, currOffset, toOffset)
     journal ! ReplayTaggedMessages(currOffset, toOffset, limit, tags, self)
-    context.become(replaying(limit))
+    context become replaying
   }
 
-  def replaying(limit: Int): Receive = {
+  def replaying: Receive = {
+
 
     case ReplayedTaggedMessage(persistentRepr, _, offset) =>
       log.debug(s"Received replayed message: ${persistentRepr.persistenceId}")
@@ -67,7 +68,6 @@ class LiveEventsByTagsPublisher(tags: Set[EventTag],
         sequenceNr = persistentRepr.sequenceNr,
         event = persistentRepr.payload
       )
-
       currOffset = offset + 1
       deliverBuf()
 
@@ -92,6 +92,8 @@ class LiveEventsByTagsPublisher(tags: Set[EventTag],
 
     case Cancel =>
       context.stop(self)
+
+    case e => log.debug(s"Got something unexpected!! $e")
   }
 
 
@@ -112,15 +114,18 @@ class LiveEventsByTagsPublisher(tags: Set[EventTag],
 
   def receiveIdleRequest(): Unit = {
     deliverBuf()
-    if (buf.isEmpty && currOffset > toOffset)
+    if (buf.isEmpty && currOffset > toOffset) {
+      log.debug(s"stopping while idle: buffer is empty and $currOffset > $toOffset")
       onCompleteThenStop()
+    }
   }
 
   def receiveRecoverySuccess(highestRowId: Long): Unit = {
     deliverBuf()
-    if (buf.isEmpty && currOffset > toOffset)
+    if (buf.isEmpty && currOffset > toOffset) {
+      log.debug(s"stopping after recovery: buffer is empty and $currOffset > $toOffset")
       onCompleteThenStop()
-
+    }
     if (newEventsWhileReplaying) replay()
     else context.become(idle)
   }

@@ -153,27 +153,27 @@ class PgAsyncWriteJournal
   private def handleReplayTaggedMessages(fromRowId: Long, toRowId: Long, max: Long,
                                          eventTags: Set[EventTag], replyTo: ActorRef): Unit = {
 
-    log.debug(s"Replaying messages tagged with $eventTags (starting from rowId:$fromRowId)")
+
     val correctedFromRowId = math.max(0L, fromRowId - 1)
 
-    asyncReadHighestRowIdWithTags(eventTags, correctedFromRowId).flatMap { highSeqNr =>
+    asyncReadHighestRowIdWithTags(eventTags, correctedFromRowId).flatMap { highestRowId =>
 
-      val calculatedToRowId = math.min(toRowId, highSeqNr)
+      val calculatedToRowId = math.min(toRowId, highestRowId)
 
-      if (highSeqNr == 0L || fromRowId > calculatedToRowId) {
+      if (highestRowId == 0L || fromRowId > calculatedToRowId) {
         // we are done if there is nothing to send
-        Future.successful(highSeqNr)
+        Future.successful(highestRowId)
       }
       else {
         asyncReplayTaggedMessagesBoundedByRowIds(eventTags, fromRowId, calculatedToRowId, max) {
-          case ReplayedTaggedMessage(p, tags, offset) =>
-            adaptFromJournal(p).foreach { adaptedPersistentRepr =>
+          case ReplayedTaggedMessage(persistentRepr, tags, offset) =>
+            adaptFromJournal(persistentRepr).foreach { adaptedPersistentRepr =>
               replyTo.tell(ReplayedTaggedMessage(adaptedPersistentRepr, tags, offset), Actor.noSender)
             }
-        }.map(_ => highSeqNr)
+        }.map(_ => highestRowId)
       }
     } map {
-      highSeqNr => RecoverySuccess(highSeqNr)
+      highestRowId => RecoverySuccess(highestRowId)
     } recover {
       case e => ReplayMessagesFailure(e)
     } pipeTo replyTo
@@ -197,7 +197,6 @@ class PgAsyncWriteJournal
 
   def asyncReadHighestRowIdWithTags(tags: Set[EventTag], fromRowId: Long): Future[Long] = {
 
-    log.debug(s"Lookup event tagged with $tags  with the highest rowId  (starting from rowId = $fromRowId)")
 
     val query =
       journals
@@ -208,14 +207,13 @@ class PgAsyncWriteJournal
 
     database
       .run(query.result)
-      .map(_.getOrElse(0L)) // we don't want an Option[Long], but a Long 
+      .map(_.getOrElse(0L)) // we don't want an Option[Long], but a Long
 
   }
 
   def asyncReplayTaggedMessagesBoundedByRowIds(tags: Set[EventTag], fromRowId: Long, toRowId: Long, max: Long)
                                               (replayCallback: ReplayedTaggedMessage => Unit): Future[Unit] = {
 
-    log.debug(s"Replaying events tagged with $tags and with rowId between $fromRowId and $toRowId")
 
     val query =
       journals
@@ -228,6 +226,7 @@ class PgAsyncWriteJournal
     database
       .run(query.result)
       .map { entries =>
+      log.debug(s"Replaying ${entries.size} events  ($fromRowId <= rowId <= $toRowId and $tags)")
       entries.foreach { entry =>
         val persistentRepr = toPersistentRepr(entry)
         replayCallback(ReplayedTaggedMessage(persistentRepr, tags, entry.rowid.get))
@@ -248,9 +247,7 @@ class PgAsyncWriteJournal
   }
 
   protected def removeSubscriber(subscriber: ActorRef): Unit = {
-
     log.debug(s"Actor $subscriber terminated!!")
-
     val tags = tagSubscribers.collect { case (k, s) if s.contains(subscriber) => k }
     if (tags.nonEmpty) {
       log.debug(s"removing subscriber $subscriber [tags: $tags]")
