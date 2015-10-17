@@ -3,7 +3,7 @@ package akka.persistence.pg
 import java.util.UUID
 
 import akka.actor.Props
-import akka.persistence.pg.util.{RecreateSchema, PersistentActorTest}
+import akka.persistence.pg.util.{CreateTables, RecreateSchema, PersistentActorTest}
 import akka.persistence.{SnapshotOffer, PersistentActor}
 import com.typesafe.config.{ConfigFactory, Config}
 import org.scalatest.{BeforeAndAfterAll, ShouldMatchers}
@@ -20,12 +20,15 @@ case class Event(message: String)
 case object GetMessage
 case object TakeSnapshot
 
+
+
 class ExamplePersistentActorTest extends PersistentActorTest
     with ScalaFutures
     with Eventually
     with RecreateSchema
     with ShouldMatchers
     with BeforeAndAfterAll
+    with CreateTables
     with PgConfig {
 
   override val config: Config = ConfigFactory.load("example-actor-test.conf")
@@ -36,47 +39,18 @@ class ExamplePersistentActorTest extends PersistentActorTest
 
   import driver.api._
 
-  val id = UUID.randomUUID().toString
-  val countEvents = sql"""select count(*) from "#$schemaName".journal where persistenceid = $id""".as[Long]
-  val countSnapshots = sql"""select count(*) from "#$schemaName".snapshot where persistenceid = $id""".as[Long]
-
-  val createJournal = sqlu"""create table "#$schemaName".journal (
-                           "id" BIGSERIAL NOT NULL PRIMARY KEY,
-                           "persistenceid" VARCHAR(254) NOT NULL,
-                           "sequencenr" INT NOT NULL,
-                           "partitionkey" VARCHAR(254) DEFAULT NULL,
-                           "deleted" BOOLEAN DEFAULT false,
-                           "sender" VARCHAR(512),
-                           "payload" BYTEA,
-                           "payloadmf" VARCHAR(512),
-                           "uuid" VARCHAR(254) NOT NULL,
-                           "created" timestamptz NOT NULL,
-                           "tags" HSTORE,
-                           "event" JSON,
-                           constraint "cc_journal_payload_event" check (payload IS NOT NULL OR event IS NOT NULL))"""
-
-  val createSnapshot = sqlu"""create table "#$schemaName".snapshot ("persistenceid" VARCHAR(254) NOT NULL,
-                            "sequencenr" INT NOT NULL,
-                            "partitionkey" VARCHAR(254) DEFAULT NULL,
-                            "timestamp" bigint NOT NULL,
-                            "snapshot" BYTEA,
-                            PRIMARY KEY (persistenceid, sequencenr))"""
-
-
   /**
    * recreate schema and tables before running the tests
    */
   override def beforeAll() {
-    Await.result(database.run(
-      recreateSchema
-        .andThen(createJournal).andThen(createSnapshot)
-    ), 10 seconds)
-    ()
+    database.run(recreateSchema.andThen(createTables)).futureValue
   }
 
+  val id = UUID.randomUUID().toString
+
   test("check journal entries are stored") { db =>
-    db.run(countEvents).futureValue.head shouldEqual 0
-    db.run(countSnapshots).futureValue.head shouldEqual 0
+    db.run(countEvents(id)).futureValue shouldEqual 0
+    db.run(countSnapshots(id)).futureValue shouldEqual 0
 
     val actor = system.actorOf(Props(new ExamplePA(id)))
 
@@ -92,20 +66,20 @@ class ExamplePersistentActorTest extends PersistentActorTest
     testProbe.send(actor, GetMessage)
     testProbe.expectMsg[String]("bar")
 
-    db.run(countEvents).futureValue.head shouldEqual 2
-    db.run(countSnapshots).futureValue.head shouldEqual 0
+    db.run(countEvents(id)).futureValue shouldEqual 2
+    db.run(countSnapshots(id)).futureValue shouldEqual 0
   }
 
   test("check recovery of events") { db =>
-    db.run(countEvents).futureValue.head shouldEqual 0
-    db.run(countSnapshots).futureValue.head shouldEqual 0
+    db.run(countEvents(id)).futureValue shouldEqual 0
+    db.run(countSnapshots(id)).futureValue shouldEqual 0
 
     val actor = system.actorOf(Props(new ExamplePA(id)))
 
     testProbe.send(actor, Command("foo"))
     testProbe.expectMsg[String]("oof")
 
-    db.run(countEvents).futureValue.head shouldEqual 1
+    db.run(countEvents(id)).futureValue shouldEqual 1
 
     //stop the actor
     system.stop(actor)
@@ -120,13 +94,13 @@ class ExamplePersistentActorTest extends PersistentActorTest
     testProbe.send(recovered, GetMessage)
     testProbe.expectMsg[String]("foo")
 
-    db.run(countEvents).futureValue.head shouldEqual 1
-    db.run(countSnapshots).futureValue.head shouldEqual 0
+    db.run(countEvents(id)).futureValue shouldEqual 1
+    db.run(countSnapshots(id)).futureValue shouldEqual 0
   }
 
   test("check snapshot is stored") { db =>
-    db.run(countEvents).futureValue.head shouldEqual 0
-    db.run(countSnapshots).futureValue.head shouldEqual 0
+    db.run(countEvents(id)).futureValue shouldEqual 0
+    db.run(countSnapshots(id)).futureValue shouldEqual 0
 
     val actor = system.actorOf(Props(new ExamplePA(id)))
 
@@ -138,9 +112,9 @@ class ExamplePersistentActorTest extends PersistentActorTest
     testProbe.expectNoMsg
 
     eventually {
-      db.run(countSnapshots).futureValue.head shouldEqual 1
+      db.run(countSnapshots(id)).futureValue shouldEqual 1
     }
-    db.run(countEvents).futureValue.head shouldEqual 1
+    db.run(countEvents(id)).futureValue shouldEqual 1
 
     //stop the actor
     system.stop(actor)

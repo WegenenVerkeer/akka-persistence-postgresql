@@ -1,5 +1,6 @@
 package akka.persistence.pg.util
 
+import java.sql.Savepoint
 import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
@@ -44,6 +45,9 @@ trait PersistentActorTest extends fixture.FunSuiteLike
     system.awaitTermination()
     possibleOutcome.get
   }
+
+  def savepoint()(implicit db: JdbcBackend.DatabaseDef): Savepoint = db.createSession().conn.setSavepoint()
+  def rollback(savepoint: Savepoint)(implicit db: JdbcBackend.DatabaseDef) = db.createSession().conn.rollback(savepoint)
 
 
 }

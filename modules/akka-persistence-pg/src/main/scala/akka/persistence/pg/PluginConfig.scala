@@ -47,6 +47,11 @@ class PluginConfig(systemConfig: Config) {
   val snapshotSchemaName: Option[String] = PluginConfig.asOption(config.getString("snapshotSchemaName"))
   val snapshotTableName = config.getString("snapshotTableName")
 
+  val fullSnapshotTableName: String = snapshotSchemaName match {
+    case None => snapshotTableName
+    case Some(s) => '"' + s + '"' + '.' + snapshotTableName
+  }
+
   def shutdownDataSource() = {
     database.close()
   }
@@ -57,7 +62,9 @@ class PluginConfig(systemConfig: Config) {
         case a: String => sys.error(s"unsupported value for pgjson '$a'. Only 'json' or 'jsonb' supported")
       })
 
-  lazy val database = {
+  lazy val database = createDatabase
+
+  def createDatabase = {
     val dbConfig = config.getConfig("db")
 
     def asyncExecutor(name: String): AsyncExecutor = {
