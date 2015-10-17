@@ -75,9 +75,6 @@ object PgPluginTestUtil {
     override val conn: Connection = database.source.createConnection()
     conn.setAutoCommit(false)
 
-    override def rollback(): Unit = {
-    }
-
     override def capabilities: JdbcBackend.DatabaseCapabilities = new JdbcBackend.DatabaseCapabilities(this)
 
     override def metaData: DatabaseMetaData = conn.getMetaData
@@ -85,12 +82,8 @@ object PgPluginTestUtil {
     override def close(): Unit = {
     }
 
-    override def withTransaction[T](f: => T): T = {
-      f
-    }
-
-    def endInTransaction(f: => Unit): Unit = {}
-    def startInTransaction: Unit = {}
+    override def endInTransaction(f: => Unit): Unit = {}
+    override def startInTransaction: Unit = {}
 
   }
 
