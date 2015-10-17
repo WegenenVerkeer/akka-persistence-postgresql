@@ -5,7 +5,7 @@ import java.util.UUID
 
 import akka.actor.ActorRef
 import akka.persistence.PersistentRepr
-import akka.persistence.pg.event.{Created, EventTagger, JsonEncoder}
+import akka.persistence.pg.event.{ReadModelUpdates, Created, EventTagger, JsonEncoder}
 import akka.persistence.pg.{PgConfig, PgExtension}
 import akka.serialization.Serialization
 import play.api.libs.json.JsValue
@@ -26,7 +26,6 @@ case class JournalEntry(id: Option[Long],
                         tags: Map[String, String],
                         json: Option[JsValue])
 
-case class JournalEntryWithEvent(entry: JournalEntry, event: Any)
 
 
 /**
@@ -38,12 +37,15 @@ trait JournalStore {
 
   def serialization: Serialization
   def pgExtension: PgExtension
-  def eventEncoder: JsonEncoder
-  def eventTagger: EventTagger
-  def partitioner: Partitioner
+  def eventEncoder: JsonEncoder = pluginConfig.eventStoreConfig.eventEncoder
+  def eventTagger: EventTagger = pluginConfig.eventStoreConfig.eventTagger
+  def partitioner: Partitioner = pluginConfig.journalPartitioner
 
   import driver.MappedJdbcType
   import driver.api._
+
+  case class JournalEntryWithReadModelUpdates(entry: JournalEntry,
+                                              readModelUpdates: Seq[DBIO[_]])
 
   implicit lazy val actorRefMapper = MappedJdbcType.base[ActorRef, String](Serialization.serializedActorPath,
     pgExtension.actorRefOf(_))
@@ -116,12 +118,18 @@ trait JournalStore {
     UUID.randomUUID.toString
   }
 
-  def toJournalEntries(messages: Seq[PersistentRepr]): Seq[JournalEntryWithEvent] = {
+  def readModelUpdates(event: Any): (Seq[DBIO[_]], Any) = event match {
+    case r: ReadModelUpdates[_] => (r.readModelUpdates, r.event)
+    case e @ _                  => (Seq.empty, e)
+  }
+
+  def toJournalEntries(messages: Seq[PersistentRepr]): Seq[JournalEntryWithReadModelUpdates] = {
     messages map { message =>
-      val (tags, event) = eventTagger.tag(message.persistenceId, message.payload)
+      val (tags, e) = eventTagger.tag(message.persistenceId, message.payload)
+      val (actions, event) = readModelUpdates(e)
       val (payloadAsJson, payloadAsBytes) = serializePayload(event)
 
-      JournalEntryWithEvent(JournalEntry(None,
+      JournalEntryWithReadModelUpdates(JournalEntry(None,
         None,
         message.persistenceId,
         message.sequenceNr,
@@ -133,7 +141,7 @@ trait JournalStore {
         getUuid(event),
         getCreated(event),
         tags,
-        payloadAsJson), event)
+        payloadAsJson), actions)
     }
   }
 

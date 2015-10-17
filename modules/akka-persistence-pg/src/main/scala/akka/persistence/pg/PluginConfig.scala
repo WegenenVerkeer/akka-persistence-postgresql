@@ -57,7 +57,9 @@ class PluginConfig(systemConfig: Config) {
         case a: String => sys.error(s"unsupported value for pgjson '$a'. Only 'json' or 'jsonb' supported")
       })
 
-  lazy val database = {
+  lazy val database = createDatabase
+
+  def createDatabase = {
     val dbConfig = config.getConfig("db")
 
     def asyncExecutor(name: String): AsyncExecutor = {

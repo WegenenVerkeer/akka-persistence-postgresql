@@ -23,29 +23,16 @@ class PgAsyncWriteJournal extends AsyncWriteJournal
 
   override val serialization: Serialization = SerializationExtension(context.system)
   override val pgExtension: PgExtension = PgExtension(context.system)
-  override val pluginConfig = pgExtension.pluginConfig
-  override val eventEncoder: JsonEncoder = pluginConfig.eventStoreConfig.eventEncoder
-  override val eventTagger: EventTagger = pluginConfig.eventStoreConfig.eventTagger
-  override val partitioner: Partitioner = pluginConfig.journalPartitioner
+  override lazy val pluginConfig = pgExtension.pluginConfig
 
-  val eventStore: Option[EventStore] = pluginConfig.eventStore
-
-  val writeStrategy = pluginConfig.writeStrategy(this.context)
+  lazy val writeStrategy = pluginConfig.writeStrategy(this.context)
 
   import driver.api._
 
   def storeActions(messages: immutable.Seq[PersistentRepr]): Seq[DBIO[_]] = {
     val entries = toJournalEntries(messages)
     val storeActions: Seq[DBIO[_]] = Seq(journals ++= entries.map(_.entry))
-
-    val actions: Seq[DBIO[_]] = eventStore match {
-      case None        => storeActions
-      case Some(store) => storeActions ++ store.postStoreActions(entries
-        .filter { _.entry.json.isDefined }
-        .map { entryWithEvent: JournalEntryWithEvent => StoredEvent(entryWithEvent.entry.persistenceId, entryWithEvent.event) }
-      )
-    }
-    actions
+    storeActions ++ entries.flatMap(_.readModelUpdates)
   }
 
   override def asyncWriteMessages(messages: immutable.Seq[PersistentRepr]): Future[Unit] = {

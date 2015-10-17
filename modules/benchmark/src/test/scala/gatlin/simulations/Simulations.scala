@@ -3,8 +3,8 @@ package gatlin.simulations
 import com.typesafe.config.ConfigFactory
 import gatlin.{MultiActorPerfSimulation, SingleActorPerfSimulation, AbstractPersistenceSimulation}
 
-class NonTxSingleActorSimulation extends SingleActorPerfSimulation(ConfigFactory.load("pg-perf-nontx.conf"))
-class NonTxMultiActorSimulation extends MultiActorPerfSimulation(ConfigFactory.load("pg-perf-nontx.conf"))
+
+
 
 class TransactionalSingleActorSimulation extends SingleActorPerfSimulation(ConfigFactory.load("pg-perf-tx.conf"))
 class TransactionalMultiActorSimulation extends MultiActorPerfSimulation(ConfigFactory.load("pg-perf-tx.conf"))

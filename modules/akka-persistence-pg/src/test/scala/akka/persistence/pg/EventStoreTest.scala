@@ -148,6 +148,7 @@ class EventStoreTest extends TestKit(ActorSystem("TestCluster", EventStoreTest.c
     Await.result(database.run(
       recreateSchema
         .andThen((journals.schema ++ snapshots.schema).create)
+        .andThen(sqlu"""create sequence #${pluginConfig.fullRowIdSequenceName}""")
     ), 10 seconds)
     super.beforeAll()
   }

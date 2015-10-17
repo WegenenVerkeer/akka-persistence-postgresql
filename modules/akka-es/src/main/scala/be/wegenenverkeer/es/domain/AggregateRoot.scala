@@ -2,10 +2,11 @@ package be.wegenenverkeer.es.domain
 
 import akka.actor._
 import akka.persistence._
-import akka.persistence.pg.event.Tagged
+import akka.persistence.pg.event.{ReadModelUpdates, Tagged}
 import be.wegenenverkeer.es.actor.GracefulPassivation
 import be.wegenenverkeer.es.domain.AggregateRoot._
 import play.api.libs.json.Json
+import slick.dbio.DBIO
 
 object AggregateRoot {
 
@@ -69,7 +70,12 @@ object AggregateRoot {
    * @param tags the tags
    * @tparam E Event subclass
    */
-  case class TaggedEvent[E <: Event](event: E, tags: Map[String, String]) extends Tagged[E]
+  case class TaggedEvent[E <: Event](event: E,
+                                     tags: Map[String, String]) extends Tagged[E]
+
+  case class CQRSEvent[E <: Event](event: E,
+                                   tags: Map[String, String],
+                                   readModelUpdates: Seq[DBIO[_]]) extends Tagged[E] with ReadModelUpdates[E]
 
   /**
    * Specifies how many events should be processed before new snapshot is taken.
@@ -123,11 +129,22 @@ trait AggregateRoot[D <: Data] extends GracefulPassivation with PersistentActor 
    * @param tags the tags to persist
    * @param handler callback handler for each persisted `event`
    */
-  protected def persistWithTags[E <: Event](event: E, tags: Map[String, String])(handler: E => Unit): Unit = {
+  protected def persistWithTags[E <: Event](event: E,
+                                            tags: Map[String, String])(handler: E => Unit): Unit = {
     def taggedHandler(e: TaggedEvent[E]): Unit = {
         handler(e.event)
     }
     persist(TaggedEvent(event, tags))(taggedHandler)
+  }
+
+  protected def persistWithReadModelUpdate[E <: Event](event: E,
+                                                       readModelUpdates: Seq[DBIO[_]] = Seq.empty,
+                                                       tags: Map[String, String] = Map.empty)
+                                                      (handler: E => Unit): Unit = {
+    def taggedHandler(e: CQRSEvent[E]): Unit = {
+      handler(e.event)
+    }
+    persist(CQRSEvent(event, tags, readModelUpdates))(taggedHandler)
   }
 
   /**

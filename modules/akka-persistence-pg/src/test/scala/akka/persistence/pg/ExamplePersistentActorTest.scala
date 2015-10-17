@@ -42,6 +42,7 @@ class ExamplePersistentActorTest extends PersistentActorTest
 
   val createJournal = sqlu"""create table "#$schemaName".journal (
                            "id" BIGSERIAL NOT NULL PRIMARY KEY,
+                           "rowid" BIGINT DEFAULT NULL,
                            "persistenceid" VARCHAR(254) NOT NULL,
                            "sequencenr" INT NOT NULL,
                            "partitionkey" VARCHAR(254) DEFAULT NULL,
@@ -69,7 +70,9 @@ class ExamplePersistentActorTest extends PersistentActorTest
   override def beforeAll() {
     Await.result(database.run(
       recreateSchema
-        .andThen(createJournal).andThen(createSnapshot)
+        .andThen(createJournal)
+        .andThen(createSnapshot)
+        .andThen(sqlu"""create sequence #${pluginConfig.fullRowIdSequenceName}""")
     ), 10 seconds)
     ()
   }
