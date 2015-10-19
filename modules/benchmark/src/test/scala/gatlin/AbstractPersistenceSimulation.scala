@@ -10,14 +10,16 @@ import io.gatling.core.Predef._
 import io.gatling.core.scenario.Simulation
 import io.gatling.core.session.{Session => GSession, Expression}
 import io.gatling.core.validation.Validation
-
-import scala.concurrent.Await
-import scala.concurrent.duration._
+import org.scalatest.concurrent.ScalaFutures
 
 import scala.language.postfixOps
 import scala.util.Random
 
-abstract class AbstractPersistenceSimulation(val config: Config) extends Simulation with PgConfig with RecreateSchema
+abstract class AbstractPersistenceSimulation(val config: Config)
+  extends Simulation
+  with PgConfig
+  with RecreateSchema
+  with ScalaFutures
 {
 
   override val pluginConfig = PluginConfig(config)
@@ -51,14 +53,14 @@ abstract class AbstractPersistenceSimulation(val config: Config) extends Simulat
    * recreate schema and tables + indices before running the benchmark
    */
   before {
-    Await.result(database.run(
+    database.run(
       recreateSchema
         .andThen(createJournal)
         .andThen(createUniqueIndex)
         .andThen(createEventIndex)
         .andThen(createRowIdIndex)
         .andThen(createRowIdSequence)
-    ), 10 seconds)
+    ).futureValue
     warmup()
   }
 

@@ -10,9 +10,6 @@ import org.scalatest.{BeforeAndAfterAll, ShouldMatchers}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.{Seconds, Span}
 
-import scala.concurrent.Await
-import scala.concurrent.duration._
-
 import scala.language.postfixOps
 
 case class Command(message: String)
@@ -44,6 +41,7 @@ class ExamplePersistentActorTest extends PersistentActorTest
    */
   override def beforeAll() {
     database.run(recreateSchema.andThen(createTables)).futureValue
+    ()
   }
 
   val id = UUID.randomUUID().toString

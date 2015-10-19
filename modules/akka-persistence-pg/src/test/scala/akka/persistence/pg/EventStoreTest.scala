@@ -17,9 +17,6 @@ import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import play.api.libs.json._
 
-import scala.concurrent.Await
-import scala.concurrent.duration._
-
 import scala.language.postfixOps
 
 object EventStoreTest {
@@ -145,19 +142,19 @@ class EventStoreTest extends TestKit(ActorSystem("TestCluster", EventStoreTest.c
   }
 
   override def beforeAll() {
-    Await.result(database.run(
+    database.run(
       recreateSchema
         .andThen((journals.schema ++ snapshots.schema).create)
         .andThen(sqlu"""create sequence #${pluginConfig.fullRowIdSequenceName}""")
-    ), 10 seconds)
+    ).futureValue
     super.beforeAll()
   }
 
   override protected def beforeEach(): Unit = {
-    Await.result(database.run(DBIO.seq(
+    database.run(DBIO.seq(
       journals.delete,
       snapshots.delete
-    )), 10 seconds)
+    )).futureValue
     super.beforeEach()
   }
 

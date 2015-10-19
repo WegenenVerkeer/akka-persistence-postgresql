@@ -87,16 +87,14 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
   }
 
   override def beforeAll() {
-    journals.schema.createStatements.foreach(println)
-
-    Await.result(database.run(
+    database.run(
       recreateSchema.andThen(journals.schema.create).andThen(sqlu"""create sequence #${pluginConfig.fullRowIdSequenceName}""")
-    ), 10 seconds)
+    ).futureValue
     actors = 1 to 10 map { _ => system.actorOf(RandomDelayPerfActor.props(driver)) }
   }
 
   override protected def beforeEach(): Unit = {
-    Await.result(database.run(DBIO.seq(journals.delete)), 10 seconds)
+    database.run(DBIO.seq(journals.delete)).futureValue
     super.beforeEach()
   }
 

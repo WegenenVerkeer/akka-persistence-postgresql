@@ -7,6 +7,7 @@ import akka.persistence.pg.util.RecreateSchema
 import akka.persistence.pg.{PgConfig, PgExtension, PluginConfig}
 import akka.serialization.{Serialization, SerializationExtension}
 import com.typesafe.config.ConfigFactory
+import org.scalatest.concurrent.ScalaFutures
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -15,6 +16,7 @@ import scala.language.postfixOps
 class PgAsyncJournalSpec extends JournalSpec
   with JournalStore
   with RecreateSchema
+  with ScalaFutures
   with PgConfig {
 
   lazy val config = ConfigFactory.load("pg-application.conf")
@@ -30,9 +32,9 @@ class PgAsyncJournalSpec extends JournalSpec
   import driver.api._
 
   override def beforeAll() {
-    Await.result(pluginConfig.database.run(recreateSchema
+    pluginConfig.database.run(recreateSchema
       .andThen(journals.schema.create)
-      .andThen(sqlu"""create sequence #${pluginConfig.fullRowIdSequenceName}""")), 10 seconds)
+      .andThen(sqlu"""create sequence #${pluginConfig.fullRowIdSequenceName}""")).futureValue
     super.beforeAll()
   }
 
