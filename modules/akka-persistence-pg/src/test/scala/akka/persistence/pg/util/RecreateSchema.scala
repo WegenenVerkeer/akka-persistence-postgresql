@@ -5,13 +5,11 @@ import akka.persistence.pg.PgConfig
 trait RecreateSchema {
   self: PgConfig =>
 
-  def schemaName: String
-
   import driver.api._
 
-  lazy val recreateSchema: DBIO[Unit] = DBIO.seq(
-    SimpleDBIO(_.connection.createStatement.execute(s"""drop schema if exists "$schemaName" cascade;""")),
-    SimpleDBIO(_.connection.createStatement.execute(s"""create schema "$schemaName";"""))
-  )
+  lazy val dropSchema = sqlu"""drop schema if exists #${pluginConfig.schemaName} cascade"""
+  lazy val createSchema = sqlu"""create schema #${pluginConfig.schemaName}"""
+
+  lazy val recreateSchema = dropSchema.andThen(createSchema)
 
 }

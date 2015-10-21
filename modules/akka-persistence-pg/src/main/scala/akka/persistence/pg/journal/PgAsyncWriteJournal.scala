@@ -29,33 +29,20 @@ class PgAsyncWriteJournal extends AsyncWriteJournal
 
   import driver.api._
 
-  def storeActions(entries: Seq[JournalEntryWithEvent]): Seq[DBIO[_]] = {
-
+  def storeActions(entries: Seq[JournalEntryWithReadModelUpdates]): Seq[DBIO[_]] = {
     val storeActions: Seq[DBIO[_]] = Seq(journals ++= entries.map(_.entry))
-
-    val actions: Seq[DBIO[_]] = pluginConfig.eventStore match {
-      case None        => storeActions
-      case Some(store) => storeActions ++ store.postStoreActions(entries
-        .filter { _.entry.json.isDefined }
-        .map { entryWithEvent: JournalEntryWithEvent => StoredEvent(entryWithEvent.entry.persistenceId, entryWithEvent.event) }
-      )
-    }
-    actions
+    storeActions ++ entries.flatMap(_.readModelUpdates)
   }
 
   def asyncWriteMessages(messages: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
     log.debug(s"asyncWriteMessages {} messages", messages.size)
-    val entries: immutable.Seq[Try[Seq[JournalEntryWithEvent]]] = messages map { atomicWrite => toJournalEntries(atomicWrite.payload) }
+    val entries: immutable.Seq[Try[Seq[JournalEntryWithReadModelUpdates]]] = messages map { atomicWrite => toJournalEntries(atomicWrite.payload) }
     val entries2Store = entries.filter(_.isSuccess).flatMap(_.get)
     val r = writeStrategy.store(storeActions(entries2Store))
-    r.onFailure {
-      case t: BatchUpdateException => log.error(t.getNextException, "problem storing events")
-      case NonFatal(t) => log.error(t, "problem storing events")
-    }
     r map { _ =>
       if (entries.count(_.isFailure) == 0) Nil
       else {
-        entries.map { (entry: Try[Seq[JournalEntryWithEvent]]) =>
+        entries.map { (entry: Try[Seq[JournalEntryWithReadModelUpdates]]) =>
           entry match {
             case Success(_) => Success(())
             case Failure(t) => Failure(t)

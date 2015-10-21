@@ -4,14 +4,13 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 import akka.persistence.PersistentRepr
-import akka.persistence.pg.event.{Created, EventTagger, JsonEncoder}
+import akka.persistence.pg.event.{Created, EventTagger, JsonEncoder, ReadModelUpdates}
 import akka.persistence.pg.{PgConfig, PgExtension}
 import akka.serialization.Serialization
 import play.api.libs.json.JsValue
 
 import scala.concurrent.Future
-import scala.util.control.NonFatal
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 case class JournalEntry(id: Option[Long],
                         rowid: Option[Long],
@@ -28,7 +27,6 @@ case class JournalEntry(id: Option[Long],
                         tags: Map[String, String],
                         json: Option[JsValue])
 
-case class JournalEntryWithEvent(entry: JournalEntry, event: Any)
 
 
 /**
@@ -44,11 +42,13 @@ trait JournalStore {
   def eventTagger: EventTagger = pluginConfig.eventStoreConfig.eventTagger
   def partitioner: Partitioner = pluginConfig.journalPartitioner
 
-  import driver.MappedJdbcType
   import driver.api._
 
+  case class JournalEntryWithReadModelUpdates(entry: JournalEntry,
+                                              readModelUpdates: Seq[DBIO[_]])
+
   class JournalTable(tag: Tag) extends Table[JournalEntry](
-    tag, pluginConfig.journalSchemaName, pluginConfig.journalTableName) {
+    tag, pluginConfig.schema, pluginConfig.journalTableName) {
 
     def id                  = column[Long]("id", O.AutoInc)
     def rowid               = column[Option[Long]]("rowid")
@@ -116,12 +116,17 @@ trait JournalStore {
     UUID.randomUUID.toString
   }
 
-  def toJournalEntries(messages: Seq[PersistentRepr]): Try[Seq[JournalEntryWithEvent]] = {
-    try {
-      Success(messages map { message =>
+  def readModelUpdates(event: Any): Seq[DBIO[_]] = event match {
+    case r: ReadModelUpdates => r.readModelUpdates
+    case e @ _               => Seq.empty
+  }
+
+  def toJournalEntries(messages: Seq[PersistentRepr]): Try[Seq[JournalEntryWithReadModelUpdates]] = {
+    Try {
+      messages map { message =>
         val (tags, event) = eventTagger.tag(message.persistenceId, message.payload)
         val (payloadAsJson, payloadAsBytes) = serializePayload(event)
-        JournalEntryWithEvent(JournalEntry(None,
+        JournalEntryWithReadModelUpdates(JournalEntry(None,
           None,
           message.persistenceId,
           message.sequenceNr,
@@ -134,10 +139,8 @@ trait JournalStore {
           message.writerUuid,
           getCreated(event),
           tags,
-          payloadAsJson), event)
-      })
-    } catch {
-      case NonFatal(t) => Failure(t)
+          payloadAsJson), readModelUpdates(message.payload))
+      }
     }
   }
 
@@ -146,8 +149,6 @@ trait JournalStore {
       entry.deleted, null, entry.writerUuid)
 
     val clazz = pgExtension.getClassFor[Any](entry.payloadManifest)
-
-
 
     (entry.payload, entry.json) match {
       case (Some(payload), _) => toRepr(serialization.deserialize(payload, clazz).get)

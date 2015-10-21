@@ -18,7 +18,7 @@ trait PgSnapshotStore {
   import driver.api._
 
   class SnapshotTable(tag: Tag) extends Table[(String, Long, Option[String], Long, Array[Byte])](tag,
-    pluginConfig.snapshotSchemaName, pluginConfig.snapshotTableName) {
+    pluginConfig.schema, pluginConfig.snapshotTableName) {
 
     def persistenceId       = column[String]("persistenceid")
     def sequenceNr          = column[Long]("sequencenr")

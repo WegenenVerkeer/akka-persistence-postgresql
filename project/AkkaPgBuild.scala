@@ -28,7 +28,7 @@ object AkkaPgBuild extends Build with BuildSettings with Dependencies {
 
     project("akka-es")
       .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies)
-      .dependsOn(akkaPersistencePgModule)
+      .dependsOn(akkaPersistencePgModule % "test->test;compile->compile")
 
   }
 

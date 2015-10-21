@@ -5,6 +5,8 @@ import java.util.UUID
 import akka.actor.{ActorLogging, Props}
 import akka.persistence.PersistentActor
 
+import scala.language.postfixOps
+
 class PerfActor extends PersistentActor with ActorLogging {
   import PerfActor._
 
@@ -15,11 +17,12 @@ class PerfActor extends PersistentActor with ActorLogging {
   override def receiveCommand: Receive = {
     case Alter(txt) => persist(Altered(txt)) { _ => sender ! txt }
   }
+
 }
 
 object PerfActor {
   case class Alter(text: String)
   case class Altered(text: String)
-  def props = Props(new PerfActor())
+  def props = Props(new PerfActor)
 }
 

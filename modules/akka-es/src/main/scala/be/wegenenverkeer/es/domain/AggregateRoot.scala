@@ -2,10 +2,11 @@ package be.wegenenverkeer.es.domain
 
 import akka.actor._
 import akka.persistence._
-import akka.persistence.pg.event.Tagged
+import akka.persistence.pg.event.{ReadModelUpdates, Tagged}
 import be.wegenenverkeer.es.actor.GracefulPassivation
 import be.wegenenverkeer.es.domain.AggregateRoot._
 import play.api.libs.json.Json
+import slick.dbio.DBIO
 
 object AggregateRoot {
 
@@ -39,7 +40,6 @@ object AggregateRoot {
    * Command to retrieve the internal state of an AR
    * We are not interested in metadata of GET requests, so it's an empty Map
    */
-  
   case object GetState extends Command {
     override val metadata: Map[String, String] = Map.empty
   }
@@ -64,12 +64,27 @@ object AggregateRoot {
   implicit val metadataFormat = Json.format[Metadata]
 
   /**
-   * Represents an Event subclass with tags
+   * Represents an Event with tags
    * @param event the wrapped event
    * @param tags the tags
    * @tparam E Event subclass
    */
-  case class TaggedEvent[E <: Event](event: E, tags: Map[String, String]) extends Tagged[E]
+  case class TaggedEvent[E <: Event](event: E,
+                                     tags: Map[String, String]) extends Tagged[E]
+
+  /**
+    * Represents an Event containing SQL statements to update the read-model in the same transaction as storing the event
+    * Your read-model will be 'strict' consistent with your events
+    * @param event the wrapped event
+    * @param tags the tags
+    * @param readModelUpdates the SQL statements to execute inside the tx that also stores the events
+    * @param failureHandler a partial function, which can handle specific failures, originating from updating the read-model
+    * @tparam E Event subclass
+    */
+  case class CQRSEvent[E <: Event](event: E,
+                                   tags: Map[String, String],
+                                   readModelUpdates: Seq[DBIO[_]],
+                                   failureHandler: PartialFunction[Throwable, Unit]) extends Tagged[E] with ReadModelUpdates
 
   /**
    * Specifies how many events should be processed before new snapshot is taken.
@@ -104,13 +119,18 @@ trait AggregateRoot[D <: Data] extends GracefulPassivation with PersistentActor 
 
   private var eventsSinceLastSnapshot = 0
 
-  override def receiveCommand = initial
+  override def receiveCommand = initial /*orElse {
+    case PersistenceFailure(CQRSEvent(_, _, _, h), _, t) if h.isDefinedAt(t) => h(t)
+  }*/ //TODO
 
   /**
    * PartialFunction to handle commands when the Actor is in the [[Uninitialized]] state
    */
   protected def initial: Receive
 
+  /**
+    * PartialFunction to handle commands when the Actor is in the [[Initialized]] state
+    */
   protected def created: Receive
 
   /**
@@ -123,11 +143,24 @@ trait AggregateRoot[D <: Data] extends GracefulPassivation with PersistentActor 
    * @param tags the tags to persist
    * @param handler callback handler for each persisted `event`
    */
-  protected def persistWithTags[E <: Event](event: E, tags: Map[String, String])(handler: E => Unit): Unit = {
+  protected def persistWithTags[E <: Event](event: E,
+                                            tags: Map[String, String])
+                                           (handler: E => Unit): Unit = {
     def taggedHandler(e: TaggedEvent[E]): Unit = {
         handler(e.event)
     }
     persist(TaggedEvent(event, tags))(taggedHandler)
+  }
+
+  protected def persistCQRSEvent[E <: Event](event: E,
+                                             readModelUpdates: Seq[DBIO[_]] = Seq.empty,
+                                             tags: Map[String, String] = Map.empty)
+                                            (handler: E => Unit,
+                                             failureHandler: PartialFunction[Throwable, Unit] = PartialFunction.empty): Unit = {
+    def wrappedHandler(e: CQRSEvent[E]): Unit = {
+      handler(e.event)
+    }
+    persist(CQRSEvent(event, tags, readModelUpdates, failureHandler))(wrappedHandler)
   }
 
   /**
@@ -158,18 +191,19 @@ trait AggregateRoot[D <: Data] extends GracefulPassivation with PersistentActor 
    * - publish an event on the Akka event bus
    *
    * @param replyTo optional actorRef to send reply to, default is the current sender
-   * @param evt Event that has been persisted
+   * @param event Event that has been persisted
    */
-  protected def afterEventPersisted(replyTo: ActorRef = context.sender())(evt: AggregateRoot.Event): Unit = {
+  protected def afterEventPersisted(event: AggregateRoot.Event,
+                                    replyTo: ActorRef = context.sender()): Unit = {
     eventsSinceLastSnapshot += 1
-    updateState(evt)
+    updateState(event)
     if (eventsSinceLastSnapshot >= eventsPerSnapshot) {
       log.debug(s"$eventsPerSnapshot events reached, saving snapshot")
       saveSnapshot((state, data))
       eventsSinceLastSnapshot = 0
     }
     respond(replyTo)
-    publish(evt)
+    publish(event)
   }
 
   /**

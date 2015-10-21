@@ -21,16 +21,7 @@ trait WriteStrategy {
 
 }
 
-class NonTransactionalWriteStrategy(override val pluginConfig: PluginConfig,
-                                    override val system: ActorSystem) extends WriteStrategy
-with PgConfig {
 
-  import driver.api._
-
-  def store(actions: Seq[DBIO[_]]): Future[Unit] = {
-    database.run { DBIO.seq(actions:_*) }
-  }
-}
 
 class SingleThreadedBatchWriteStrategy(override val pluginConfig: PluginConfig,
                                        override val system: ActorSystem) extends WriteStrategy

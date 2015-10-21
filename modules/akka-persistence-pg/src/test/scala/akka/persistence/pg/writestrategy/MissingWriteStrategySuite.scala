@@ -6,6 +6,8 @@ abstract class MissingWriteStrategySuite(config: Config) extends WriteStrategySu
 
   import driver.api._
 
+  override val expected = 2000
+
   test("polling stored events should miss events") {
     val ids = writeEvents
     val missing: Seq[Long] = missingIds(ids)

@@ -13,6 +13,12 @@ trait EventTagger {
 
 }
 
+class EmptyTagger extends EventTagger {
+
+  override def tag(persistenceId: String, event: Any) = (Map.empty, event)
+
+}
+
 object DefaultTagger extends EventTagger {
 
   override def tag(persistenceId: String, event: Any) = {
