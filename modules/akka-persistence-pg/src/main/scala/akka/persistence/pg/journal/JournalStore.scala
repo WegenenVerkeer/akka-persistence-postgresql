@@ -51,7 +51,7 @@ trait JournalStore {
     pgExtension.actorRefOf(_))
 
   class JournalTable(tag: Tag) extends Table[JournalEntry](
-    tag, pluginConfig.journalSchemaName, pluginConfig.journalTableName) {
+    tag, pluginConfig.schema, pluginConfig.journalTableName) {
 
     def id                  = column[Long]("id", O.AutoInc)
     def rowid               = column[Option[Long]]("rowid")
@@ -119,8 +119,8 @@ trait JournalStore {
   }
 
   def readModelUpdates(event: Any): Seq[DBIO[_]] = event match {
-    case r: ReadModelUpdates[_] => r.readModelUpdates
-    case e @ _                  => Seq.empty
+    case r: ReadModelUpdates => r.readModelUpdates
+    case e @ _               => Seq.empty
   }
 
   def toJournalEntries(messages: Seq[PersistentRepr]): Seq[JournalEntryWithReadModelUpdates] = {

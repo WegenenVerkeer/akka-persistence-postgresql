@@ -32,7 +32,6 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
   with ScalaFutures {
 
   val system =  ActorSystem("TestCluster", config)
-  override val schemaName = config.getString("postgres.schema")
   override val serialization: Serialization = SerializationExtension(system)
   override val pgExtension: PgExtension = PgExtension(system)
   override val pluginConfig = PluginConfig(system)

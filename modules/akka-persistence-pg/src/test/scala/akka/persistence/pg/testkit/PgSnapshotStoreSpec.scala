@@ -21,7 +21,6 @@ class PgSnapshotStoreSpec extends SnapshotStoreSpec
 
   lazy val config = ConfigFactory.load("pg-application.conf")
 
-  override val schemaName = config.getString("postgres.schema")
   override val pluginConfig = PluginConfig(system)
   override val serialization: Serialization = SerializationExtension(system)
   override val partitioner = NotPartitioned

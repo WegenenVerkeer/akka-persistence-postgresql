@@ -23,7 +23,7 @@ class RandomDelayPerfActor(driver: PgPostgresDriver) extends PersistentActor wit
   override def receiveRecover: Receive = { case _ => }
 
   override def receiveCommand: Receive = {
-    case Alter(txt) => persist(new ReadModelUpdates[Altered] with Tagged[Altered] {
+    case Alter(txt) => persist(new ReadModelUpdates with Tagged[Altered] {
       import driver.api._
       implicit object GetUnit extends GetResult[Unit] { def apply(rs: PositionedResult) = { rs.nextObject(); () } }
 

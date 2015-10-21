@@ -2,9 +2,6 @@ package akka.persistence.pg.util
 
 import akka.persistence.pg.PgConfig
 
-/**
-  * Created by peter on 18/10/15.
-  */
 trait CreateTables {
   self: PgConfig =>
 
@@ -23,7 +20,7 @@ trait CreateTables {
                            "uuid" VARCHAR(254) NOT NULL,
                            "created" timestamptz NOT NULL,
                            "tags" HSTORE,
-                           "event" JSON,
+                           "event" #${pluginConfig.jsonType},
                            constraint "cc_journal_payload_event" check (payload IS NOT NULL OR event IS NOT NULL))"""
 
   lazy val createSnapshot = sqlu"""create table #${pluginConfig.fullSnapshotTableName} (
@@ -34,9 +31,16 @@ trait CreateTables {
                             "snapshot" BYTEA,
                             PRIMARY KEY (persistenceid, sequencenr))"""
 
+  lazy val createUniqueIndex = sqlu"""CREATE INDEX journal_pidseq_idx ON #${pluginConfig.fullJournalTableName} (persistenceid, sequencenr)"""
+  lazy val createEventIndex = sqlu"""CREATE INDEX journal_event_idx ON #${pluginConfig.fullJournalTableName} USING gin (event)"""
+  lazy val createRowIdIndex = sqlu"""CREATE INDEX journal_rowid_idx ON #${pluginConfig.fullJournalTableName} (rowid)"""
   lazy val createRowIdSequence = sqlu"""create sequence #${pluginConfig.fullRowIdSequenceName}"""
 
-  lazy val createTables = createJournal.andThen(createSnapshot).andThen(createRowIdSequence)
+  lazy val createTables = createJournal
+      .andThen(createUniqueIndex)
+      .andThen(createRowIdIndex)
+      .andThen(createSnapshot)
+      .andThen(createRowIdSequence)
 
   def countEvents                = sql"""select count(*) from #${pluginConfig.fullJournalTableName}""".as[Long].head
   def countEvents(id: String)    = sql"""select count(*) from #${pluginConfig.fullJournalTableName} where persistenceid = $id""".as[Long].head

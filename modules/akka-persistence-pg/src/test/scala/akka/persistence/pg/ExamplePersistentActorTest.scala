@@ -30,7 +30,6 @@ class ExamplePersistentActorTest extends PersistentActorTest
 
   override val config: Config = ConfigFactory.load("example-actor-test.conf")
   override val pluginConfig = PluginConfig(config)
-  val schemaName = config.getString("postgres.schema")
 
   override implicit val patienceConfig = PatienceConfig(timeout = scaled(Span(2, Seconds)))
 

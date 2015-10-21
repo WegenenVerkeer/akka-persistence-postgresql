@@ -28,35 +28,30 @@ class PluginConfig(systemConfig: Config) {
 
   private[this] val config = systemConfig.getConfig("pg-persistence")
 
-  val journalSchemaName: Option[String] = PluginConfig.asOption(config.getString("journalSchemaName"))
-  val journalTableName = config.getString("journalTableName")
+  val schema: Option[String] = PluginConfig.asOption(config.getString("schemaName"))
+  val schemaName = schema.fold("")(n => '"' + n + '"')
 
-  val fullJournalTableName: String = journalSchemaName match {
-    case None => journalTableName
-    case Some(s) => '"' + s + '"' + '.' + journalTableName
+  def getFullName(partialName: String) = schema match {
+    case None => partialName
+    case Some(s) => '"' + s + '"' + '.' + partialName
   }
+
+  val journalTableName = config.getString("journalTableName")
+  val fullJournalTableName: String = getFullName(journalTableName)
 
   val rowIdSequenceName: String = s"${journalTableName}_rowid_seq"
+  val fullRowIdSequenceName: String = getFullName(rowIdSequenceName)
 
-  val fullRowIdSequenceName: String = journalSchemaName match {
-    case None => rowIdSequenceName
-    case Some(s) => '"' + s + '"' + '.' + '"' + rowIdSequenceName + '"'
-  }
-
-
-  val snapshotSchemaName: Option[String] = PluginConfig.asOption(config.getString("snapshotSchemaName"))
   val snapshotTableName = config.getString("snapshotTableName")
-
-  val fullSnapshotTableName: String = snapshotSchemaName match {
-    case None => snapshotTableName
-    case Some(s) => '"' + s + '"' + '.' + snapshotTableName
-  }
+  val fullSnapshotTableName: String = getFullName(snapshotTableName)
 
   def shutdownDataSource() = {
     database.close()
   }
 
-  val pgPostgresDriver = new PgPostgresDriverImpl(config.getString("pgjson") match {
+  val jsonType = config.getString("pgjson")
+
+  val pgPostgresDriver = new PgPostgresDriverImpl(jsonType match {
         case "jsonb"   => "jsonb"
         case "json"    => "json"
         case a: String => sys.error(s"unsupported value for pgjson '$a'. Only 'json' or 'jsonb' supported")
@@ -105,7 +100,7 @@ class PluginConfig(systemConfig: Config) {
   }
 
   lazy val eventStoreConfig = new EventStoreConfig(config.getConfig("eventstore"),
-    journalSchemaName,
+    schema,
     journalTableName)
 
   lazy val eventStore: Option[EventStore] = {
@@ -135,7 +130,7 @@ class PluginConfig(systemConfig: Config) {
 }
 
 case class EventStoreConfig(cfg: Config,
-                            journalSchemaName: Option[String],
+                            schema: Option[String],
                             journalTableName: String) {
 
   val idColumnName: String = cfg.getString("idColumnName")
@@ -144,7 +139,7 @@ case class EventStoreConfig(cfg: Config,
   val schemaName: Option[String] = if (useView) {
     PluginConfig.asOption(cfg.getString("schemaName"))
   } else {
-    journalSchemaName
+    schema
   }
 
   val tableName: String = if (useView) {

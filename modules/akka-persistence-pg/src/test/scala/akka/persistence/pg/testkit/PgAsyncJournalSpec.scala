@@ -21,7 +21,6 @@ class PgAsyncJournalSpec extends JournalSpec
 
   lazy val config = ConfigFactory.load("pg-application.conf")
 
-  override val schemaName = config.getString("postgres.schema")
   override val pluginConfig = PluginConfig(system)
   override val serialization: Serialization = SerializationExtension(system)
   override val pgExtension: PgExtension = PgExtension(system)

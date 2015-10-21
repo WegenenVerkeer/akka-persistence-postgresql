@@ -84,7 +84,7 @@ object AggregateRoot {
   case class CQRSEvent[E <: Event](event: E,
                                    tags: Map[String, String],
                                    readModelUpdates: Seq[DBIO[_]],
-                                   failureHandler: PartialFunction[Throwable, Unit]) extends Tagged[E] with ReadModelUpdates[E]
+                                   failureHandler: PartialFunction[Throwable, Unit]) extends Tagged[E] with ReadModelUpdates
 
   /**
    * Specifies how many events should be processed before new snapshot is taken.

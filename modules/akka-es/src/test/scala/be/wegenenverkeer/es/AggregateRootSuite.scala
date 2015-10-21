@@ -33,22 +33,23 @@ class AggregateRootSuite extends PersistentActorTest
 
   override val config: Config = ConfigFactory.load("example-actor-test.conf")
   val pluginConfig = PluginConfig(config)
-  val schemaName = config.getString("postgres.schema")
   override implicit val patienceConfig = PatienceConfig(timeout = scaled(Span(2, Seconds)))
 
   import driver.api._
 
+  lazy val readModelTable = pluginConfig.getFullName("readmodel")
+
   override protected def beforeAll(): Unit = {
     database.run(recreateSchema
       .andThen(createTables)
-      .andThen(sqlu"""create table "#$schemaName".readmodel ("name" VARCHAR(254) NOT NULL PRIMARY KEY, "value" VARCHAR(254) NOT NULL)""")
+      .andThen(sqlu"""create table #$readModelTable ("name" VARCHAR(254) NOT NULL PRIMARY KEY, "value" VARCHAR(254) NOT NULL)""")
     ).futureValue
     ()
   }
 
 
-  val countReadModel = sql"""select count(*) from "#$schemaName".readmodel""".as[Long].head
-  val selectFromReadModel = sql"""select * from "#$schemaName".readmodel""".as[(String, String)].head
+  val countReadModel = sql"""select count(*) from #$readModelTable""".as[Long].head
+  val selectFromReadModel = sql"""select * from #$readModelTable""".as[(String, String)].head
 
   val uuid = UUID.randomUUID().toString
 
@@ -101,7 +102,7 @@ class AggregateRootSuite extends PersistentActorTest
       case Create(name, v, metadata) =>
           persistCQRSEvent(
             Created(name, v, Metadata(persistenceId, 1, metadata)),
-            Seq(sqlu"""insert into "#$schemaName".readmodel values ($name, $v)""")
+            Seq(sqlu"""insert into #$readModelTable values ($name, $v)""")
           )(e => afterEventPersisted(e),
             //http://www.postgresql.org/docs/9.4/static/errcodes-appendix.html
           { case t: PSQLException if t.getSQLState == "23505" => sender ! AlreadyExists })
@@ -112,7 +113,7 @@ class AggregateRootSuite extends PersistentActorTest
 
       case Modify(value: String, metadata) =>
         persistCQRSEvent(Modified(value, Metadata(persistenceId, 1, metadata)),
-          Seq(sqlu"""update "#$schemaName".readmodel set value = $value where name = ${data.name}""")
+          Seq(sqlu"""update #$readModelTable set value = $value where name = ${data.name}""")
         ) (e => afterEventPersisted(e))
     }
 

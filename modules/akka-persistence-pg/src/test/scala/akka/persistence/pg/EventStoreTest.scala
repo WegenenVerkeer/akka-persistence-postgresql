@@ -30,8 +30,6 @@ class EventStoreTest extends TestKit(ActorSystem("TestCluster", EventStoreTest.c
   with PgConfig
   with ScalaFutures {
 
-  override val schemaName = EventStoreTest.config.getString("postgres.schema")
-
   override val serialization: Serialization = SerializationExtension(system)
   override val pgExtension: PgExtension = PgExtension(system)
   override val pluginConfig = PluginConfig(system)
