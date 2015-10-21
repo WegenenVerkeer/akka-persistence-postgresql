@@ -247,7 +247,7 @@ class PgAsyncWriteJournal
   }
 
   protected def removeSubscriber(subscriber: ActorRef): Unit = {
-    log.debug(s"Actor $subscriber terminated!!")
+    log.warning(s"Actor $subscriber terminated!!")
     val tags = tagSubscribers.collect { case (k, s) if s.contains(subscriber) => k }
     if (tags.nonEmpty) {
       log.debug(s"removing subscriber $subscriber [tags: $tags]")

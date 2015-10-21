@@ -23,6 +23,7 @@ class LiveEventsByTagsPublisher(tags: Set[EventTag],
   val tickTask = context.system.scheduler.schedule(refreshInterval, refreshInterval, self, Continue)(context.dispatcher)
 
   override def postStop(): Unit = {
+
     tickTask.cancel()
     ()
   }
@@ -36,9 +37,15 @@ class LiveEventsByTagsPublisher(tags: Set[EventTag],
   def receive = init
 
   def init: Receive = {
-    case _: Request => receiveInitialRequest()
-    case Continue   => // skip, wait for first Request
-    case Cancel     => context.stop(self)
+    case request: Request =>
+      log.debug(s"Received first request: $request")
+      receiveInitialRequest()
+    case Continue         =>
+    // skip, wait for first Request
+    case Cancel =>
+      val origSender = sender()
+      log.debug(s"Received a 'Cancel' message from $origSender")
+      context.stop(self)
   }
 
   def receiveInitialRequest(): Unit = {
@@ -72,41 +79,36 @@ class LiveEventsByTagsPublisher(tags: Set[EventTag],
       deliverBuf()
 
     case RecoverySuccess(highestRowId) =>
-      log.debug("replay completed for tag [{}], currOffset [{}]", tags, currOffset)
+      log.debug(s"completed for tag [$tags], currOffset [$currOffset]")
       receiveRecoverySuccess(highestRowId)
 
     case ReplayMessagesFailure(cause) =>
-      log.debug("replay failed for tag [{}], due to [{}]", tags, cause.getMessage)
+      log.error(cause, s"replay failed for tag [$tags], due to [${cause.getMessage}]")
       deliverBuf()
       onErrorThenStop(cause)
 
-    case _: Request =>
+    case request: Request => log.debug(s"Received request: $request")
       deliverBuf()
 
     case Continue => // skip during replay
 
-    case _: TaggedEventAppended =>
+    case event: TaggedEventAppended =>
       // save row id so know if we can ask a replay as soon as possible
+      log.debug(s"Received tagged event notification while replaying: $event")
       newEventsWhileReplaying = true
 
-
     case Cancel =>
+      val origSender = sender()
+      log.debug(s"Streaming cancelled: $origSender")
       context.stop(self)
 
-    case e => log.debug(s"Got something unexpected!! $e")
   }
 
 
   def idle: Receive = {
-    case Continue | _: TaggedEventAppended =>
-      if (timeForReplay)
-        replay()
-
-    case _: Request =>
-      receiveIdleRequest()
-
-    case Cancel =>
-      context.stop(self)
+    case Continue | _: TaggedEventAppended => if (timeForReplay) replay()
+    case _: Request                        => receiveIdleRequest()
+    case Cancel                            => context.stop(self)
   }
 
   def timeForReplay: Boolean =
@@ -130,6 +132,9 @@ class LiveEventsByTagsPublisher(tags: Set[EventTag],
     else context.become(idle)
   }
 
+  override def unhandled(message: Any): Unit = {
+    log.debug(s"Got unexpected message: $message")
+  }
 }
 
 object LiveEventsByTagsPublisher {
