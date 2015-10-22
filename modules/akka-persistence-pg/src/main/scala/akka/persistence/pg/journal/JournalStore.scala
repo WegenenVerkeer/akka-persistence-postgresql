@@ -68,7 +68,7 @@ trait JournalStore {
     def pk                  = primaryKey(s"${pluginConfig.journalTableName}_pk", (persistenceId, sequenceNr))
 
     def * = (id.?, rowid, persistenceId, sequenceNr, partitionKey, deleted, payload, payloadManifest, manifest, uuid, writerUuid, created, tags, event) <>
-      (JournalEntry.tupled, JournalEntry.unapply _)
+      (JournalEntry.tupled, JournalEntry.unapply)
 
   }
 
@@ -84,15 +84,6 @@ trait JournalStore {
         .filter(_.sequenceNr === sequenceNr)
         .result
     ) map { _.headOption.map(toPersistentRepr)}
-  }
-
-  def deleteMessageRange(persistenceId: String, toSequenceNr: Long): Future[Int] = {
-    database.run(
-      journals
-        .filter(_.persistenceId === persistenceId)
-        .filter(_.sequenceNr <= toSequenceNr)
-        .delete
-    )
   }
 
   private[this] def serializePayload(payload: Any): (Option[JsValue], Option[Array[Byte]]) = {

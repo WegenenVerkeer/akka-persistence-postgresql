@@ -8,7 +8,7 @@ import akka.pattern.{ask, pipe}
 import akka.persistence.pg.event._
 import akka.persistence.pg.journal.{JournalStore, NotPartitioned}
 import akka.persistence.pg.perf.{PerfActor, PerfEventEncoder, RandomDelayPerfActor}
-import akka.persistence.pg.util.RecreateSchema
+import akka.persistence.pg.util.{CreateTables, RecreateSchema}
 import akka.persistence.pg.{PgConfig, PgExtension, PluginConfig}
 import akka.serialization.{Serialization, SerializationExtension}
 import akka.util.Timeout
@@ -28,6 +28,7 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
   with BeforeAndAfterAll
   with JournalStore
   with RecreateSchema
+  with CreateTables
   with PgConfig
   with ScalaFutures {
 
@@ -90,7 +91,7 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
 
   override def beforeAll() {
     database.run(
-      recreateSchema.andThen(journals.schema.create).andThen(sqlu"""create sequence #${pluginConfig.fullRowIdSequenceName}""")
+      recreateSchema.andThen(journals.schema.create).andThen(createRowIdSequence)
     ).futureValue
     actors = 1 to 10 map { _ => system.actorOf(RandomDelayPerfActor.props(driver)) }
   }

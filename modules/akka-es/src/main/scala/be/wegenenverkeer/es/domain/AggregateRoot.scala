@@ -121,7 +121,7 @@ trait AggregateRoot[D <: Data] extends GracefulPassivation with PersistentActor 
 
   override def receiveCommand = initial /*orElse {
     case PersistenceFailure(CQRSEvent(_, _, _, h), _, t) if h.isDefinedAt(t) => h(t)
-  }*/ //TODO
+  }*/
 
   /**
    * PartialFunction to handle commands when the Actor is in the [[Uninitialized]] state
@@ -262,6 +262,15 @@ trait AggregateRoot[D <: Data] extends GracefulPassivation with PersistentActor 
       case Initialized => context.become(created)
     }
     setData(data)
+  }
+
+  //TODO Persistent actor will be stopped => how to avoid, if we handle the persistence failure
+//  override protected def onPersistFailure(cause: Throwable, event: Any, seqNr: Long): Unit = {
+//    event match {
+//      case CQRSEvent(_, _, _, h) if h.isDefinedAt(cause) => h(cause)
+//      case _ => super.onPersistFailure(cause, event, seqNr)
+//    }
+
   }
 
 }

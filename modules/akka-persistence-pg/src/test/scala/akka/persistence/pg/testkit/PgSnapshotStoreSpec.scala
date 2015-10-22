@@ -8,6 +8,7 @@ import akka.persistence.snapshot.SnapshotStoreSpec
 import akka.serialization.{Serialization, SerializationExtension}
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.time.{Milliseconds, Second, Span}
 
 import scala.language.postfixOps
 
@@ -16,6 +17,8 @@ class PgSnapshotStoreSpec extends SnapshotStoreSpec(ConfigFactory.load("pg-appli
   with RecreateSchema
   with ScalaFutures
   with PgConfig {
+
+  override implicit val patienceConfig = PatienceConfig(timeout = Span(1, Second), interval = Span(100, Milliseconds))
 
   override val pluginConfig = PluginConfig(system)
   override val serialization: Serialization = SerializationExtension(system)

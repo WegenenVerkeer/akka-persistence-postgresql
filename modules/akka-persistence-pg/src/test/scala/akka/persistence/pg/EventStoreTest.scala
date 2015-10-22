@@ -8,7 +8,7 @@ import akka.persistence.pg.TestActor._
 import akka.persistence.pg.event._
 import akka.persistence.pg.journal.{NotPartitioned, JournalStore}
 import akka.persistence.pg.snapshot.PgSnapshotStore
-import akka.persistence.pg.util.RecreateSchema
+import akka.persistence.pg.util.{CreateTables, RecreateSchema}
 import akka.persistence.{PersistentActor, SaveSnapshotFailure, SaveSnapshotSuccess, SnapshotOffer}
 import akka.serialization.{Serialization, SerializationExtension}
 import akka.testkit.{TestKit, TestProbe}
@@ -28,6 +28,7 @@ class EventStoreTest extends TestKit(ActorSystem("TestCluster", EventStoreTest.c
   with BeforeAndAfterAll with JournalStore with EventStore with RecreateSchema
   with PgSnapshotStore
   with PgConfig
+  with CreateTables
   with ScalaFutures {
 
   override val serialization: Serialization = SerializationExtension(system)
@@ -143,9 +144,9 @@ class EventStoreTest extends TestKit(ActorSystem("TestCluster", EventStoreTest.c
     database.run(
       recreateSchema
         .andThen((journals.schema ++ snapshots.schema).create)
-        .andThen(sqlu"""create sequence #${pluginConfig.fullRowIdSequenceName}""")
+        .andThen(createRowIdSequence)
     ).futureValue
-    super.beforeAll()
+    ()
   }
 
   override protected def beforeEach(): Unit = {
@@ -153,7 +154,6 @@ class EventStoreTest extends TestKit(ActorSystem("TestCluster", EventStoreTest.c
       journals.delete,
       snapshots.delete
     )).futureValue
-    super.beforeEach()
   }
 
 }

@@ -1,18 +1,14 @@
 package akka.persistence.pg.journal
 
-import java.sql.BatchUpdateException
-
 import akka.actor.ActorLogging
 import akka.persistence.journal.AsyncWriteJournal
 import akka.persistence.pg.{PgConfig, PgExtension}
-import akka.persistence.pg.event.StoredEvent
 import akka.persistence.{AtomicWrite, PersistentRepr}
 import akka.serialization.{Serialization, SerializationExtension}
 
 import scala.collection.immutable
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
-import scala.util.control.NonFatal
 
 class PgAsyncWriteJournal extends AsyncWriteJournal
   with ActorLogging
@@ -34,22 +30,14 @@ class PgAsyncWriteJournal extends AsyncWriteJournal
     storeActions ++ entries.flatMap(_.readModelUpdates)
   }
 
-  def asyncWriteMessages(messages: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
-    log.debug(s"asyncWriteMessages {} messages", messages.size)
-    val entries: immutable.Seq[Try[Seq[JournalEntryWithReadModelUpdates]]] = messages map { atomicWrite => toJournalEntries(atomicWrite.payload) }
-    val entries2Store = entries.filter(_.isSuccess).flatMap(_.get)
-    val r = writeStrategy.store(storeActions(entries2Store))
-    r map { _ =>
-      if (entries.count(_.isFailure) == 0) Nil
-      else {
-        entries.map { (entry: Try[Seq[JournalEntryWithReadModelUpdates]]) =>
-          entry match {
-            case Success(_) => Success(())
-            case Failure(t) => Failure(t)
-          }
-        }
-      }
+  override def asyncWriteMessages(writes: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
+    log.debug(s"asyncWriteMessages {} atomicWrites", writes.size)
+    val batches = writes map { atomicWrite => toJournalEntries(atomicWrite.payload) }
+    val storedBatches = batches map {
+      case Failure(t)     => Future.successful(Failure(t))
+      case Success(batch) => writeStrategy.store(storeActions(batch)).map(Success(_))
     }
+    Future sequence storedBatches
   }
 
   override def asyncReadHighestSequenceNr(persistenceId: String, fromSequenceNr: Long): Future[Long] = {
@@ -90,17 +78,13 @@ class PgAsyncWriteJournal extends AsyncWriteJournal
   }
 
   override def asyncDeleteMessagesTo(persistenceId: String, toSequenceNr: Long): Future[Unit] = {
-    val selectedEntries = journals
+    //TODO we could alternatively permanently delete all but the last message and mark the last message as deleted
+    val selectedEntries: Query[JournalTable, JournalEntry, Seq] = journals
       .filter(_.persistenceId === persistenceId)
       .filter(_.sequenceNr <= toSequenceNr)
       .filter(byPartitionKey(persistenceId))
+      .sortBy(_.sequenceNr.desc)
 
-    //TODO check if messages should be permanently deleted or not
-//    val action = if (permanent) {
-//        selectedEntries.delete
-//    } else {
-//        selectedEntries.map(_.deleted).update(true)
-//    }
     database.run(selectedEntries.map(_.deleted).update(true)).map(_ => ())
   }
 

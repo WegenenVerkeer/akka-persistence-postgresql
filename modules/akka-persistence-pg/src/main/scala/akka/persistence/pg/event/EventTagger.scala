@@ -13,7 +13,7 @@ trait EventTagger {
 
 }
 
-class EmptyTagger extends EventTagger {
+object NotTagged extends EventTagger {
 
   override def tag(persistenceId: String, event: Any) = (Map.empty, event)
 
