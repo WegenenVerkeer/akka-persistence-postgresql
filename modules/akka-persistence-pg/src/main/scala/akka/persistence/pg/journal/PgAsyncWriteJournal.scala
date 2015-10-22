@@ -200,9 +200,9 @@ class PgAsyncWriteJournal
 
     val query =
       journals
-        .filter(_.rowid >= fromRowId)
+        .filter(_.idForQuery >= fromRowId)
         .filter(tagsFilter(tags))
-        .map(_.rowid)
+        .map(_.idForQuery)
         .max
 
     database
@@ -214,13 +214,12 @@ class PgAsyncWriteJournal
   def asyncReplayTaggedMessagesBoundedByRowIds(tags: Set[EventTag], fromRowId: Long, toRowId: Long, max: Long)
                                               (replayCallback: ReplayedTaggedMessage => Unit): Future[Unit] = {
 
-
     val query =
       journals
-        .filter(_.rowid >= fromRowId)
-        .filter(_.rowid <= toRowId)
+        .filter(_.idForQuery >= fromRowId)
+        .filter(_.idForQuery <= toRowId)
         .filter(tagsFilter(tags))
-        .sortBy(_.rowid)
+        .sortBy(_.idForQuery)
         .take(max)
 
     database
@@ -229,9 +228,18 @@ class PgAsyncWriteJournal
       log.debug(s"Replaying ${entries.size} events  ($fromRowId <= rowId <= $toRowId and $tags)")
       entries.foreach { entry =>
         val persistentRepr = toPersistentRepr(entry)
-        replayCallback(ReplayedTaggedMessage(persistentRepr, tags, entry.rowid.get))
+        replayCallback(ReplayedTaggedMessage(persistentRepr, tags, idForQuery(entry)))
       }
     }
+  }
+
+  private def idForQuery(entry: JournalEntry): Long = {
+    val id = if (pluginConfig.eventStoreConfig.idColumnName == "rowid") {
+      entry.rowid
+    } else {
+      entry.id
+    }
+    id.getOrElse(sys.error("something went wrong, probably a misconfiguration"))
   }
 
 

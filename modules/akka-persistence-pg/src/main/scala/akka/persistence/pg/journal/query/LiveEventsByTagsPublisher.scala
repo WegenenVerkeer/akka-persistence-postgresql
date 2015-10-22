@@ -23,7 +23,6 @@ class LiveEventsByTagsPublisher(tags: Set[EventTag],
   val tickTask = context.system.scheduler.schedule(refreshInterval, refreshInterval, self, Continue)(context.dispatcher)
 
   override def postStop(): Unit = {
-
     tickTask.cancel()
     ()
   }
@@ -127,9 +126,10 @@ class LiveEventsByTagsPublisher(tags: Set[EventTag],
     if (buf.isEmpty && currOffset > toOffset) {
       log.debug(s"stopping after recovery: buffer is empty and $currOffset > $toOffset")
       onCompleteThenStop()
+    } else {
+      if (newEventsWhileReplaying) replay()
+      else context.become(idle)
     }
-    if (newEventsWhileReplaying) replay()
-    else context.become(idle)
   }
 
   override def unhandled(message: Any): Unit = {

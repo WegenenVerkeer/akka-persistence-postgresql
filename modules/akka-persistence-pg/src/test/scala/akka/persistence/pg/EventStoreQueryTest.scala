@@ -6,10 +6,11 @@ import akka.persistence.pg.journal.query.PostgresReadJournal
 import akka.persistence.query.PersistenceQuery
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
+import org.scalatest.concurrent.Eventually
 
 import scala.language.postfixOps
 
-class EventStoreQueryTest extends AbstractEventStoreTest {
+class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
   implicit val materializer = ActorMaterializer()
 
@@ -28,8 +29,9 @@ class EventStoreQueryTest extends AbstractEventStoreTest {
     var events = List[TestActor.Event]()
 
     def checkSizeReceivedEvents(size: Int) = {
-      Thread.sleep(5000)
-      events should have size size
+      eventually {
+        events should have size size
+      }
       val onlyAlteredEvents = events.collect { case evt: Altered => evt }
       onlyAlteredEvents should have size size
     }
@@ -64,8 +66,9 @@ class EventStoreQueryTest extends AbstractEventStoreTest {
     var events = List[TestActor.Event]()
 
     def checkSizeReceivedEvents(size: Int) = {
-      Thread.sleep(5000)
-      events should have size size
+      eventually {
+        events should have size size
+      }
     }
 
     // a Sink that will append each event to the Events List

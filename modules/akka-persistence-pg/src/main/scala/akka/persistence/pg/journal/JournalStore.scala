@@ -82,6 +82,14 @@ trait JournalStore {
 
     def event = column[Option[JsValue]]("event")
 
+    def idForQuery = {
+      if (pluginConfig.eventStoreConfig.idColumnName == "rowid") {
+        rowid
+      } else {
+        id.?
+      }
+    }
+
     def pk = primaryKey(s"${pluginConfig.journalTableName}_pk", (persistenceId, sequenceNr))
 
     def * = (id
