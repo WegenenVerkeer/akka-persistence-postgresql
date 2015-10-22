@@ -33,7 +33,8 @@ abstract class SingleActorPerfSimulation(override val config: Config) extends Ab
 
   val scn = scenario("single persistent actor").during(30 seconds) {
     feed(feeder)
-    .exec(request(actor, AlterMessage("${text}")))
+      .exec { session => session.set("actor", actor) }
+      .exec { request(AlterMessage("${text}")) }
   }
 
   setUp(scn.inject(atOnceUsers(10)))

@@ -2,7 +2,7 @@ package akka.persistence.pg.testkit
 
 import akka.persistence.journal.JournalSpec
 import akka.persistence.pg.event.{NotTagged, DefaultTagger, JsonEncoder, NoneJsonEncoder}
-import akka.persistence.pg.journal.{NotPartitioned, JournalStore}
+import akka.persistence.pg.journal.{JournalTable, NotPartitioned, JournalStore}
 import akka.persistence.pg.util.{CreateTables, RecreateSchema}
 import akka.persistence.pg.{PgConfig, PgExtension, PluginConfig}
 import akka.serialization.{Serialization, SerializationExtension}
@@ -15,7 +15,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 class PgAsyncJournalSpec extends JournalSpec(ConfigFactory.load("pg-application.conf"))
-  with JournalStore
+  with JournalTable
   with RecreateSchema
   with ScalaFutures
   with CreateTables
@@ -24,11 +24,6 @@ class PgAsyncJournalSpec extends JournalSpec(ConfigFactory.load("pg-application.
   override implicit val patienceConfig = PatienceConfig(timeout = Span(1, Second), interval = Span(100, Milliseconds))
 
   override val pluginConfig = PluginConfig(system)
-  override val serialization: Serialization = SerializationExtension(system)
-  override val pgExtension: PgExtension = PgExtension(system)
-  override val eventEncoder: JsonEncoder = NoneJsonEncoder
-  override val eventTagger = NotTagged
-  override val partitioner = NotPartitioned
 
   import driver.api._
 

@@ -26,8 +26,6 @@ abstract class AbstractPersistenceSimulation(val config: Config)
   override val pluginConfig = PluginConfig(config)
   val system = ActorSystem("benchmark-system", config)
 
-  import driver.api._
-
   /**
    * recreate schema and tables + indices before running the benchmark
    */

@@ -122,13 +122,18 @@ class PluginConfig(systemConfig: Config) {
     writeStrategyClazz.getConstructor(classOf[PluginConfig], classOf[ActorSystem]).newInstance(this, context.system)
   }
 
+  lazy val idForQuery = {
+    val clazz = config.getString("writestrategy")
+    if (clazz == "akka.persistence.pg.journal.RowIdUpdatingStrategy") "rowid"
+    else "id"
+  }
+
 }
 
 case class EventStoreConfig(cfg: Config,
                             schema: Option[String],
                             journalTableName: String) {
 
-  val idColumnName: String = cfg.getString("idColumnName")
   val useView: Boolean = cfg.getBoolean("useView")
 
   val schemaName: Option[String] = if (useView) {
@@ -152,7 +157,8 @@ case class EventStoreConfig(cfg: Config,
 
   val eventTagger: EventTagger = {
     PluginConfig.asOption(cfg.getString("tagger")) match {
-      case None => DefaultTagger
+      case None => NotTagged
+      case Some("default") => DefaultTagger
       case Some(clazz) => Thread.currentThread().getContextClassLoader.loadClass(clazz).asInstanceOf[Class[_ <: EventTagger]].newInstance()
     }
   }

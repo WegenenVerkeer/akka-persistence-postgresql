@@ -270,7 +270,7 @@ trait AggregateRoot[D <: Data] extends GracefulPassivation with PersistentActor 
 //      case CQRSEvent(_, _, _, h) if h.isDefinedAt(cause) => h(cause)
 //      case _ => super.onPersistFailure(cause, event, seqNr)
 //    }
-
-  }
+//
+//  }
 
 }

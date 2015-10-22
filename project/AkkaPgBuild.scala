@@ -5,23 +5,13 @@ object AkkaPgBuild extends Build with BuildSettings with Dependencies {
 
   lazy val akkaPersistencePgModule = {
 
-    val mainDeps = Seq(slick, hikariCp, slickPg, akkaPersistence, akkaActor, akkaStreams, akkaTest, akkaPersistenceTestkit, playJson)
+    val mainDeps = Seq(slick, hikariCp, slickPg, akkaPersistence, akkaPersistenceQuery, akkaActor, akkaStreams, akkaTest, akkaPersistenceTestkit, playJson)
 
     project("akka-persistence-pg")
       .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies)
 
   }
-
-
-  lazy val akkaPersistenceQueryPgModule = {
-
-    val mainDeps = Seq(slick, hikariCp, slickPg, akkaPersistenceQuery, akkaActor, akkaStreams, akkaTest, playJson)
-
-    project("akka-persistence-query-pg")
-      .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies)
-
-  }
-    
+   
   lazy val akkaEsModule = {
 
     val mainDeps = Seq(akkaPersistence, akkaTest)
@@ -40,13 +30,12 @@ object AkkaPgBuild extends Build with BuildSettings with Dependencies {
 
     project("benchmark")
       .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies)
-      .dependsOn(akkaPersistencePgModule % "test->test;compile->compile", akkaEsModule)
+      .dependsOn(akkaPersistencePgModule % "it->test;test->test;compile->compile", akkaEsModule)
       .enablePlugins(GatlingPlugin)
   }
 
   lazy val main = mainProject(
     akkaPersistencePgModule,
-    akkaPersistenceQueryPgModule,
     akkaEsModule,
     benchmarkModule
   )

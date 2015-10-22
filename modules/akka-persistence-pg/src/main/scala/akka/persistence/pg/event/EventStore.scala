@@ -27,7 +27,7 @@ trait EventStore {
   class EventsTable(tag: Tag) extends Table[Event](
     tag, pluginConfig.eventStoreConfig.schemaName, pluginConfig.eventStoreConfig.tableName) {
 
-    def id                  = column[Long](pluginConfig.eventStoreConfig.idColumnName)
+    def id                  = column[Long](pluginConfig.idForQuery)
     def persistenceId       = column[String]("persistenceid")
     def sequenceNr          = column[Long]("sequencenr")
     def uuid                = column[String]("uuid")

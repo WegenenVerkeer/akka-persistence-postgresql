@@ -19,7 +19,6 @@ object AskAction {
 }
 
 class AskAction(val next: ActorRef,
-                val actor: Option[ActorRef],
                 val message: AskMessage,
                 requestName: String)
   extends Action
@@ -29,10 +28,7 @@ class AskAction(val next: ActorRef,
   import AskAction.timeout
 
   override def execute(session: Session): Unit = {
-    val sendTo = actor match {
-      case Some(a) => a
-      case None => session("actor").as[ActorRef]
-    }
+    val sendTo = session("actor").as[ActorRef]
     val sendMessage = message(session).get
 
     val start = nowMillis

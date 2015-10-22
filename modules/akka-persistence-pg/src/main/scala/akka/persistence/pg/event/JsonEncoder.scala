@@ -5,13 +5,13 @@ import play.api.libs.json.{JsError, JsSuccess, JsValue, Reads}
 trait JsonEncoder {
 
   def toJson: PartialFunction[Any, JsValue]
+
   def fromJson: PartialFunction[(JsValue, Class[_]), AnyRef]
 
-  def tryRead[T](json: JsValue)
-                (implicit reads: Reads[T]): T = {
+  def tryRead[T](json: JsValue)(implicit reads: Reads[T]): T = {
     reads.reads(json) match {
       case JsSuccess(v, _) => v
-      case JsError(e) => sys.error(e.toString())
+      case JsError(e)      => sys.error(e.toString())
     }
   }
 

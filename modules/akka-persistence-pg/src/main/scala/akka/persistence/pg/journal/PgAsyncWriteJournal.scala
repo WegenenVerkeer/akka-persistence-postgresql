@@ -1,16 +1,24 @@
 package akka.persistence.pg.journal
 
-import akka.actor.ActorLogging
+import java.sql.BatchUpdateException
+
+import akka.actor._
+import akka.persistence.JournalProtocol.{ReplayMessagesFailure, RecoverySuccess}
 import akka.persistence.journal.AsyncWriteJournal
 import akka.persistence.pg.{PgConfig, PgExtension}
 import akka.persistence.{AtomicWrite, PersistentRepr}
 import akka.serialization.{Serialization, SerializationExtension}
 
-import scala.collection.immutable
+import scala.collection.{immutable, mutable}
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
+import scala.util.Try
+import akka.persistence.pg.journal.PgAsyncWriteJournal._
+import akka.pattern._
+import akka.persistence.pg.EventTag
 
-class PgAsyncWriteJournal extends AsyncWriteJournal
+class PgAsyncWriteJournal
+  extends AsyncWriteJournal
   with ActorLogging
   with PgConfig
   with JournalStore {
@@ -35,7 +43,17 @@ class PgAsyncWriteJournal extends AsyncWriteJournal
     val batches = writes map { atomicWrite => toJournalEntries(atomicWrite.payload) }
     val storedBatches = batches map {
       case Failure(t)     => Future.successful(Failure(t))
-      case Success(batch) => writeStrategy.store(storeActions(batch)).map(Success(_))
+      case Success(batch) =>
+        val r = writeStrategy.store(storeActions(batch))
+        r.onSuccess { case _ =>
+          batch foreach { entry =>
+            entry.entry.tags.foreach(notifyTagChange)
+          }
+        }
+        r.onFailure {
+          case e: BatchUpdateException => log.error(e.getNextException, "problem storing events")
+        }
+        r.map(Success.apply)
     }
     Future sequence storedBatches
   }
@@ -62,7 +80,10 @@ class PgAsyncWriteJournal extends AsyncWriteJournal
 
   override def asyncReplayMessages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)
                                   (replayCallback: (PersistentRepr) => Unit): Future[Unit] = {
-    log.debug(s"Async replay for processorId [$persistenceId], from sequenceNr: [$fromSequenceNr], to sequenceNr: [$toSequenceNr] with max records: [$max]")
+
+    log.debug(s"Async replay for processorId [$persistenceId], " +
+      s"from sequenceNr: [$fromSequenceNr], to sequenceNr: [$toSequenceNr] with max records: [$max]")
+
     database.run {
       journals
         .filter(_.persistenceId === persistenceId)
@@ -87,5 +108,160 @@ class PgAsyncWriteJournal extends AsyncWriteJournal
 
     database.run(selectedEntries.map(_.deleted).update(true)).map(_ => ())
   }
+
+
+  // ------------------------------------------------------------
+  // --- Akka Persistence Query logic ------
+
+  override def receivePluginInternal: Receive = {
+
+    // requested to send events containing given tags between from and to rowId
+    case ReplayTaggedMessages(fromRowId, toRowId, max, tags, replyTo) =>
+      handleReplayTaggedMessages(fromRowId, toRowId, max, tags, replyTo)
+
+    // subscribe sender to tag nofification
+    case SubscribeTags(tags) => addTagSubscriber(tags)
+
+    // unsubscribe terminated actor
+    case Terminated(ref) => removeSubscriber(ref)
+  }
+
+
+  private def handleReplayTaggedMessages(fromRowId: Long, toRowId: Long, max: Long,
+                                         eventTags: Set[EventTag], replyTo: ActorRef): Unit = {
+
+
+    val correctedFromRowId = math.max(0L, fromRowId - 1)
+
+    asyncReadHighestRowIdWithTags(eventTags, correctedFromRowId).flatMap { highestRowId =>
+
+      val calculatedToRowId = math.min(toRowId, highestRowId)
+
+      if (highestRowId == 0L || fromRowId > calculatedToRowId) {
+        // we are done if there is nothing to send
+        Future.successful(highestRowId)
+      }
+      else {
+        asyncReplayTaggedMessagesBoundedByRowIds(eventTags, fromRowId, calculatedToRowId, max) {
+          case ReplayedTaggedMessage(persistentRepr, tags, offset) =>
+            adaptFromJournal(persistentRepr).foreach { adaptedPersistentRepr =>
+              replyTo.tell(ReplayedTaggedMessage(adaptedPersistentRepr, tags, offset), Actor.noSender)
+            }
+        }.map(_ => highestRowId)
+      }
+    } map {
+      highestRowId => RecoverySuccess(highestRowId)
+    } recover {
+      case e => ReplayMessagesFailure(e)
+    } pipeTo replyTo
+
+    ()
+  }
+
+
+  /**
+   * build a 'or' filter for tags
+   * will select Events containing at least one of the EventTags
+   */
+  private def tagsFilter(tags: Set[EventTag]) = {
+    (table: JournalTable) => {
+      tags
+        .map { case (tagKey, tagValue) => table.tags @> Map(tagKey -> tagValue.value).bind }
+        .reduceLeftOption(_ || _)
+        .getOrElse(false: Rep[Boolean])
+    }
+  }
+
+  def asyncReadHighestRowIdWithTags(tags: Set[EventTag], fromRowId: Long): Future[Long] = {
+
+
+    val query =
+      journals
+        .filter(_.idForQuery >= fromRowId)
+        .filter(tagsFilter(tags))
+        .map(_.idForQuery)
+        .max
+
+    database
+      .run(query.result)
+      .map(_.getOrElse(0L)) // we don't want an Option[Long], but a Long
+
+  }
+
+  def asyncReplayTaggedMessagesBoundedByRowIds(tags: Set[EventTag], fromRowId: Long, toRowId: Long, max: Long)
+                                              (replayCallback: ReplayedTaggedMessage => Unit): Future[Unit] = {
+
+    val query =
+      journals
+        .filter(_.idForQuery >= fromRowId)
+        .filter(_.idForQuery <= toRowId)
+        .filter(tagsFilter(tags))
+        .sortBy(_.idForQuery)
+        .take(max)
+
+    database
+      .run(query.result)
+      .map { entries =>
+      log.debug(s"Replaying ${entries.size} events  ($fromRowId <= rowId <= $toRowId and $tags)")
+      entries.foreach { entry =>
+        val persistentRepr = toPersistentRepr(entry)
+        replayCallback(ReplayedTaggedMessage(persistentRepr, tags, idForQuery(entry)))
+      }
+    }
+  }
+
+  private def idForQuery(entry: JournalEntry): Long = {
+    val id = if (pluginConfig.idForQuery == "rowid") {
+      entry.rowid
+    } else {
+      entry.id
+    }
+    id.getOrElse(sys.error("something went wrong, probably a misconfiguration"))
+  }
+
+
+  private val tagSubscribers = new mutable.HashMap[EventTag, mutable.Set[ActorRef]] with mutable.MultiMap[EventTag, ActorRef]
+
+  private def addTagSubscriber(eventTags: Set[EventTag]): Unit = {
+    val subscriber = sender()
+    eventTags.foreach(eventTag => tagSubscribers.addBinding(eventTag, subscriber))
+    log.debug(s"added subscriptions for $eventTags for actor $subscriber")
+    // watch subscribers in order to unsubscribe them if they terminate
+    context.watch(subscriber)
+    ()
+  }
+
+  protected def removeSubscriber(subscriber: ActorRef): Unit = {
+    log.warning(s"Actor $subscriber terminated!!")
+    val tags = tagSubscribers.collect { case (k, s) if s.contains(subscriber) => k }
+    if (tags.nonEmpty) {
+      log.debug(s"removing subscriber $subscriber [tags: $tags]")
+      tags.foreach { tag => tagSubscribers.removeBinding(tag, subscriber) }
+    }
+  }
+
+  protected def notifyTagChange(eventTag: EventTag): Unit =
+    if (tagSubscribers.contains(eventTag)) {
+      log.debug(s"Notify subscriber of new events with tag: $eventTag")
+      val changed = PgAsyncWriteJournal.TaggedEventAppended(eventTag)
+      tagSubscribers(eventTag).foreach(_ ! changed)
+    }
+
+}
+
+
+object PgAsyncWriteJournal {
+
+  sealed trait SubscriptionCommand
+
+  final case class SubscribeTags(tags: Set[EventTag]) extends SubscriptionCommand
+
+  final case class TaggedEventAppended(eventTag: EventTag) extends DeadLetterSuppression
+
+  final case class ReplayTaggedMessages(fromRowId: Long, toRowId: Long, max: Long,
+                                        tags: Set[EventTag], replyTo: ActorRef) extends SubscriptionCommand
+
+  final case class ReplayedTaggedMessage(persistent: PersistentRepr, tags: Set[EventTag], offset: Long)
+    extends DeadLetterSuppression with NoSerializationVerificationNeeded
 
 }

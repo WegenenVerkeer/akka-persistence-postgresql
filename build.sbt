@@ -1,22 +1,4 @@
 
-
-import com.typesafe.sbt.SbtGit.GitKeys._
-
-git.useGitDescribe := true
-git.baseVersion := "0.1.1"
-
-
-git.gitDescribedVersion := gitReader.value.withGit(_.describedVersion).flatMap(v =>
-  Option(v).map(_.drop(1)).orElse(formattedShaVersion.value).orElse(Some(baseVersion.value))
-)
-
-val VersionRegex = "v([0-9]+.[0-9]+.[0-9]+)-?(.*)?".r
-git.gitTagToVersionNumber := {
-  case VersionRegex(v,"") => Some(v)
-  case VersionRegex(v,"SNAPSHOT") => Some(s"$v-SNAPSHOT")
-  case VersionRegex(v,s) => Some(s"$v-$s-SNAPSHOT")
-  case _ => None
-}
 scalaVersion := "2.11.7"
 
 organization := "be.wegenenverkeer"

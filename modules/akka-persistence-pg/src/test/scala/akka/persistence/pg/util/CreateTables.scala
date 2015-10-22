@@ -22,7 +22,7 @@ trait CreateTables {
                            "writeruuid" VARCHAR(254) NOT NULL,
                            "created" timestamptz NOT NULL,
                            "tags" HSTORE,
-                           "event" JSONB,
+                           "event" #${pluginConfig.jsonType},
                            constraint "cc_journal_payload_event" check (payload IS NOT NULL OR event IS NOT NULL))"""
 
 

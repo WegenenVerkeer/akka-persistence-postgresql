@@ -6,11 +6,10 @@ import java.util.concurrent.atomic.AtomicInteger
 import akka.actor._
 import akka.pattern.{ask, pipe}
 import akka.persistence.pg.event._
-import akka.persistence.pg.journal.{JournalStore, NotPartitioned}
-import akka.persistence.pg.perf.{PerfActor, PerfEventEncoder, RandomDelayPerfActor}
+import akka.persistence.pg.journal.JournalTable
+import akka.persistence.pg.perf.{PerfActor, RandomDelayPerfActor}
 import akka.persistence.pg.util.{CreateTables, RecreateSchema}
-import akka.persistence.pg.{PgConfig, PgExtension, PluginConfig}
-import akka.serialization.{Serialization, SerializationExtension}
+import akka.persistence.pg.{PgConfig, PluginConfig}
 import akka.util.Timeout
 import com.typesafe.config.Config
 import org.scalatest._
@@ -26,19 +25,14 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
   with BeforeAndAfterEach
   with ShouldMatchers
   with BeforeAndAfterAll
-  with JournalStore
+  with JournalTable
   with RecreateSchema
   with CreateTables
   with PgConfig
   with ScalaFutures {
 
   val system =  ActorSystem("TestCluster", config)
-  override val serialization: Serialization = SerializationExtension(system)
-  override val pgExtension: PgExtension = PgExtension(system)
   override val pluginConfig = PluginConfig(system)
-  override val eventEncoder = new PerfEventEncoder()
-  override val eventTagger = DefaultTagger
-  override val partitioner = NotPartitioned
 
   import PerfActor._
   import driver.api._

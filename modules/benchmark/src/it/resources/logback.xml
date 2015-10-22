@@ -14,7 +14,7 @@
     <!-- 	<logger name="io.gatling.http.ahc.AsyncHandlerActor" level="DEBUG" /> -->
 
     <logger name="slick" level="OFF" />
-    <logger name="com.zaxxer.hikari.HikariConfig" level="DEBUG" />
+    <logger name="com.zaxxer.hikari.HikariConfig" level="OFF" />
 
     <root level="WARN">
         <appender-ref ref="CONSOLE" />
