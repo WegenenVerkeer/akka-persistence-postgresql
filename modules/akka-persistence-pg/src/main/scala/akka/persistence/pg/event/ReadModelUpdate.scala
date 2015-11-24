@@ -2,8 +2,8 @@ package akka.persistence.pg.event
 
 import slick.dbio.DBIO
 
-trait ReadModelUpdates {
+trait ReadModelUpdate {
 
-  def readModelUpdates: Seq[DBIO[_]]
+  def readModelAction: DBIO[_]
 
 }

@@ -3,8 +3,9 @@ package akka.persistence.pg.journal
 import java.time.OffsetDateTime
 import java.util.UUID
 
+import akka.actor.ActorRef
 import akka.persistence.PersistentRepr
-import akka.persistence.pg.event.{Created, EventTagger, JsonEncoder, ReadModelUpdates}
+import akka.persistence.pg.event._
 import akka.persistence.pg.{PgConfig, PgExtension}
 import akka.serialization.Serialization
 import play.api.libs.json.JsValue
@@ -26,6 +27,8 @@ trait JournalStore extends JournalTable {
   def partitioner: Partitioner = pluginConfig.journalPartitioner
 
   import driver.api._
+
+  type JournalEntryWithReadModelUpdate = (JournalEntry, DBIO[_])
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -61,17 +64,21 @@ trait JournalStore extends JournalTable {
     UUID.randomUUID.toString
   }
 
-  def readModelUpdates(event: Any): Seq[DBIO[_]] = event match {
-    case r: ReadModelUpdates => r.readModelUpdates
-    case e @ _               => Seq.empty
-  }
-
-  def toJournalEntries(messages: Seq[PersistentRepr]): Try[Seq[JournalEntryWithReadModelUpdates]] = {
+  def toJournalEntries(messages: Seq[PersistentRepr]): Try[Seq[JournalEntryWithReadModelUpdate]] = {
     Try {
       messages map { message =>
-        val (tags, event) = eventTagger.tag(message.persistenceId, message.payload)
+        val event = message.payload match {
+          case w: EventWrapper[_] => w.event
+          case _ => message.payload
+        }
+        val tags: Map[String, String] = eventTagger.tag(message.payload)
+        val update: DBIO[_] = message.payload match {
+          case r: ReadModelUpdate => r.readModelAction
+          case _ => DBIO.successful(())
+        }
+
         val (payloadAsJson, payloadAsBytes) = serializePayload(event)
-        JournalEntryWithReadModelUpdates(JournalEntry(None,
+        (JournalEntry(None,
           None,
           message.persistenceId,
           message.sequenceNr,
@@ -79,12 +86,11 @@ trait JournalStore extends JournalTable {
           deleted = false,
           payloadAsBytes,
           event.getClass.getName,
-          message.manifest,
           getUuid(event),
           message.writerUuid,
           getCreated(event),
           tags,
-          payloadAsJson), readModelUpdates(message.payload))
+          payloadAsJson), update)
       }
     }
   }
@@ -95,13 +101,13 @@ trait JournalStore extends JournalTable {
         payload = a,
         sequenceNr = entry.sequenceNr,
         persistenceId = entry.persistenceId,
-        manifest = entry.manifest,
+        manifest = "",
         deleted = entry.deleted,
-        sender = null, // sender ActorRef
+        sender = ActorRef.noSender,
         writerUuid = entry.writerUuid
       )
 
-    val clazz = pgExtension.getClassFor[Any](entry.payloadManifest)
+    val clazz = pgExtension.getClassFor[Any](entry.manifest)
 
     (entry.payload, entry.json) match {
       case (Some(payload), _) => toRepr(serialization.deserialize(payload, clazz).get)

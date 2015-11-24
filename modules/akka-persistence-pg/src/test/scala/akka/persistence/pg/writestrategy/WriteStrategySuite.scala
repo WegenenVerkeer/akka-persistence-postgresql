@@ -49,7 +49,7 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
     val eventReader = system.actorOf(Props(new EventReader()))
 
     1 to expected foreach { i =>
-      actors(Random.nextInt(actors.size)) ? Alter(Random.alphanumeric.take(16).toString()) map { case s =>
+      actors(Random.nextInt(actors.size)) ? Alter(Random.alphanumeric.take(16).mkString) map { case s =>
         received.incrementAndGet()
       }
     }

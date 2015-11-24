@@ -5,11 +5,11 @@ import TestActor._
 
 class TestEventTagger extends EventTagger {
 
-  def tag(persistenceId: String, event: Any): (Map[String, String], Any) = {
+  def tag(event: Any): Map[String, String] = {
     event match {
-      case evt: Altered => (Map(TestTags.alteredTag), event)
-      case evt: Incremented => (Map(TestTags.incrementedTag), event)
-      case other => (Map.empty, other)
+      case evt: Altered => Map(TestTags.alteredTag)
+      case evt: Incremented => Map(TestTags.incrementedTag)
+      case _ => Map.empty
     }
   }
 }

@@ -2,7 +2,7 @@ package be.wegenenverkeer.es.domain
 
 import akka.actor._
 import akka.persistence._
-import akka.persistence.pg.event.{ReadModelUpdates, Tagged}
+import akka.persistence.pg.event.{EventWrapper, ReadModelUpdate, Tagged}
 import be.wegenenverkeer.es.actor.GracefulPassivation
 import be.wegenenverkeer.es.domain.AggregateRoot._
 import play.api.libs.json.Json
@@ -70,21 +70,32 @@ object AggregateRoot {
    * @tparam E Event subclass
    */
   case class TaggedEvent[E <: Event](event: E,
-                                     tags: Map[String, String]) extends Tagged[E]
+                                     tags: Map[String, String]) extends Tagged with EventWrapper[E]
+
+  /**
+    * Represents an Event which will, when stored, also update the read-model in the same tx
+    * @param event the wrapped event
+    * @param readModelAction the action to apply to the read-model
+    * @param failureHandler a partial function, which can handle specific failures, originating from updating the read-model
+    * @tparam E Event subclass
+    */
+  case class ReadModelUpdateEvent[E <: Event](event: E,
+                                              readModelAction: DBIO[_],
+                                              failureHandler: PartialFunction[Throwable, Unit]) extends EventWrapper[E] with ReadModelUpdate
 
   /**
     * Represents an Event containing SQL statements to update the read-model in the same transaction as storing the event
     * Your read-model will be 'strict' consistent with your events
     * @param event the wrapped event
     * @param tags the tags
-    * @param readModelUpdates the SQL statements to execute inside the tx that also stores the events
+    * @param readModelAction the SQL statements to execute inside the tx that also stores the events
     * @param failureHandler a partial function, which can handle specific failures, originating from updating the read-model
     * @tparam E Event subclass
     */
   case class CQRSEvent[E <: Event](event: E,
                                    tags: Map[String, String],
-                                   readModelUpdates: Seq[DBIO[_]],
-                                   failureHandler: PartialFunction[Throwable, Unit]) extends Tagged[E] with ReadModelUpdates
+                                   readModelAction: DBIO[_],
+                                   failureHandler: PartialFunction[Throwable, Unit]) extends EventWrapper[E] with Tagged with ReadModelUpdate
 
   /**
    * Specifies how many events should be processed before new snapshot is taken.
@@ -152,15 +163,25 @@ trait AggregateRoot[D <: Data] extends GracefulPassivation with PersistentActor 
     persist(TaggedEvent(event, tags))(taggedHandler)
   }
 
+  protected def persistWithReadModelUpdate[E <: Event](event: E,
+                                                       readModelUpdate: DBIO[_])
+                                                      (handler: E => Unit,
+                                                       failureHandler: PartialFunction[Throwable, Unit] = PartialFunction.empty): Unit = {
+    def wrappedHandler(e: ReadModelUpdateEvent[E]): Unit = {
+      handler(e.event)
+    }
+    persist(ReadModelUpdateEvent(event, readModelUpdate, failureHandler))(wrappedHandler)
+  }
+
   protected def persistCQRSEvent[E <: Event](event: E,
-                                             readModelUpdates: Seq[DBIO[_]] = Seq.empty,
+                                             readModelUpdate: DBIO[_],
                                              tags: Map[String, String] = Map.empty)
                                             (handler: E => Unit,
                                              failureHandler: PartialFunction[Throwable, Unit] = PartialFunction.empty): Unit = {
     def wrappedHandler(e: CQRSEvent[E]): Unit = {
       handler(e.event)
     }
-    persist(CQRSEvent(event, tags, readModelUpdates, failureHandler))(wrappedHandler)
+    persist(CQRSEvent(event, tags, readModelUpdate, failureHandler))(wrappedHandler)
   }
 
   /**

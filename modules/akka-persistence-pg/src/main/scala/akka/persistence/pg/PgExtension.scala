@@ -1,6 +1,7 @@
 package akka.persistence.pg
 
 import akka.actor._
+import akka.persistence.Persistence
 import akka.persistence.pg.event.PgEventReader
 
 import scala.reflect.ClassTag
@@ -14,6 +15,8 @@ object PgExtension extends ExtensionId[PgExtension] with ExtensionIdProvider {
 }
 
 class PgExtension(system: ExtendedActorSystem) extends Extension {
+
+  val persistence = Persistence(system)
 
   private val DefaultPluginDispatcherId = "akka.persistence.dispatchers.default-plugin-dispatcher"
   val pluginConfig = PluginConfig(system)

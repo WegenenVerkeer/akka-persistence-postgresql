@@ -33,7 +33,7 @@ trait EventStore {
     def uuid                = column[String]("uuid")
     def created             = column[OffsetDateTime]("created")
     def tags                = column[Map[String, String]]("tags")
-    def className           = column[String]("payloadmf")
+    def className           = column[String]("manifest")
     def event               = column[JsValue]("event")
 
     def * = (id, persistenceId, sequenceNr, uuid, created, tags, className, event) <> (Event.tupled, Event.unapply)

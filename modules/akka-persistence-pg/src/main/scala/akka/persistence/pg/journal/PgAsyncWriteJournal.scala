@@ -33,9 +33,9 @@ class PgAsyncWriteJournal
 
   import driver.api._
 
-  def storeActions(entries: Seq[JournalEntryWithReadModelUpdates]): Seq[DBIO[_]] = {
-    val storeActions: Seq[DBIO[_]] = Seq(journals ++= entries.map(_.entry))
-    storeActions ++ entries.flatMap(_.readModelUpdates)
+  def storeActions(entries: Seq[JournalEntryWithReadModelUpdate]): Seq[DBIO[_]] = {
+    val storeActions: Seq[DBIO[_]] = Seq(journals ++= entries.map(_._1))
+    storeActions ++ entries.map(_._2)
   }
 
   override def asyncWriteMessages(writes: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
@@ -47,7 +47,7 @@ class PgAsyncWriteJournal
         val r = writeStrategy.store(storeActions(batch))
         r.onSuccess { case _ =>
           batch foreach { entry =>
-            entry.entry.tags.foreach(notifyTagChange)
+            entry._1.tags.foreach(notifyTagChange)
           }
         }
         r.onFailure {

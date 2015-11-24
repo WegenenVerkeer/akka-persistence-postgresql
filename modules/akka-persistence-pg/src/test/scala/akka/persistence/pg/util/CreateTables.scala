@@ -16,7 +16,6 @@ trait CreateTables {
                            "deleted" BOOLEAN DEFAULT false,
                            "sender" VARCHAR(512),
                            "payload" BYTEA,
-                           "payloadmf" VARCHAR(512),
                            "manifest" VARCHAR(512),
                            "uuid" VARCHAR(254) NOT NULL,
                            "writeruuid" VARCHAR(254) NOT NULL,
@@ -24,7 +23,6 @@ trait CreateTables {
                            "tags" HSTORE,
                            "event" #${pluginConfig.jsonType},
                            constraint "cc_journal_payload_event" check (payload IS NOT NULL OR event IS NOT NULL))"""
-
 
   lazy val createSnapshot = sqlu"""create table #${pluginConfig.fullSnapshotTableName} (
                             "persistenceid" VARCHAR(254) NOT NULL,

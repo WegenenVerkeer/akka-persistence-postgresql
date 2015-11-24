@@ -1,16 +1,8 @@
 package akka.persistence.pg.journal
 
 import java.time.OffsetDateTime
-import java.util.UUID
-
-import akka.persistence.PersistentRepr
-import akka.persistence.pg.event.{Created, EventTagger, JsonEncoder, ReadModelUpdates}
-import akka.persistence.pg.{PgConfig, PgExtension}
-import akka.serialization.Serialization
+import akka.persistence.pg.PgConfig
 import play.api.libs.json.JsValue
-
-import scala.concurrent.Future
-import scala.util.Try
 
 case class JournalEntry(id: Option[Long],
                         rowid: Option[Long],
@@ -19,7 +11,6 @@ case class JournalEntry(id: Option[Long],
                         partitionKey: Option[String],
                         deleted: Boolean,
                         payload: Option[Array[Byte]],
-                        payloadManifest: String,
                         manifest: String,
                         uuid: String,
                         writerUuid: String,
@@ -51,7 +42,6 @@ trait JournalTable {
     def partitionKey        = column[Option[String]]("partitionkey")
     def deleted             = column[Boolean]("deleted", O.Default(false))
     def payload             = column[Option[Array[Byte]]]("payload")
-    def payloadManifest     = column[String]("payloadmf")
     def manifest            = column[String]("manifest")
     def uuid                = column[String]("uuid")
     def writerUuid          = column[String]("writeruuid")
@@ -65,7 +55,7 @@ trait JournalTable {
 
     def pk = primaryKey(s"${pluginConfig.journalTableName}_pk", (persistenceId, sequenceNr))
 
-    def * = (id.?, rowid, persistenceId, sequenceNr, partitionKey, deleted, payload, payloadManifest, manifest, uuid, writerUuid, created, tags, event) <>
+    def * = (id.?, rowid, persistenceId, sequenceNr, partitionKey, deleted, payload, manifest, uuid, writerUuid, created, tags, event) <>
       (JournalEntry.tupled, JournalEntry.unapply)
 
   }

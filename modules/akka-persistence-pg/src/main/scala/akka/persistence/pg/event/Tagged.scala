@@ -1,6 +1,6 @@
 package akka.persistence.pg.event
 
-trait Tagged[E] extends EventWrapper[E] {
+trait Tagged {
 
   def tags: Map[String, String]
 
