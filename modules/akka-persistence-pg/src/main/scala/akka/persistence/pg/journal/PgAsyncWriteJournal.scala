@@ -5,9 +5,11 @@ import java.sql.BatchUpdateException
 import akka.actor._
 import akka.persistence.JournalProtocol.{ReplayMessagesFailure, RecoverySuccess}
 import akka.persistence.journal.AsyncWriteJournal
+import akka.persistence.pg.event.{StoredEvent, EventStore}
 import akka.persistence.pg.{PgConfig, PgExtension}
 import akka.persistence.{AtomicWrite, PersistentRepr}
 import akka.serialization.{Serialization, SerializationExtension}
+import slick.dbio
 
 import scala.collection.{immutable, mutable}
 import scala.concurrent.Future
@@ -33,9 +35,13 @@ class PgAsyncWriteJournal
 
   import driver.api._
 
-  def storeActions(entries: Seq[JournalEntryWithReadModelUpdate]): Seq[DBIO[_]] = {
-    val storeActions: Seq[DBIO[_]] = Seq(journals ++= entries.map(_._1))
-    storeActions ++ entries.map(_._2)
+  def storeActions(entries: Seq[JournalEntryWithPayloadAndReadModelUpdate]): Seq[DBIO[_]] = {
+    val storeEventsActions: Seq[DBIO[_]] = Seq(journals ++= entries.map(_._1))
+    val readModelUpdateActions: Seq[DBIO[_]] = entries.flatMap(_._3) ++
+      pluginConfig.eventStore.fold (Seq.empty[DBIO[_]]) { (store: EventStore) =>
+        store.postStoreActions(entries.map { entry => StoredEvent(entry._1.persistenceId, entry._2) })
+    }
+    storeEventsActions ++ readModelUpdateActions
   }
 
   override def asyncWriteMessages(writes: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {

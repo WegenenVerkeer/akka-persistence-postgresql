@@ -44,6 +44,16 @@ trait EventStore {
 
 
   /**
+    * if you want to do something in the same transaction after the events are stored
+    * then you should override this method.
+    * This can for example be used to keep the read side of the CQRS application in sync.
+    * Since this is done in the same tx as the storing of the events, you are guaranteed to have
+    * strict consistency between your read and write model
+    * @param events a sequence of (persistenceId, event object) tuples
+    */
+  def postStoreActions(events: Seq[StoredEvent]): Seq[DBIO[_]] = Seq.empty
+
+  /**
    * find all events for a specific persistenceId
    * @param persistenceId the persistenceId
    */
