@@ -8,8 +8,8 @@ import akka.persistence.pg.event._
 import akka.persistence.pg.journal.{WriteStrategy, DefaultRegexPartitioner, NotPartitioned, Partitioner}
 import com.typesafe.config.{ConfigFactory, Config}
 import org.postgresql.ds.PGSimpleDataSource
-import slick.jdbc.JdbcBackend
-import slick.util.AsyncExecutor
+import slick.jdbc.{JdbcDataSource, JdbcBackend}
+import slick.util.{ClassLoaderUtil, AsyncExecutor}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.FiniteDuration
@@ -79,7 +79,7 @@ class PluginConfig(systemConfig: Config) {
             simpleDataSource.setUser(dbConfig.getString("user"))
             simpleDataSource.setPassword(dbConfig.getString("password"))
             simpleDataSource.setPrepareThreshold(1)
-            JdbcBackend.Database.forDataSource(simpleDataSource, asyncExecutor("unpooled"))
+            JdbcBackend.Database.forDataSource(simpleDataSource, asyncExecutor("akkapg-unpooled"))
 
           case _ =>
             //Slick's Database.forConfig does NOT use the 'url' when also configuring using a JDBC DataSource instead of
@@ -92,7 +92,10 @@ class PluginConfig(systemConfig: Config) {
               case (k, v)          => props.put(k, v)
             }
             val urlConfig = ConfigFactory.parseProperties(props).atPath("properties")
-            JdbcBackend.Database.forConfig("", dbConfig.withFallback(urlConfig))
+            val sourceConfig = dbConfig.withFallback(urlConfig)
+            val source = JdbcDataSource.forConfig(sourceConfig, null, "", ClassLoaderUtil.defaultClassLoader)
+            val executor = AsyncExecutor("akkapg-pooled", sourceConfig.getInt("numThreads"), sourceConfig.getInt("queueSize"))
+            JdbcBackend.Database.forSource(source, executor)
         }
 
     }

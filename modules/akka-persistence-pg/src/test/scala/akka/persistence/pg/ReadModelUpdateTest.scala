@@ -5,7 +5,7 @@ import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
 
 import akka.actor._
 import akka.pattern.ask
-import akka.persistence.pg.perf.{PerfActor, WithReadModelUpdateActor}
+import akka.persistence.pg.perf.{PerfActor, ReadModelUpdateActor}
 import akka.persistence.pg.util.{CreateTables, RecreateSchema}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
@@ -17,7 +17,7 @@ import scala.collection.JavaConverters._
 import scala.language.postfixOps
 import scala.util.Random
 
-class WithReadModelUpdateTest extends FunSuite
+class ReadModelUpdateTest extends FunSuite
   with BeforeAndAfterEach
   with ShouldMatchers
   with BeforeAndAfterAll
@@ -28,7 +28,7 @@ class WithReadModelUpdateTest extends FunSuite
 
   override implicit val patienceConfig = PatienceConfig(timeout = Span(3, Seconds), interval = Span(100, Milliseconds))
 
-  val config = ConfigFactory.load("pg-writestrategy-rowid.conf")
+  val config = ConfigFactory.load("pg-readmodelupdate.conf")
   val system =  ActorSystem("TestCluster", config)
   override val pluginConfig = PluginConfig(system)
 
@@ -38,6 +38,7 @@ class WithReadModelUpdateTest extends FunSuite
   import scala.concurrent.ExecutionContext.Implicits.global
 
   implicit val timeOut = Timeout(1, TimeUnit.MINUTES)
+  val numActors = 10
   var actors: Seq[ActorRef] = _
   val expected = 1000
   val readModelTable = pluginConfig.getFullName("READMODEL")
@@ -80,17 +81,25 @@ class WithReadModelUpdateTest extends FunSuite
   }
 
   override def beforeAll() {
+    ReadModelUpdateActor.reset()
     database.run(
       recreateSchema.andThen(createTables).andThen(sqlu"""create table #$readModelTable (
                                                           "id" BIGSERIAL NOT NULL PRIMARY KEY,
                                                           "txt" VARCHAR(255) DEFAULT NULL)""")
     ).futureValue
-    actors = 1 to 10 map { i =>
+    actors = 1 to numActors map { i =>
       database.run(sqlu"""insert into #$readModelTable values ($i, null)""").futureValue
-      system.actorOf(WithReadModelUpdateActor.props(driver, pluginConfig.getFullName("READMODEL")))
+      system.actorOf(ReadModelUpdateActor.props(driver, pluginConfig.getFullName("READMODEL")))
     }
 
   }
+
+  override protected def afterAll(): Unit = {
+    system.terminate()
+    system.whenTerminated.futureValue
+    ()
+  }
+
 
 }
 

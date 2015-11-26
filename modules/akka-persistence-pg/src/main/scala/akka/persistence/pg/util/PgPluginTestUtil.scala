@@ -44,6 +44,7 @@ object PgPluginTestUtil {
    * Unitialize the global state. This will be called when the actor system stops
    */
   private[pg] def uninitialize() = {
+    db.database.close()
     db = null
     dbLatch = new CountDownLatch(1)
   }
@@ -95,7 +96,7 @@ object PgPluginTestUtil {
   }
 
 
-  private[pg] class RollbackDatabase(database: JdbcBackend.DatabaseDef) extends JdbcBackend.DatabaseDef(database.source, database.executor) {
+  private[pg] class RollbackDatabase(val database: JdbcBackend.DatabaseDef) extends JdbcBackend.DatabaseDef(database.source, database.executor) {
 
     private var session: Option[RollbackSession] = None
 

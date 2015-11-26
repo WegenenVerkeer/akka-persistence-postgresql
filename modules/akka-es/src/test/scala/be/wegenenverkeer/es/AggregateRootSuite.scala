@@ -99,13 +99,12 @@ class AggregateRootSuite extends PersistentActorTest
 
     override protected def initial: Receive = {
 
+      //http://www.postgresql.org/docs/9.4/static/errcodes-appendix.html
       case Create(name, v, metadata) =>
           persistWithReadModelUpdate(
             Created(name, v, Metadata(persistenceId, 1, metadata)),
-            sqlu"""insert into #$readModelTable values ($name, $v)"""
-          )(e => afterEventPersisted(e),
-            //http://www.postgresql.org/docs/9.4/static/errcodes-appendix.html
-          { case t: PSQLException if t.getSQLState == "23505" => sender ! AlreadyExists })
+            sqlu"""insert into #$readModelTable values ($name, $v)""",
+           { case t: PSQLException if t.getSQLState == "23505" => sender ! AlreadyExists })
 
     }
 
@@ -115,7 +114,7 @@ class AggregateRootSuite extends PersistentActorTest
         persistCQRSEvent(Modified(value, Metadata(persistenceId, 1, metadata)),
           sqlu"""update #$readModelTable set value = $value where name = ${data.name}""",
           Map("foo" -> "bar")
-        ) (e => afterEventPersisted(e))
+        )
     }
 
     override def updateState(event: Event): Unit = event match {

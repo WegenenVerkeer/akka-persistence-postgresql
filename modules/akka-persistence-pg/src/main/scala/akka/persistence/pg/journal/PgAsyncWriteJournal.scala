@@ -9,7 +9,6 @@ import akka.persistence.pg.event.{StoredEvent, EventStore}
 import akka.persistence.pg.{PgConfig, PgExtension}
 import akka.persistence.{AtomicWrite, PersistentRepr}
 import akka.serialization.{Serialization, SerializationExtension}
-import slick.dbio
 
 import scala.collection.{immutable, mutable}
 import scala.concurrent.Future
@@ -35,31 +34,44 @@ class PgAsyncWriteJournal
 
   import driver.api._
 
-  def storeActions(entries: Seq[JournalEntryWithPayloadAndReadModelUpdate]): Seq[DBIO[_]] = {
-    val storeEventsActions: Seq[DBIO[_]] = Seq(journals ++= entries.map(_._1))
-    val readModelUpdateActions: Seq[DBIO[_]] = entries.flatMap(_._3) ++
+  def storeActions(entries: Seq[JournalEntryInfo]): Seq[DBIO[_]] = {
+    val storeEventsActions: Seq[DBIO[_]] = Seq(journals ++= entries.map(_.entry))
+    val readModelUpdateActions: Seq[DBIO[_]] = entries.flatMap(_.readModelInfo).map(_.action) ++
       pluginConfig.eventStore.fold (Seq.empty[DBIO[_]]) { (store: EventStore) =>
-        store.postStoreActions(entries.map { entry => StoredEvent(entry._1.persistenceId, entry._2) })
+        store.postStoreActions(entries.map { info => StoredEvent(info.entry.persistenceId, info.payload) })
     }
     storeEventsActions ++ readModelUpdateActions
   }
 
+  def failureHandlers(entries: Seq[JournalEntryInfo]): Seq[PartialFunction[Throwable, Unit]] = {
+    entries.flatMap(_.readModelInfo).map(_.failureHandler)
+  }
+
   override def asyncWriteMessages(writes: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
     log.debug(s"asyncWriteMessages {} atomicWrites", writes.size)
-    val batches = writes map { atomicWrite => toJournalEntries(atomicWrite.payload) }
+    val batches: immutable.Seq[Try[Seq[JournalEntryInfo]]] = writes map { atomicWrite => toJournalEntries(atomicWrite.payload) }
+
+    def storeBatch(entries: Seq[JournalEntryInfo]): Future[Try[Unit]] = {
+      val r: Future[Unit] = writeStrategy.store(storeActions(entries))
+      r.onFailure {
+        case e: BatchUpdateException => log.error(e.getNextException, "problem storing events")
+      }
+      r.map {
+        entries foreach { info =>
+          info.entry.tags.foreach(notifyTagChange)
+        }
+        Success.apply
+      }
+    }
+
     val storedBatches = batches map {
       case Failure(t)     => Future.successful(Failure(t))
       case Success(batch) =>
-        val r = writeStrategy.store(storeActions(batch))
-        r.onSuccess { case _ =>
-          batch foreach { entry =>
-            entry._1.tags.foreach(notifyTagChange)
-          }
+        failureHandlers(batch).toList match {
+          case Nil =>       storeBatch(batch)
+          case h :: Nil =>  storeBatch(batch).recover { case e: Throwable if h.isDefinedAt(e) => Failure(e)  }
+          case _ =>         Future.failed(new RuntimeException("you can only have one failureHandler for each AtomicWrite"))
         }
-        r.onFailure {
-          case e: BatchUpdateException => log.error(e.getNextException, "problem storing events")
-        }
-        r.map(Success.apply)
     }
     Future sequence storedBatches
   }

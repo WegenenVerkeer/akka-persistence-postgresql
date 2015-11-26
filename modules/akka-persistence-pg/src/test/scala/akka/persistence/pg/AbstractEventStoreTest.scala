@@ -50,7 +50,8 @@ abstract class AbstractEventStoreTest
   }
 
   override protected def afterAll(): Unit = {
-    system.terminate().futureValue
+    system.terminate()
+    system.whenTerminated.futureValue
     ()
   }
 }

@@ -34,6 +34,13 @@ class PgAsyncJournalSpec extends JournalSpec(ConfigFactory.load("pg-application.
     super.beforeAll()
   }
 
+  override protected def afterAll(): Unit = {
+    system.terminate()
+    system.whenTerminated.futureValue
+    ()
+  }
+
+
 }
 
 

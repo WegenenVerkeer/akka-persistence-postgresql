@@ -1,4 +1,4 @@
-package akka.persistence.pg
+package akka.persistence.pg.query
 
 import com.typesafe.config.ConfigFactory
 

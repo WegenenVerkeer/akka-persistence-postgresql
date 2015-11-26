@@ -90,6 +90,13 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
     actors = 1 to 10 map { _ => system.actorOf(RandomDelayPerfActor.props(driver)) }
   }
 
+
+  override protected def afterAll(): Unit = {
+    system.terminate()
+    Await.result(system.whenTerminated, Duration.Inf)
+    ()
+  }
+
   override protected def beforeEach(): Unit = {
     database.run(DBIO.seq(journals.delete)).futureValue
     super.beforeEach()

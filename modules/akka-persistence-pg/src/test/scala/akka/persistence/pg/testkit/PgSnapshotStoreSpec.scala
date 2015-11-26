@@ -31,6 +31,13 @@ class PgSnapshotStoreSpec extends SnapshotStoreSpec(ConfigFactory.load("pg-appli
     super.beforeAll()
   }
 
+  override protected def afterAll(): Unit = {
+    system.terminate()
+    system.whenTerminated.futureValue
+    ()
+  }
+
+
 }
 
 

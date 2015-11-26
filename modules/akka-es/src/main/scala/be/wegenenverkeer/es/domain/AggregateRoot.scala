@@ -130,9 +130,7 @@ trait AggregateRoot[D <: Data] extends GracefulPassivation with PersistentActor 
 
   private var eventsSinceLastSnapshot = 0
 
-  override def receiveCommand = initial /*orElse {
-    case PersistenceFailure(CQRSEvent(_, _, _, h), _, t) if h.isDefinedAt(t) => h(t)
-  }*/
+  override def receiveCommand = initial
 
   /**
    * PartialFunction to handle commands when the Actor is in the [[Uninitialized]] state
@@ -143,6 +141,10 @@ trait AggregateRoot[D <: Data] extends GracefulPassivation with PersistentActor 
     * PartialFunction to handle commands when the Actor is in the [[Initialized]] state
     */
   protected def created: Receive
+
+  protected def deleted: Receive = {
+    case _ => sender ! Status.Failure(new RuntimeException(s"aggregate $persistenceId is removed"))
+  }
 
   /**
    * Asynchronously persists `event` and `tags`. On successful persistence, `handler` is called with the
@@ -155,8 +157,8 @@ trait AggregateRoot[D <: Data] extends GracefulPassivation with PersistentActor 
    * @param handler callback handler for each persisted `event`
    */
   protected def persistWithTags[E <: Event](event: E,
-                                            tags: Map[String, String])
-                                           (handler: E => Unit): Unit = {
+                                            tags: Map[String, String],
+                                            handler: E => Unit = defaulEventPersisted _): Unit = {
     def taggedHandler(e: TaggedEvent[E]): Unit = {
         handler(e.event)
     }
@@ -164,9 +166,9 @@ trait AggregateRoot[D <: Data] extends GracefulPassivation with PersistentActor 
   }
 
   protected def persistWithReadModelUpdate[E <: Event](event: E,
-                                                       readModelUpdate: DBIO[_])
-                                                      (handler: E => Unit,
-                                                       failureHandler: PartialFunction[Throwable, Unit] = PartialFunction.empty): Unit = {
+                                                       readModelUpdate: DBIO[_],
+                                                       failureHandler: PartialFunction[Throwable, Unit] = PartialFunction.empty,
+                                                       handler: E => Unit = defaulEventPersisted _): Unit = {
     def wrappedHandler(e: ReadModelUpdateEvent[E]): Unit = {
       handler(e.event)
     }
@@ -175,9 +177,9 @@ trait AggregateRoot[D <: Data] extends GracefulPassivation with PersistentActor 
 
   protected def persistCQRSEvent[E <: Event](event: E,
                                              readModelUpdate: DBIO[_],
-                                             tags: Map[String, String] = Map.empty)
-                                            (handler: E => Unit,
-                                             failureHandler: PartialFunction[Throwable, Unit] = PartialFunction.empty): Unit = {
+                                             tags: Map[String, String] = Map.empty,
+                                             failureHandler: PartialFunction[Throwable, Unit] = PartialFunction.empty,
+                                             handler: E => Unit = defaulEventPersisted _): Unit = {
     def wrappedHandler(e: CQRSEvent[E]): Unit = {
       handler(e.event)
     }
@@ -203,6 +205,10 @@ trait AggregateRoot[D <: Data] extends GracefulPassivation with PersistentActor 
     data = d
   }
 
+  def defaulEventPersisted(event: Event) = {
+    afterEventPersisted()(event)
+  }
+
   /**
    * This method should be used as a callback handler for persist() method.
    * It will:
@@ -214,8 +220,7 @@ trait AggregateRoot[D <: Data] extends GracefulPassivation with PersistentActor 
    * @param replyTo optional actorRef to send reply to, default is the current sender
    * @param event Event that has been persisted
    */
-  protected def afterEventPersisted(event: AggregateRoot.Event,
-                                    replyTo: ActorRef = context.sender()): Unit = {
+  def afterEventPersisted(replyTo: ActorRef = context.sender())(event: Event) = {
     eventsSinceLastSnapshot += 1
     updateState(event)
     if (eventsSinceLastSnapshot >= eventsPerSnapshot) {
@@ -277,21 +282,23 @@ trait AggregateRoot[D <: Data] extends GracefulPassivation with PersistentActor 
   protected def restoreState(metadata: SnapshotMetadata,
                             state: AggregateRoot.State,
                             data: D) = {
+    setData(data)
     this.state = state
     this.state match {
       case Uninitialized => context.become(initial)
       case Initialized => context.become(created)
+      case Removed => context.become(deleted)
     }
-    setData(data)
+
   }
 
-  //TODO Persistent actor will be stopped => how to avoid, if we handle the persistence failure
-//  override protected def onPersistFailure(cause: Throwable, event: Any, seqNr: Long): Unit = {
-//    event match {
-//      case CQRSEvent(_, _, _, h) if h.isDefinedAt(cause) => h(cause)
-//      case _ => super.onPersistFailure(cause, event, seqNr)
-//    }
-//
-//  }
+  protected def setRemoved() = {
+    state = Removed
+  }
+
+  protected override def onPersistRejected(cause: Throwable, event: Any, seqNr: Long): Unit = event match {
+      case CQRSEvent(_, _, _, h) if h.isDefinedAt(cause) => h(cause)
+      case _ => super.onPersistRejected(cause, event, seqNr)
+    }
 
 }

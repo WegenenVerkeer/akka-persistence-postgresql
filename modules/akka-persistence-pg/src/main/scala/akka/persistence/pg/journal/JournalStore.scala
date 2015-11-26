@@ -28,7 +28,8 @@ trait JournalStore extends JournalTable {
 
   import driver.api._
 
-  type JournalEntryWithPayloadAndReadModelUpdate = (JournalEntry, Any, Option[DBIO[_]])
+  case class ReadModelUpdateInfo(action: DBIO[_], failureHandler: PartialFunction[Throwable, Unit])
+  case class JournalEntryInfo(entry: JournalEntry, payload: Any, readModelInfo: Option[ReadModelUpdateInfo])
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -64,7 +65,7 @@ trait JournalStore extends JournalTable {
     UUID.randomUUID.toString
   }
 
-  def toJournalEntries(messages: Seq[PersistentRepr]): Try[Seq[JournalEntryWithPayloadAndReadModelUpdate]] = {
+  def toJournalEntries(messages: Seq[PersistentRepr]): Try[Seq[JournalEntryInfo]] = {
     Try {
       messages map { message =>
         val event = message.payload match {
@@ -72,13 +73,13 @@ trait JournalStore extends JournalTable {
           case _ => message.payload
         }
         val tags: Map[String, String] = eventTagger.tag(message.payload)
-        val update: Option[DBIO[_]] = message.payload match {
-          case r: ReadModelUpdate => Some(r.readModelAction)
+        val update: Option[ReadModelUpdateInfo] = message.payload match {
+          case r: ReadModelUpdate => Some(ReadModelUpdateInfo(r.readModelAction, r.failureHandler))
           case _ => None
         }
 
         val (payloadAsJson, payloadAsBytes) = serializePayload(event)
-        (JournalEntry(None,
+        JournalEntryInfo(JournalEntry(None,
           None,
           message.persistenceId,
           message.sequenceNr,

@@ -14,7 +14,6 @@ trait CreateTables {
                            "rowid" BIGINT DEFAULT NULL,
                            "partitionkey" VARCHAR(254) DEFAULT NULL,
                            "deleted" BOOLEAN DEFAULT false,
-                           "sender" VARCHAR(512),
                            "payload" BYTEA,
                            "manifest" VARCHAR(512),
                            "uuid" VARCHAR(254) NOT NULL,
@@ -32,9 +31,9 @@ trait CreateTables {
                             "snapshot" BYTEA,
                             PRIMARY KEY (persistenceid, sequencenr))"""
 
-  lazy val createUniqueIndex = sqlu"""CREATE INDEX journal_pidseq_idx ON #${pluginConfig.fullJournalTableName} (persistenceid, sequencenr)"""
+  lazy val createUniqueIndex = sqlu"""CREATE unique INDEX journal_pidseq_idx ON #${pluginConfig.fullJournalTableName} (persistenceid, sequencenr)"""
   lazy val createEventIndex = sqlu"""CREATE INDEX journal_event_idx ON #${pluginConfig.fullJournalTableName} USING gin (event)"""
-  lazy val createRowIdIndex = sqlu"""CREATE INDEX journal_rowid_idx ON #${pluginConfig.fullJournalTableName} (rowid)"""
+  lazy val createRowIdIndex = sqlu"""CREATE unique INDEX journal_rowid_idx ON #${pluginConfig.fullJournalTableName} (rowid)"""
   lazy val createRowIdSequence = sqlu"""create sequence #${pluginConfig.fullRowIdSequenceName}"""
 
   lazy val createTables = createJournal
@@ -46,6 +45,7 @@ trait CreateTables {
   def countEvents                = sql"""select count(*) from #${pluginConfig.fullJournalTableName}""".as[Long].head
   def countEvents(id: String)    = sql"""select count(*) from #${pluginConfig.fullJournalTableName} where persistenceid = $id""".as[Long].head
   def countSnapshots(id: String) = sql"""select count(*) from #${pluginConfig.fullSnapshotTableName} where persistenceid = $id""".as[Long].head
+  def countSnapshots             = sql"""select count(*) from #${pluginConfig.fullSnapshotTableName}""".as[Long].head
 
 
 }

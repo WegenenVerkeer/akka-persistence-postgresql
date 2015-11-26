@@ -1,0 +1,155 @@
+package be.wegenenverkeer.es.example
+
+import java.util.{UUID, Base64}
+
+import akka.actor.Props
+import akka.persistence.pg.{PgConfig, PluginConfig}
+import akka.persistence.pg.util.{CreateTables, RecreateSchema, PersistentActorTest}
+import be.wegenenverkeer.es.domain.AggregateRoot
+import be.wegenenverkeer.es.domain.AggregateRoot.{Data, Metadata, Command, Event}
+import com.typesafe.config.{ConfigFactory, Config}
+import org.postgresql.util.PSQLException
+import org.scalatest.time.{Seconds, Span}
+import org.scalatest.{ShouldMatchers, BeforeAndAfterAll}
+import org.scalatest.concurrent.ScalaFutures
+
+class UserManagerSuite extends PersistentActorTest
+  with ScalaFutures
+  with BeforeAndAfterAll
+  with ShouldMatchers
+  with RecreateSchema
+  with CreateTables
+  with UserSchema
+  with PgConfig {
+
+  override val config: Config = ConfigFactory.load("example-actor-test.conf")
+  val pluginConfig = PluginConfig(config)
+  override implicit val patienceConfig = PatienceConfig(timeout = scaled(Span(2, Seconds)))
+
+  import driver.api._
+
+  override protected def beforeAll(): Unit = {
+    database.run(recreateSchema
+      .andThen(createTables)
+      .andThen(users.schema.create)
+    ).futureValue
+  }
+
+  val uuid: String = UUID.randomUUID.toString
+  lazy val usersTable = pluginConfig.getFullName("users")
+
+  test("invalid password") { db =>
+    val actor = system.actorOf(Props(new UserAggregate(uuid)))
+    testProbe.send(actor, CreateUser("foo", "bar", Map.empty))
+    testProbe.expectMsg(InvalidPassword)
+  }
+
+  test("create user") { db =>
+    db.run(countEvents(uuid)).futureValue shouldEqual 0
+    db.run(users.length.result).futureValue shouldEqual 0
+
+    val actor = system.actorOf(Props(new UserAggregate(uuid)))
+    testProbe.send(actor, CreateUser("foo", "foobarbaz", Map.empty))
+    val user = testProbe.expectMsgType[User]
+    user.userName shouldBe "foo"
+    db.run(countEvents(uuid)).futureValue shouldEqual 1
+    db.run(users.length.result).futureValue shouldBe 1
+    db.run(users.result.head).futureValue shouldEqual user
+  }
+
+  test("creating two users with same username fails") { implicit db =>
+    db.run(countEvents(uuid)).futureValue shouldEqual 0
+    db.run(users.length.result).futureValue shouldEqual 0
+
+    val actor = system.actorOf(Props(new UserAggregate(uuid)))
+    testProbe.send(actor, CreateUser("foo", "foobarbaz", Map.empty))
+    testProbe.expectMsgType[User]
+    db.run(users.length.result).futureValue shouldBe 1
+    val checkpoint = savepoint()
+
+    val uuid2 = UUID.randomUUID().toString
+    val actor2 = system.actorOf(Props(new UserAggregate(uuid2)))
+    testProbe.send(actor2, CreateUser("foo", "blablabla", Map.empty))
+    testProbe.expectMsg(UsernameAlreadyExists)
+    rollback(checkpoint)
+
+    db.run(users.length.result).futureValue shouldBe 1
+    db.run(countEvents(uuid2)).futureValue shouldBe 0
+
+  }
+
+  class UserAggregate(val userId: String) extends AggregateRoot[User] {
+
+    override val persistenceId: String = userId
+
+    override protected def initial: Receive = {
+
+      case CreateUser(userName, password, metadata) =>
+        if (!isPasswordValid(password)) {
+          sender ! InvalidPassword
+        } else {
+          val hashed = hashPassword(password)
+          persistCQRSEvent(
+            UserCreated(userName, hashed, Metadata(userId, 1, metadata)),
+            Seq(sqlu"""insert into #$usersTable values ($userName, $hashed)""")
+          )({ e => afterEventPersisted(e) },
+          //http://www.postgresql.org/docs/9.4/static/errcodes-appendix.html
+          { case t: PSQLException if t.getSQLState == "23505" => sender ! UsernameAlreadyExists })
+        }
+
+    }
+
+    override protected def created: Receive = {
+      case CheckPassword(password) => sender ! checkPassword(password)
+    }
+
+    def hashPassword(password: String): String = {
+      val md = java.security.MessageDigest.getInstance("SHA-1")
+      Base64.getEncoder.encodeToString(md.digest(password.getBytes("UTF-8")))
+    }
+
+    def checkPassword(password: String): Boolean = {
+      data.passwordHash == hashPassword(password)
+    }
+
+    def isPasswordValid(password: String): Boolean = {
+      password.length > 6
+    }
+
+    override def updateState(evt: Event): Unit = evt match {
+      case UserCreated(name, hash, metadata) =>
+        data = User(name, hash)
+        context.become(created)
+    }
+  }
+
+}
+
+trait UserSchema {
+  self: PgConfig =>
+
+  import driver.api._
+
+  class UserTable(tag: Tag) extends Table[User](tag, pluginConfig.schema, "users") {
+
+    def userName = column[String]("username", O.PrimaryKey)
+    def passwordHash = column[String]("passwordhash")
+
+    def * = (userName, passwordHash) <> (User.tupled, User.unapply)
+  }
+
+  def users = TableQuery[UserTable]
+
+}
+
+case class User(userName: String, passwordHash: String) extends Data
+
+//create a user
+case class CreateUser(userName: String, passswordHash: String, metadata: Map[String, String]) extends Command
+case class UserCreated(userName: String, passswordHash: String, metadata: Metadata) extends Event
+
+case class CheckPassword(password: String)
+case object InvalidPassword
+case object UsernameAlreadyExists
+
+
