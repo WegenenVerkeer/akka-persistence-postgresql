@@ -12,12 +12,10 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-class PgAsyncJournalSpec extends JournalSpec
+class PgAsyncJournalSpec extends JournalSpec(ConfigFactory.load("pg-application.conf"))
   with JournalStore
   with RecreateSchema
   with PgConfig {
-
-  lazy val config = ConfigFactory.load("pg-application.conf")
 
   override val schemaName = config.getString("postgres.schema")
   override val pluginConfig = PluginConfig(system)
@@ -30,7 +28,9 @@ class PgAsyncJournalSpec extends JournalSpec
   import driver.api._
 
   override def beforeAll() {
-    Await.result(pluginConfig.database.run(recreateSchema.andThen(journals.schema.create)), 10 seconds)
+    Await.result(pluginConfig.database.run(recreateSchema
+      .andThen(journals.schema.create)
+      .andThen(sqlu"""create sequence #${pluginConfig.fullRowIdSequenceName}""")), 10 seconds)
     super.beforeAll()
   }
 

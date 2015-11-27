@@ -1,8 +1,8 @@
-import com.typesafe.sbt.{GitVersioning, GitBranchPrompt}
 import sbt.Keys._
 import sbt._
 
-trait BuildSettings { this: Build =>
+trait BuildSettings {
+  this: Build =>
 
   val projectName = "akka-persistence-postgresql"
 
@@ -18,20 +18,19 @@ trait BuildSettings { this: Build =>
     Project(
       id = projectName,
       base = file("."),
-      settings = projectSettings() ++ Seq(publishLocal := {}, publish := { })
+      settings = projectSettings() ++ Seq(publishLocal := {}, publish := {})
     ).aggregate(modules: _*)
-     .enablePlugins(GitVersioning, GitBranchPrompt)
   }
 
   private def projectSettings() = {
 
     val projectSettings = Seq(
-      parallelExecution := false,
+      parallelExecution in Test := false,
       resolvers ++= Seq(
         "Local Maven" at Path.userHome.asFile.toURI.toURL + ".m2/repository",
         Resolver.typesafeRepo("releases"),
-        "krasserm at bintray" at "http://dl.bintray.com/krasserm/maven"
-        ),
+        "akka snapshots" at "http://repo.akka.io/snapshots"
+      ),
       credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
       updateOptions := updateOptions.value.withCachedResolution(true),
       organization := "be.wegenenverkeer",
@@ -47,9 +46,9 @@ trait BuildSettings { this: Build =>
       if (v.trim.endsWith("SNAPSHOT"))
         Some("collab snapshots" at nexus + "snapshots")
       else
-        Some("collab releases"  at nexus + "releases")
+        Some("collab releases" at nexus + "releases")
     },
-//    publishMavenStyle := true,
+    //    publishMavenStyle := true,
     publishArtifact in Compile := true,
     publishArtifact in Test := true
   )

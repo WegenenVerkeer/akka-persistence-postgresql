@@ -26,7 +26,7 @@ object PluginConfig {
 
 class PluginConfig(systemConfig: Config) {
 
-  private[this] val config = systemConfig.getConfig("pg-persistence")
+  private val config = systemConfig.getConfig("pg-persistence")
 
   val journalSchemaName: Option[String] = PluginConfig.asOption(config.getString("journalSchemaName"))
   val journalTableName = config.getString("journalTableName")
@@ -57,7 +57,9 @@ class PluginConfig(systemConfig: Config) {
         case a: String => sys.error(s"unsupported value for pgjson '$a'. Only 'json' or 'jsonb' supported")
       })
 
-  lazy val database = {
+  lazy val database = createDatabase
+
+  def createDatabase = {
     val dbConfig = config.getConfig("db")
 
     def asyncExecutor(name: String): AsyncExecutor = {
@@ -112,11 +114,6 @@ class PluginConfig(systemConfig: Config) {
     case None => NotPartitioned
     case Some("default") => DefaultRegexPartitioner
     case Some(clazz) => Thread.currentThread.getContextClassLoader.loadClass(clazz).asInstanceOf[Class[_ <: Partitioner]].newInstance()
-  }
-
-  lazy val snapshotDeleteAwaitDuration: FiniteDuration = {
-    val duration = config.getDuration("snapshotDeleteAwaitDuration")
-    FiniteDuration(duration.toMillis, TimeUnit.MILLISECONDS)
   }
 
   def writeStrategy(context: ActorContext): WriteStrategy = {

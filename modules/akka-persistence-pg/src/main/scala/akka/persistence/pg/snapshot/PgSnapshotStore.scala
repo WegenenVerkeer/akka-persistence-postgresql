@@ -1,6 +1,6 @@
 package akka.persistence.pg.snapshot
 
-import akka.persistence.pg.{PgConfig, PluginConfig}
+import akka.persistence.pg.PgConfig
 import akka.persistence.pg.journal.Partitioner
 import akka.persistence.serialization.Snapshot
 import akka.persistence.{SelectedSnapshot, SnapshotMetadata, SnapshotSelectionCriteria}
@@ -13,7 +13,7 @@ trait PgSnapshotStore {
   self: PgConfig =>
 
   def serialization: Serialization
-  def partitioner: Partitioner
+  def partitioner: Partitioner = pluginConfig.journalPartitioner
 
   import driver.api._
 
@@ -35,13 +35,16 @@ trait PgSnapshotStore {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
+  def snapshotsQuery(metadata: SnapshotMetadata) = {
+    snapshots
+      .filter(_.persistenceId === metadata.persistenceId)
+      .filter(_.sequenceNr === metadata.sequenceNr)
+      .filter(byPartitionKey(metadata.persistenceId))
+  }
+
   def deleteSnapshot(metadata: SnapshotMetadata): Future[Int] = {
     database.run {
-      snapshots
-        .filter(_.persistenceId === metadata.persistenceId)
-        .filter(_.sequenceNr === metadata.sequenceNr)
-        .filter(byPartitionKey(metadata.persistenceId))
-        .delete
+      snapshotsQuery(metadata).delete
     }
   }
 

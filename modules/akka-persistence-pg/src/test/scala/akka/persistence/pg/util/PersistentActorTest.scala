@@ -9,6 +9,8 @@ import com.typesafe.config.Config
 import org.scalatest._
 import slick.jdbc.JdbcBackend
 
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 import scala.util.Try
 
 /**
@@ -40,8 +42,8 @@ trait PersistentActorTest extends fixture.FunSuiteLike
       }
     }
     //akka shutdown must be done in this way instead of using afterEach
-    system.shutdown()
-    system.awaitTermination()
+    system.terminate()
+    Await.result(system.whenTerminated, Duration.Inf)
     possibleOutcome.get
   }
 

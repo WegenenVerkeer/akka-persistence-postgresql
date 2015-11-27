@@ -5,13 +5,13 @@ object AkkaPgBuild extends Build with BuildSettings with Dependencies {
 
   lazy val akkaPersistencePgModule = {
 
-    val mainDeps = Seq(slick, hikariCp, slickPg, akkaPersistence, akkaActor, akkaStreams, akkaTest, akkaPersistenceTestkit, playJson)
+    val mainDeps = Seq(slick, hikariCp, slickPg, akkaPersistence, akkaPersistenceQuery, akkaActor, akkaStreams, akkaTest, akkaPersistenceTestkit, playJson)
 
     project("akka-persistence-pg")
       .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies)
 
   }
-    
+   
   lazy val akkaEsModule = {
 
     val mainDeps = Seq(akkaPersistence, akkaTest)

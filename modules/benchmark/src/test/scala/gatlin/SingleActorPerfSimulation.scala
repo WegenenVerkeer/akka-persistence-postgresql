@@ -1,6 +1,6 @@
 package gatlin
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.persistence.pg.perf.PerfActor
 import PerfActor.Alter
@@ -22,9 +22,10 @@ import scala.util.Random
 abstract class SingleActorPerfSimulation(override val config: Config) extends AbstractPersistenceSimulation(config)
 {
 
-  val actor = system.actorOf(PerfActor.props)
+  var actor: ActorRef = _
 
   override def warmup() = {
+    actor = system.actorOf(PerfActor.props)
     implicit val timeout = Timeout(2 seconds)
     Await.result(actor ? Alter("warmup"), 10 seconds)
     ()
