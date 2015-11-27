@@ -9,6 +9,8 @@ import com.typesafe.config.Config
 import org.scalatest._
 import slick.jdbc.JdbcBackend
 
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 import scala.util.Try
 
 /**
@@ -31,17 +33,17 @@ trait PersistentActorTest extends fixture.FunSuiteLike
     testProbe = TestProbe()
   }
 
-  case class FixtureParam(db: JdbcBackend.DatabaseDef)
+  type FixtureParam = JdbcBackend.DatabaseDef
 
   override protected def withFixture(test: OneArgTest): Outcome = {
     val possibleOutcome = Try {
       PgPluginTestUtil.withTransactionRollback { db =>
-        withFixture(test.toNoArgTest(FixtureParam(db)))
+        withFixture(test.toNoArgTest(db))
       }
     }
     //akka shutdown must be done in this way instead of using afterEach
-    system.shutdown()
-    system.awaitTermination()
+    system.terminate()
+    Await.result(system.whenTerminated, Duration.Inf)
     possibleOutcome.get
   }
 

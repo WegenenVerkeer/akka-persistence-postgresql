@@ -1,16 +1,15 @@
 package akka.persistence.pg.event
 
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
 
-import akka.persistence.pg.EventStoreConfig
+import akka.persistence.pg.{PgConfig, EventStoreConfig}
 import play.api.libs.json.JsValue
-
 
 case class Event(id: Long,
                  persistenceId: String,
                  sequenceNr: Long,
                  uuid: String,
-                 created: ZonedDateTime,
+                 created: OffsetDateTime,
                  tags: Map[String, String],
                  className: String,
                  event: JsValue)
@@ -18,20 +17,21 @@ case class Event(id: Long,
 case class StoredEvent(persistenceId: String, event: Any)
 
 trait EventStore {
+  self: PgConfig =>
 
-  import akka.persistence.pg.PgPostgresDriver.api._
+  def eventStoreConfig: EventStoreConfig = pluginConfig.eventStoreConfig
 
-  def eventStoreConfig: EventStoreConfig
+  import driver.api._
 
   //This is basically just a another mapping on the same journal table, ideally you would create a DB view
   class EventsTable(tag: Tag) extends Table[Event](
-    tag, eventStoreConfig.schemaName, eventStoreConfig.tableName) {
+    tag, pluginConfig.eventStoreConfig.schemaName, pluginConfig.eventStoreConfig.tableName) {
 
-    def id                  = column[Long]("id", O.PrimaryKey, O.AutoInc)
+    def id                  = column[Long](pluginConfig.eventStoreConfig.idColumnName)
     def persistenceId       = column[String]("persistenceid")
     def sequenceNr          = column[Long]("sequencenr")
     def uuid                = column[String]("uuid")
-    def created             = column[ZonedDateTime]("created", O.Default(ZonedDateTime.now()))
+    def created             = column[OffsetDateTime]("created")
     def tags                = column[Map[String, String]]("tags")
     def className           = column[String]("payloadmf")
     def event               = column[JsValue]("event")
@@ -44,14 +44,14 @@ trait EventStore {
 
 
   /**
-   * if you want to do something in the same transaction after the events are stored
+   * if you want to do something in the same transaction the events are stored
    * then you should override this method.
    * This can for example be used to keep the read side of the CQRS application in sync.
    * Since this is done in the same tx as the storing of the events, you are guaranteed to have
    * strict consistency between your read and write model
    * @param events a sequence of (persistenceId, event object) tuples
    */
-  def postStoreActions(events: Seq[StoredEvent]): Seq[DBIOAction[_, NoStream, _]] = Seq.empty
+  def postStoreActions(events: Seq[StoredEvent]): Seq[DBIO[_]] = Seq.empty
 
   /**
    * find all events for a specific persistenceId
@@ -70,7 +70,7 @@ trait EventStore {
    * @param max maximum number of events to return
    * @return the list of corresponding events
    */
-  def findEvents(fromId: Long, tags: Map[String, String], max: Long = Long.MaxValue): Query[EventsTable, Event, Seq] = {
+  def findEvents(fromId: Long, tags: Map[String, String] = Map.empty, max: Long = Long.MaxValue): Query[EventsTable, Event, Seq] = {
     events
       .filter(_.id >= fromId)
       .filter(_.event.?.isDefined)

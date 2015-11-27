@@ -1,7 +1,8 @@
 import sbt.Keys._
 import sbt._
 
-trait BuildSettings { this: Build =>
+trait BuildSettings {
+  this: Build =>
 
   val projectName = "akka-persistence-postgresql"
 
@@ -9,7 +10,7 @@ trait BuildSettings { this: Build =>
     Project(
       id = moduleName,
       base = file("modules/" + moduleName),
-      settings = projectSettings()
+      settings = projectSettings() ++ publishSettings
     )
   }
 
@@ -17,24 +18,40 @@ trait BuildSettings { this: Build =>
     Project(
       id = projectName,
       base = file("."),
-      settings = projectSettings()
-    ).settings(publishArtifact := false)
-      .aggregate(modules: _*)
+      settings = projectSettings() ++ Seq(publishLocal := {}, publish := {})
+    ).aggregate(modules: _*)
   }
 
   private def projectSettings() = {
 
     val projectSettings = Seq(
-      parallelExecution := false,
+      parallelExecution in Test := false,
       resolvers ++= Seq(
         "Local Maven" at Path.userHome.asFile.toURI.toURL + ".m2/repository",
         Resolver.typesafeRepo("releases"),
-        "krasserm at bintray" at "http://dl.bintray.com/krasserm/maven"
-        ),
-      updateOptions := updateOptions.value.withCachedResolution(true)
+        "akka snapshots" at "http://repo.akka.io/snapshots"
+      ),
+      credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
+      updateOptions := updateOptions.value.withCachedResolution(true),
+      organization := "be.wegenenverkeer",
+      scalaVersion := "2.11.7"
     )
 
     Defaults.coreDefaultSettings ++ projectSettings
   }
+
+  def publishSettings: Seq[Setting[_]] = Seq(
+    publishTo <<= version { (v: String) =>
+      val nexus = "https://collab.mow.vlaanderen.be/nexus/content/repositories/"
+      if (v.trim.endsWith("SNAPSHOT"))
+        Some("collab snapshots" at nexus + "snapshots")
+      else
+        Some("collab releases" at nexus + "releases")
+    },
+    //    publishMavenStyle := true,
+    publishArtifact in Compile := true,
+    publishArtifact in Test := true
+  )
+
 
 }

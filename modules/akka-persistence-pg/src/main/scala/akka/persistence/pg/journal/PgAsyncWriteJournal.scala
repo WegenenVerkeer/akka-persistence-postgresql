@@ -2,66 +2,87 @@ package akka.persistence.pg.journal
 
 import java.sql.BatchUpdateException
 
-import akka.actor.ActorLogging
+import akka.actor._
+import akka.persistence.JournalProtocol.{RecoverySuccess, ReplayMessagesFailure}
 import akka.persistence.journal.AsyncWriteJournal
-import akka.persistence.pg.{PgActorConfig, PgExtension}
-import akka.persistence.pg.event.{EventStore, EventTagger, JsonEncoder, StoredEvent}
-import akka.persistence.{PersistentConfirmation, PersistentId, PersistentRepr}
+import akka.persistence.pg.event.StoredEvent
+import akka.persistence.pg.{PgConfig, PgExtension}
+import akka.persistence.{AtomicWrite, PersistentRepr}
 import akka.serialization.{Serialization, SerializationExtension}
 
-import scala.collection.immutable
+import scala.collection.{immutable, mutable}
 import scala.concurrent.Future
+import scala.util.Try
+import scala.util.control.NonFatal
+import akka.persistence.pg.journal.PgAsyncWriteJournal._
+import akka.pattern._
+import akka.persistence.pg.EventTag
 
-class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgActorConfig with JournalStore {
+class PgAsyncWriteJournal
+  extends AsyncWriteJournal
+  with ActorLogging
+  with PgConfig
+  with JournalStore {
 
   implicit val executionContext = context.system.dispatcher
 
   override val serialization: Serialization = SerializationExtension(context.system)
   override val pgExtension: PgExtension = PgExtension(context.system)
-  override val pluginConfig = pgExtension.pluginConfig
-  override val eventEncoder: JsonEncoder = pluginConfig.eventStoreConfig.eventEncoder
-  override val eventTagger: EventTagger = pluginConfig.eventStoreConfig.eventTagger
-  override val journalEntryPartitioner: Partitioner = pluginConfig.journalPartitioner
+  override lazy val pluginConfig = pgExtension.pluginConfig
 
-  val eventStore: Option[EventStore] = pluginConfig.eventStore
+  lazy val writeStrategy = pluginConfig.writeStrategy(this.context)
 
-  import akka.persistence.pg.PgPostgresDriver.api._
+  import driver.api._
 
-  override def asyncWriteMessages(messages: immutable.Seq[PersistentRepr]): Future[Unit] = {
-    val entries = toJournalEntries(messages)
-    val storeActions: Seq[DBIOAction[_, NoStream, _]] = Seq(journals ++= entries.map(_.entry))
+  def storeActions(entries: Seq[JournalEntryWithEvent]): Seq[DBIO[_]] = {
 
-    val actions: Seq[DBIOAction[_, NoStream, _]] = eventStore match {
-      case None        => storeActions
+    val storeActions: Seq[DBIO[_]] = Seq(journals ++= entries.map(_.entry))
+
+    val actions: Seq[DBIO[_]] = pluginConfig.eventStore match {
+      case None => storeActions
       case Some(store) => storeActions ++ store.postStoreActions(entries
-          .filter { _.entry.json.isDefined }
-          .map { entryWithEvent: JournalEntryWithEvent => StoredEvent(entryWithEvent.entry.persistenceId, entryWithEvent.event) }
-        )
+        .filter {
+        _.entry.json.isDefined
+      }
+        .map { entryWithEvent: JournalEntryWithEvent => StoredEvent(entryWithEvent.entry.persistenceId, entryWithEvent.event) }
+      )
     }
-
-    val r = db.run {
-      DBIO.seq(actions:_*).transactionally
-    }
-    r.onFailure { case t: BatchUpdateException => println(t.getNextException) }
-    r
+    actions
   }
 
-  @deprecated("asyncWriteConfirmations will be removed, since Channels will be removed.", since = "2.3.4")
-  override def asyncWriteConfirmations(confirmations: immutable.Seq[PersistentConfirmation]): Future[Unit] = {
-    Future.failed(new RuntimeException("unsupported"))
-  }
+  def asyncWriteMessages(messages: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
+    log.debug(s"asyncWriteMessages {} messages", messages.size)
 
-  @deprecated("asyncDeleteMessages will be removed.", since = "2.3.4")
-  override def asyncDeleteMessages(messageIds: immutable.Seq[PersistentId], permanent: Boolean): Future[Unit] = {
-    Future.failed(new RuntimeException("unsupported"))
+    val entries: immutable.Seq[Try[Seq[JournalEntryWithEvent]]] = messages map { atomicWrite => toJournalEntries(atomicWrite.payload) }
+    val entries2Store = entries.filter(_.isSuccess).flatMap(_.get)
+    val result = writeStrategy.store(storeActions(entries2Store))
+
+    result.onFailure {
+      case t: BatchUpdateException => log.error(t.getNextException, "problem storing events")
+      case NonFatal(t) => log.error(t, "problem storing events")
+    }
+
+    result map { _ =>
+
+      entries2Store.foreach { entryWithEvent =>
+        entryWithEvent.entry.tags.foreach(notifyTagChange)
+      }
+
+      if (entries.count(_.isFailure) == 0) Nil
+      else {
+        entries.map { (entry: Try[Seq[JournalEntryWithEvent]]) =>
+          entry.map(_ => ())
+        }
+      }
+    }
   }
 
   override def asyncReadHighestSequenceNr(persistenceId: String, fromSequenceNr: Long): Future[Long] = {
     log.debug(s"Async read for highest sequence number for processorId: [$persistenceId] (hint, seek from  nr: [$fromSequenceNr])")
-    db.run {
+    database.run {
       journals
         .filter(_.persistenceId === persistenceId)
-        .filter(_.partitionKey === journalEntryPartitioner.partitionKey(persistenceId))
+        .filter(byPartitionKey(persistenceId))
         .map((table: JournalTable) => table.sequenceNr)
         .max
         .result
@@ -70,34 +91,200 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgAct
     }
   }
 
+  private[this] def byPartitionKey(persistenceId: String): (JournalTable) => Rep[Option[Boolean]] = {
+    j =>
+      val partitionKey = partitioner.partitionKey(persistenceId)
+      j.partitionKey.isEmpty && partitionKey.isEmpty || j.partitionKey === partitionKey
+  }
+
   override def asyncReplayMessages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)
                                   (replayCallback: (PersistentRepr) => Unit): Future[Unit] = {
-    log.debug(s"Async replay for processorId [$persistenceId], from sequenceNr: [$fromSequenceNr], to sequenceNr: [$toSequenceNr] with max records: [$max]")
-    db.run {
-      journals.filter((table: JournalTable) => table.persistenceId === persistenceId
-        && table.sequenceNr >= fromSequenceNr
-        && table.sequenceNr <= toSequenceNr
-        && table.partitionKey === journalEntryPartitioner.partitionKey(persistenceId))
+
+    log.debug(s"Async replay for processorId [$persistenceId], " +
+      s"from sequenceNr: [$fromSequenceNr], to sequenceNr: [$toSequenceNr] with max records: [$max]")
+
+    database.run {
+      journals
+        .filter(_.persistenceId === persistenceId)
+        .filter(_.sequenceNr >= fromSequenceNr)
+        .filter(_.sequenceNr <= toSequenceNr)
+        .filter(byPartitionKey(persistenceId))
         .sortBy(_.sequenceNr)
         .take(max)
         .result
     } map {
-      _.map { toPersistentRepr } foreach { replayCallback }
+      _.map(toPersistentRepr).foreach(replayCallback)
     }
   }
 
-  override def asyncDeleteMessagesTo(persistenceId: String, toSequenceNr: Long, permanent: Boolean): Future[Unit] = {
+  override def asyncDeleteMessagesTo(persistenceId: String, toSequenceNr: Long): Future[Unit] = {
     val selectedEntries = journals
       .filter(_.persistenceId === persistenceId)
       .filter(_.sequenceNr <= toSequenceNr)
-      .filter(_.partitionKey === journalEntryPartitioner.partitionKey(persistenceId))
+      .filter(byPartitionKey(persistenceId))
 
-    val action = if (permanent) {
-        selectedEntries.delete
-    } else {
-        selectedEntries.map(_.deleted).update(true)
-    }
-    db.run(action).map(_ => ())
+    //TODO check if messages should be permanently deleted or not
+    //    val action = if (permanent) {
+    //        selectedEntries.delete
+    //    } else {
+    //        selectedEntries.map(_.deleted).update(true)
+    //    }
+    database.run(selectedEntries.map(_.deleted).update(true)).map(_ => ())
   }
+
+
+  // ------------------------------------------------------------
+  // --- Akka Persistence Query logic ------
+
+  override def receivePluginInternal: Receive = {
+
+    // requested to send events containing given tags between from and to rowId
+    case ReplayTaggedMessages(fromRowId, toRowId, max, tags, replyTo) =>
+      handleReplayTaggedMessages(fromRowId, toRowId, max, tags, replyTo)
+
+    // subscribe sender to tag nofification
+    case SubscribeTags(tags) => addTagSubscriber(tags)
+
+    // unsubscribe terminated actor
+    case Terminated(ref) => removeSubscriber(ref)
+  }
+
+
+  private def handleReplayTaggedMessages(fromRowId: Long, toRowId: Long, max: Long,
+                                         eventTags: Set[EventTag], replyTo: ActorRef): Unit = {
+
+
+    val correctedFromRowId = math.max(0L, fromRowId - 1)
+
+    asyncReadHighestRowIdWithTags(eventTags, correctedFromRowId).flatMap { highestRowId =>
+
+      val calculatedToRowId = math.min(toRowId, highestRowId)
+
+      if (highestRowId == 0L || fromRowId > calculatedToRowId) {
+        // we are done if there is nothing to send
+        Future.successful(highestRowId)
+      }
+      else {
+        asyncReplayTaggedMessagesBoundedByRowIds(eventTags, fromRowId, calculatedToRowId, max) {
+          case ReplayedTaggedMessage(persistentRepr, tags, offset) =>
+            adaptFromJournal(persistentRepr).foreach { adaptedPersistentRepr =>
+              replyTo.tell(ReplayedTaggedMessage(adaptedPersistentRepr, tags, offset), Actor.noSender)
+            }
+        }.map(_ => highestRowId)
+      }
+    } map {
+      highestRowId => RecoverySuccess(highestRowId)
+    } recover {
+      case e => ReplayMessagesFailure(e)
+    } pipeTo replyTo
+
+    ()
+  }
+
+
+  /**
+   * build a 'or' filter for tags
+   * will select Events containing at least one of the EventTags
+   */
+  private def tagsFilter(tags: Set[EventTag]) = {
+    (table: JournalTable) => {
+      tags
+        .map { case (tagKey, tagValue) => table.tags @> Map(tagKey -> tagValue.value).bind }
+        .reduceLeftOption(_ || _)
+        .getOrElse(false: Rep[Boolean])
+    }
+  }
+
+  def asyncReadHighestRowIdWithTags(tags: Set[EventTag], fromRowId: Long): Future[Long] = {
+
+
+    val query =
+      journals
+        .filter(_.idForQuery >= fromRowId)
+        .filter(tagsFilter(tags))
+        .map(_.idForQuery)
+        .max
+
+    database
+      .run(query.result)
+      .map(_.getOrElse(0L)) // we don't want an Option[Long], but a Long
+
+  }
+
+  def asyncReplayTaggedMessagesBoundedByRowIds(tags: Set[EventTag], fromRowId: Long, toRowId: Long, max: Long)
+                                              (replayCallback: ReplayedTaggedMessage => Unit): Future[Unit] = {
+
+    val query =
+      journals
+        .filter(_.idForQuery >= fromRowId)
+        .filter(_.idForQuery <= toRowId)
+        .filter(tagsFilter(tags))
+        .sortBy(_.idForQuery)
+        .take(max)
+
+    database
+      .run(query.result)
+      .map { entries =>
+      log.debug(s"Replaying ${entries.size} events  ($fromRowId <= rowId <= $toRowId and $tags)")
+      entries.foreach { entry =>
+        val persistentRepr = toPersistentRepr(entry)
+        replayCallback(ReplayedTaggedMessage(persistentRepr, tags, idForQuery(entry)))
+      }
+    }
+  }
+
+  private def idForQuery(entry: JournalEntry): Long = {
+    val id = if (pluginConfig.eventStoreConfig.idColumnName == "rowid") {
+      entry.rowid
+    } else {
+      entry.id
+    }
+    id.getOrElse(sys.error("something went wrong, probably a misconfiguration"))
+  }
+
+
+  private val tagSubscribers = new mutable.HashMap[EventTag, mutable.Set[ActorRef]] with mutable.MultiMap[EventTag, ActorRef]
+
+  private def addTagSubscriber(eventTags: Set[EventTag]): Unit = {
+    val subscriber = sender()
+    eventTags.foreach(eventTag => tagSubscribers.addBinding(eventTag, subscriber))
+    log.debug(s"added subscriptions for $eventTags for actor $subscriber")
+    // watch subscribers in order to unsubscribe them if they terminate
+    context.watch(subscriber)
+    ()
+  }
+
+  protected def removeSubscriber(subscriber: ActorRef): Unit = {
+    log.warning(s"Actor $subscriber terminated!!")
+    val tags = tagSubscribers.collect { case (k, s) if s.contains(subscriber) => k }
+    if (tags.nonEmpty) {
+      log.debug(s"removing subscriber $subscriber [tags: $tags]")
+      tags.foreach { tag => tagSubscribers.removeBinding(tag, subscriber) }
+    }
+  }
+
+  protected def notifyTagChange(eventTag: EventTag): Unit =
+    if (tagSubscribers.contains(eventTag)) {
+      log.debug(s"Notify subscriber of new events with tag: $eventTag")
+      val changed = PgAsyncWriteJournal.TaggedEventAppended(eventTag)
+      tagSubscribers(eventTag).foreach(_ ! changed)
+    }
+
+}
+
+
+object PgAsyncWriteJournal {
+
+  sealed trait SubscriptionCommand
+
+  final case class SubscribeTags(tags: Set[EventTag]) extends SubscriptionCommand
+
+  final case class TaggedEventAppended(eventTag: EventTag) extends DeadLetterSuppression
+
+  final case class ReplayTaggedMessages(fromRowId: Long, toRowId: Long, max: Long,
+                                        tags: Set[EventTag], replyTo: ActorRef) extends SubscriptionCommand
+
+  final case class ReplayedTaggedMessage(persistent: PersistentRepr, tags: Set[EventTag], offset: Long)
+    extends DeadLetterSuppression with NoSerializationVerificationNeeded
 
 }
