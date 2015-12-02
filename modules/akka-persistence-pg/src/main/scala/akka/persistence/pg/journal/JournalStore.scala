@@ -10,8 +10,7 @@ import akka.serialization.Serialization
 import play.api.libs.json.JsValue
 
 import scala.concurrent.Future
-import scala.util.control.NonFatal
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 case class JournalEntry(id: Option[Long],
                         rowid: Option[Long],
@@ -48,7 +47,6 @@ trait JournalStore {
 
   def partitioner: Partitioner = pluginConfig.journalPartitioner
 
-  import driver.MappedJdbcType
   import driver.api._
 
   class JournalTable(tag: Tag) extends Table[JournalEntry](
@@ -83,11 +81,8 @@ trait JournalStore {
     def event = column[Option[JsValue]]("event")
 
     def idForQuery = {
-      if (pluginConfig.eventStoreConfig.idColumnName == "rowid") {
-        rowid
-      } else {
-        id.?
-      }
+      if (pluginConfig.idForQuery == "rowid") rowid
+      else id.?
     }
 
     def pk = primaryKey(s"${pluginConfig.journalTableName}_pk", (persistenceId, sequenceNr))
