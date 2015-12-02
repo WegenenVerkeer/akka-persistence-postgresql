@@ -234,7 +234,7 @@ class PgAsyncWriteJournal
   }
 
   private def idForQuery(entry: JournalEntry): Long = {
-    val id = if (pluginConfig.eventStoreConfig.idColumnName == "rowid") {
+    val id = if (pluginConfig.idForQuery == "rowid") {
       entry.rowid
     } else {
       entry.id

@@ -122,6 +122,11 @@ class PluginConfig(systemConfig: Config) {
     writeStrategyClazz.getConstructor(classOf[PluginConfig], classOf[ActorSystem]).newInstance(this, context.system)
   }
 
+  lazy val idForQuery = {
+    val clazz = config.getString("writestrategy")
+    if (clazz == "akka.persistence.pg.journal.RowIdUpdatingStrategy") "rowid"
+    else "id"
+  }
 }
 
 case class EventStoreConfig(cfg: Config,
