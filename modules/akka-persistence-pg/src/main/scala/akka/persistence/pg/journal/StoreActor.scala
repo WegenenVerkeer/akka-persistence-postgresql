@@ -1,16 +1,18 @@
 package akka.persistence.pg.journal
 
-import akka.pattern.pipe
 import akka.actor._
-import akka.persistence.pg.journal.StoreActor.{StoreSuccess, Store}
-import akka.persistence.pg.{PgConfig, PluginConfig}
+import akka.pattern.pipe
+import akka.persistence.pg.PgPostgresDriver
+import akka.persistence.pg.journal.StoreActor.{Store, StoreSuccess}
+import slick.jdbc.JdbcBackend
 
-import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
+import scala.util.{Failure, Success, Try}
 
 private object StoreActor {
 
-  def props(pluginConfig: PluginConfig) = Props(new StoreActor(pluginConfig))
+  def props(driver: PgPostgresDriver,
+            database: WriteStrategy#DbLike) = Props(new StoreActor(driver, database))
 
   import slick.dbio.DBIO
 
@@ -18,18 +20,19 @@ private object StoreActor {
   case object StoreSuccess
 }
 
-private class StoreActor(override val pluginConfig: PluginConfig) extends Actor
-  with ActorLogging
-  with PgConfig {
+private class StoreActor(driver: PgPostgresDriver,
+                         database: WriteStrategy#DbLike)
+  extends Actor
+  with ActorLogging {
 
   case class Done(senders: List[ActorRef], result: Try[Unit])
   case object Run
 
-  import driver.api._
   import context.dispatcher
+  import driver.api._
 
-  var senders: List[ActorRef] = List.empty[ActorRef]
-  var actions: Seq[driver.api.DBIO[_]] = Seq.empty[DBIO[_]]
+  private var senders: List[ActorRef] = List.empty[ActorRef]
+  private var actions: Seq[driver.api.DBIO[_]] = Seq.empty[DBIO[_]]
 
   override def receive: Receive = idle
 

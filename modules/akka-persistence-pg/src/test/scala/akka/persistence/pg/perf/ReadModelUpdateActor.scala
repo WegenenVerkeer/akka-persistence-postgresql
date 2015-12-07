@@ -8,6 +8,9 @@ import akka.persistence.pg.event.{EventWrapper, ReadModelUpdate}
 import akka.persistence.pg.PgPostgresDriver
 import akka.persistence.pg.perf.ReadModelUpdateActor.TextNotUnique
 import org.postgresql.util.PSQLException
+import slick.jdbc.{PositionedResult, GetResult}
+
+import scala.util.Random
 
 object ReadModelUpdateActor {
   case object TextNotUnique
@@ -31,7 +34,15 @@ class ReadModelUpdateActor(driver: PgPostgresDriver, fullTableName: String, id: 
     case Alter(txt) => persist(new ReadModelUpdate with EventWrapper[Altered] {
 
       import driver.api._
-      override def readModelAction: DBIO[_] = sqlu"""update #$fullTableName set txt = $txt where id = $id"""
+      import context.dispatcher
+      implicit object GetUnit extends GetResult[Unit] { def apply(rs: PositionedResult) = { rs.nextObject(); () } }
+
+      override def readModelAction: DBIO[_] =
+        sql"""select cnt from #$fullTableName where id = $id""".as[Long]
+          .flatMap { c =>
+            val i = c(0).toInt + 1
+            sqlu"""update #$fullTableName set txt = $txt, cnt=$i where id = $id"""
+          }
 
       override def failureHandler = { case t: PSQLException if t.getSQLState == "23505" => sender ! TextNotUnique }
 

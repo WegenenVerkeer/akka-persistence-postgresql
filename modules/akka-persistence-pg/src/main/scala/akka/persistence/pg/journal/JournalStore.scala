@@ -3,7 +3,6 @@ package akka.persistence.pg.journal
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import akka.actor.ActorRef
 import akka.persistence.PersistentRepr
 import akka.persistence.pg.event._
 import akka.persistence.pg.{PgConfig, PgExtension}
@@ -104,7 +103,7 @@ trait JournalStore extends JournalTable {
         persistenceId = entry.persistenceId,
         manifest = "",
         deleted = entry.deleted,
-        sender = ActorRef.noSender,
+        sender = null, //sender ActorRef
         writerUuid = entry.writerUuid
       )
 

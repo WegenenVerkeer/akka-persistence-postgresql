@@ -6,13 +6,13 @@ import java.util.concurrent.TimeUnit
 import akka.actor.{ActorContext, ActorSystem}
 import akka.persistence.pg.event._
 import akka.persistence.pg.journal.{WriteStrategy, DefaultRegexPartitioner, NotPartitioned, Partitioner}
+import akka.util.Timeout
 import com.typesafe.config.{ConfigFactory, Config}
 import org.postgresql.ds.PGSimpleDataSource
 import slick.jdbc.{JdbcDataSource, JdbcBackend}
 import slick.util.{ClassLoaderUtil, AsyncExecutor}
 
 import scala.collection.JavaConverters._
-import scala.concurrent.duration.FiniteDuration
 
 object PluginConfig {
   def apply(system: ActorSystem) = new PluginConfig(system.settings.config)
@@ -25,7 +25,6 @@ object PluginConfig {
 }
 
 class PluginConfig(systemConfig: Config) {
-
   private val config = systemConfig.getConfig("pg-persistence")
 
   val schema: Option[String] = PluginConfig.asOption(config.getString("schemaName"))
@@ -57,11 +56,14 @@ class PluginConfig(systemConfig: Config) {
         case a: String => sys.error(s"unsupported value for pgjson '$a'. Only 'json' or 'jsonb' supported")
       })
 
-  lazy val database = createDatabase
+  lazy val database: JdbcBackend.DatabaseDef = createDatabase
 
-  def createDatabase = {
-    val dbConfig = config.getConfig("db")
+  val throttled: Boolean = config.getBoolean("db.throttled")
+  val throttleTimeout: Timeout = Timeout(config.getDuration("db.throttle.timeout").toMillis, TimeUnit.MILLISECONDS)
 
+  lazy val dbConfig: Config = config.getConfig("db")
+
+  def createDatabase: JdbcBackend.DatabaseDef = {
     def asyncExecutor(name: String): AsyncExecutor = {
       AsyncExecutor(s"$name executor", dbConfig.getInt("numThreads"), dbConfig.getInt("queueSize"))
     }
@@ -92,7 +94,7 @@ class PluginConfig(systemConfig: Config) {
               case (k, v)          => props.put(k, v)
             }
             val urlConfig = ConfigFactory.parseProperties(props).atPath("properties")
-            val sourceConfig = dbConfig.withFallback(urlConfig)
+            val sourceConfig = dbConfig.withFallback(urlConfig).withoutPath("url")
             val source = JdbcDataSource.forConfig(sourceConfig, null, "", ClassLoaderUtil.defaultClassLoader)
             val executor = AsyncExecutor("akkapg-pooled", sourceConfig.getInt("numThreads"), sourceConfig.getInt("queueSize"))
             JdbcBackend.Database.forSource(source, executor)
@@ -130,13 +132,13 @@ class PluginConfig(systemConfig: Config) {
     if (clazz == "akka.persistence.pg.journal.RowIdUpdatingStrategy") "rowid"
     else "id"
   }
-
 }
 
 case class EventStoreConfig(cfg: Config,
                             schema: Option[String],
                             journalTableName: String) {
 
+  val idColumnName: String = cfg.getString("idColumnName")
   val useView: Boolean = cfg.getBoolean("useView")
 
   val schemaName: Option[String] = if (useView) {

@@ -34,11 +34,12 @@ class ReadModelUpdateActorTest extends PersistentActorTest
     database.run(
       recreateSchema.andThen(createTables).andThen(sqlu"""create table #$readModelTable (
                                                           "id" BIGSERIAL NOT NULL PRIMARY KEY,
+                                                          "cnt" INTEGER,
                                                           "txt" VARCHAR(255) DEFAULT NULL)""")
         .andThen(sqlu"""CREATE unique INDEX readmodel_txt_idx ON #$readModelTable (txt)""")
     ).futureValue
     1 to 2 map { i =>
-      database.run(sqlu"""insert into #$readModelTable values ($i, null)""").futureValue
+      database.run(sqlu"""insert into #$readModelTable values ($i, 0, null)""").futureValue
     }
     ()
   }

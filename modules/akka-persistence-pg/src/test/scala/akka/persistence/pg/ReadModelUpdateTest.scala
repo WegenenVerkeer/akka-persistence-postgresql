@@ -38,9 +38,9 @@ class ReadModelUpdateTest extends FunSuite
   import scala.concurrent.ExecutionContext.Implicits.global
 
   implicit val timeOut = Timeout(1, TimeUnit.MINUTES)
-  val numActors = 10
+  val numActors = 20
   var actors: Seq[ActorRef] = _
-  val expected = 1000
+  val expected = 500
   val readModelTable = pluginConfig.getFullName("READMODEL")
 
   test("writing events should update readmodel and not block") {
@@ -85,10 +85,11 @@ class ReadModelUpdateTest extends FunSuite
     database.run(
       recreateSchema.andThen(createTables).andThen(sqlu"""create table #$readModelTable (
                                                           "id" BIGSERIAL NOT NULL PRIMARY KEY,
+                                                          "cnt" INTEGER,
                                                           "txt" VARCHAR(255) DEFAULT NULL)""")
     ).futureValue
     actors = 1 to numActors map { i =>
-      database.run(sqlu"""insert into #$readModelTable values ($i, null)""").futureValue
+      database.run(sqlu"""insert into #$readModelTable values ($i, 0, null)""").futureValue
       system.actorOf(ReadModelUpdateActor.props(driver, pluginConfig.getFullName("READMODEL")))
     }
 
