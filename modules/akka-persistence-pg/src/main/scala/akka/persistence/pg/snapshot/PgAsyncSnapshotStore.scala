@@ -20,7 +20,8 @@ class PgAsyncSnapshotStore extends akka.persistence.snapshot.SnapshotStore
   implicit val executionContext = context.system.dispatcher
 
   override val serialization: Serialization = SerializationExtension(context.system)
-  override val pluginConfig = PgExtension(context.system).pluginConfig
+  override lazy val pluginConfig = PgExtension(context.system).pluginConfig
+  override def partitioner: Partitioner = pluginConfig.journalPartitioner
 
   import driver.api._
 

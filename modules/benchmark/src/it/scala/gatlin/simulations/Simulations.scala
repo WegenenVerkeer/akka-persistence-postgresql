@@ -1,16 +1,16 @@
 package gatlin.simulations
 
 import com.typesafe.config.ConfigFactory
-import gatlin.{MultiActorPerfSimulation, SingleActorPerfSimulation, AbstractPersistenceSimulation}
-
-class NonTxSingleActorSimulation extends SingleActorPerfSimulation(ConfigFactory.load("pg-perf-nontx.conf"))
-class NonTxMultiActorSimulation extends MultiActorPerfSimulation(ConfigFactory.load("pg-perf-nontx.conf"))
+import gatlin.{MultiActorPerfSimulation, SingleActorPerfSimulation}
 
 class TransactionalSingleActorSimulation extends SingleActorPerfSimulation(ConfigFactory.load("pg-perf-tx.conf"))
 class TransactionalMultiActorSimulation extends MultiActorPerfSimulation(ConfigFactory.load("pg-perf-tx.conf"))
 
 class RowIdUpdatingSingleActorSimulation extends SingleActorPerfSimulation(ConfigFactory.load("pg-perf-rowid.conf"))
 class RowIdUpdatingMultiActorSimulation extends MultiActorPerfSimulation(ConfigFactory.load("pg-perf-rowid.conf"))
+
+class RowIdThrottledUpdatingSingleActorSimulation extends SingleActorPerfSimulation(ConfigFactory.load("pg-perf-rowid-throttled.conf"))
+class RowIdThrottledUpdatingMultiActorSimulation extends MultiActorPerfSimulation(ConfigFactory.load("pg-perf-rowid-throttled.conf"))
 
 class SingleThreadedSingleActorSimulation extends SingleActorPerfSimulation(ConfigFactory.load("pg-perf-st.conf"))
 class SingleThreadedMultiActorSimulation extends MultiActorPerfSimulation(ConfigFactory.load("pg-perf-st.conf"))

@@ -3,17 +3,17 @@ package akka.persistence.pg.journal
 import java.sql.BatchUpdateException
 
 import akka.actor._
-import akka.persistence.JournalProtocol.{RecoverySuccess, ReplayMessagesFailure}
+import akka.persistence.JournalProtocol.{ReplayMessagesFailure, RecoverySuccess}
 import akka.persistence.journal.AsyncWriteJournal
-import akka.persistence.pg.event.StoredEvent
+import akka.persistence.pg.event.{StoredEvent, EventStore}
 import akka.persistence.pg.{PgConfig, PgExtension}
 import akka.persistence.{AtomicWrite, PersistentRepr}
 import akka.serialization.{Serialization, SerializationExtension}
 
 import scala.collection.{immutable, mutable}
 import scala.concurrent.Future
+import scala.util.{Failure, Success}
 import scala.util.Try
-import scala.util.control.NonFatal
 import akka.persistence.pg.journal.PgAsyncWriteJournal._
 import akka.pattern._
 import akka.persistence.pg.EventTag
@@ -34,47 +34,46 @@ class PgAsyncWriteJournal
 
   import driver.api._
 
-  def storeActions(entries: Seq[JournalEntryWithEvent]): Seq[DBIO[_]] = {
-
-    val storeActions: Seq[DBIO[_]] = Seq(journals ++= entries.map(_.entry))
-
-    val actions: Seq[DBIO[_]] = pluginConfig.eventStore match {
-      case None => storeActions
-      case Some(store) => storeActions ++ store.postStoreActions(entries
-        .filter {
-        _.entry.json.isDefined
-      }
-        .map { entryWithEvent: JournalEntryWithEvent => StoredEvent(entryWithEvent.entry.persistenceId, entryWithEvent.event) }
-      )
+  def storeActions(entries: Seq[JournalEntryInfo]): Seq[DBIO[_]] = {
+    val storeEventsActions: Seq[DBIO[_]] = Seq(journals ++= entries.map(_.entry))
+    val readModelUpdateActions: Seq[DBIO[_]] = entries.flatMap(_.readModelInfo).map(_.action) ++
+      pluginConfig.eventStore.fold (Seq.empty[DBIO[_]]) { (store: EventStore) =>
+        store.postStoreActions(entries.map { info => StoredEvent(info.entry.persistenceId, info.payload) })
     }
-    actions
+    storeEventsActions ++ readModelUpdateActions
   }
 
-  def asyncWriteMessages(messages: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
-    log.debug(s"asyncWriteMessages {} messages", messages.size)
+  def failureHandlers(entries: Seq[JournalEntryInfo]): Seq[PartialFunction[Throwable, Unit]] = {
+    entries.flatMap(_.readModelInfo).map(_.failureHandler)
+  }
 
-    val entries: immutable.Seq[Try[Seq[JournalEntryWithEvent]]] = messages map { atomicWrite => toJournalEntries(atomicWrite.payload) }
-    val entries2Store = entries.filter(_.isSuccess).flatMap(_.get)
-    val result = writeStrategy.store(storeActions(entries2Store))
+  override def asyncWriteMessages(writes: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
+    log.debug(s"asyncWriteMessages {} atomicWrites", writes.size)
+    val batches: immutable.Seq[Try[Seq[JournalEntryInfo]]] = writes map { atomicWrite => toJournalEntries(atomicWrite.payload) }
 
-    result.onFailure {
-      case t: BatchUpdateException => log.error(t.getNextException, "problem storing events")
-      case NonFatal(t) => log.error(t, "problem storing events")
-    }
-
-    result map { _ =>
-
-      entries2Store.foreach { entryWithEvent =>
-        entryWithEvent.entry.tags.foreach(notifyTagChange)
+    def storeBatch(entries: Seq[JournalEntryInfo]): Future[Try[Unit]] = {
+      val r: Future[Unit] = writeStrategy.store(storeActions(entries))
+      r.onFailure {
+        case e: BatchUpdateException => log.error(e.getNextException, "problem storing events")
       }
-
-      if (entries.count(_.isFailure) == 0) Nil
-      else {
-        entries.map { (entry: Try[Seq[JournalEntryWithEvent]]) =>
-          entry.map(_ => ())
+      r.map {
+        entries foreach { info =>
+          info.entry.tags.foreach(notifyTagChange)
         }
+        Success.apply
       }
     }
+
+    val storedBatches = batches map {
+      case Failure(t)     => Future.successful(Failure(t))
+      case Success(batch) =>
+        failureHandlers(batch).toList match {
+          case Nil =>       storeBatch(batch)
+          case h :: Nil =>  storeBatch(batch).recover { case e: Throwable if h.isDefinedAt(e) => Failure(e)  }
+          case _ =>         Future.failed(new RuntimeException("you can only have one failureHandler for each AtomicWrite"))
+        }
+    }
+    Future sequence storedBatches
   }
 
   override def asyncReadHighestSequenceNr(persistenceId: String, fromSequenceNr: Long): Future[Long] = {
@@ -118,17 +117,13 @@ class PgAsyncWriteJournal
   }
 
   override def asyncDeleteMessagesTo(persistenceId: String, toSequenceNr: Long): Future[Unit] = {
-    val selectedEntries = journals
+    //TODO we could alternatively permanently delete all but the last message and mark the last message as deleted
+    val selectedEntries: Query[JournalTable, JournalEntry, Seq] = journals
       .filter(_.persistenceId === persistenceId)
       .filter(_.sequenceNr <= toSequenceNr)
       .filter(byPartitionKey(persistenceId))
+      .sortBy(_.sequenceNr.desc)
 
-    //TODO check if messages should be permanently deleted or not
-    //    val action = if (permanent) {
-    //        selectedEntries.delete
-    //    } else {
-    //        selectedEntries.map(_.deleted).update(true)
-    //    }
     database.run(selectedEntries.map(_.deleted).update(true)).map(_ => ())
   }
 

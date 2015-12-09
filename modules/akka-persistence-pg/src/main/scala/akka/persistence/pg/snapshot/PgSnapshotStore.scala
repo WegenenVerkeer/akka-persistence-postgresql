@@ -9,29 +9,13 @@ import akka.serialization.Serialization
 import scala.concurrent.Future
 import scala.language.postfixOps
 
-trait PgSnapshotStore {
+trait PgSnapshotStore extends SnapshotTable {
   self: PgConfig =>
 
   def serialization: Serialization
   def partitioner: Partitioner = pluginConfig.journalPartitioner
 
   import driver.api._
-
-  class SnapshotTable(tag: Tag) extends Table[(String, Long, Option[String], Long, Array[Byte])](tag,
-    pluginConfig.snapshotSchemaName, pluginConfig.snapshotTableName) {
-
-    def persistenceId       = column[String]("persistenceid")
-    def sequenceNr          = column[Long]("sequencenr")
-    def partitionKey        = column[Option[String]]("partitionkey")
-    def timestamp           = column[Long]("timestamp")
-    def snapshot            = column[Array[Byte]]("snapshot")
-
-    def pk = primaryKey(s"pk_${pluginConfig.snapshotTableName}", (persistenceId, sequenceNr))
-
-    def * = (persistenceId, sequenceNr, partitionKey, timestamp, snapshot)
-  }
-
-  val snapshots = TableQuery[SnapshotTable]
 
   import scala.concurrent.ExecutionContext.Implicits.global
 

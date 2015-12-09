@@ -6,13 +6,14 @@ import java.util.concurrent.TimeUnit
 import akka.actor.{ActorContext, ActorSystem}
 import akka.persistence.pg.event._
 import akka.persistence.pg.journal.{WriteStrategy, DefaultRegexPartitioner, NotPartitioned, Partitioner}
+import akka.util.Timeout
 import com.typesafe.config.{ConfigFactory, Config}
 import org.postgresql.ds.PGSimpleDataSource
-import slick.jdbc.JdbcBackend
-import slick.util.AsyncExecutor
+import slick.jdbc.{JdbcDataSource, JdbcBackend}
+import slick.util.{ClassLoaderUtil, AsyncExecutor}
 
 import scala.collection.JavaConverters._
-import scala.concurrent.duration.FiniteDuration
+import scala.util.{Failure, Success, Try}
 
 object PluginConfig {
   def apply(system: ActorSystem) = new PluginConfig(system.settings.config)
@@ -25,43 +26,53 @@ object PluginConfig {
 }
 
 class PluginConfig(systemConfig: Config) {
-
   private val config = systemConfig.getConfig("pg-persistence")
 
-  val journalSchemaName: Option[String] = PluginConfig.asOption(config.getString("journalSchemaName"))
-  val journalTableName = config.getString("journalTableName")
+  val schema: Option[String] = PluginConfig.asOption(config.getString("schemaName"))
+  val schemaName = schema.fold("")(n => '"' + n + '"')
 
-  val fullJournalTableName: String = journalSchemaName match {
-    case None => journalTableName
-    case Some(s) => '"' + s + '"' + '.' + journalTableName
+  def getFullName(partialName: String) = schema match {
+    case None => partialName
+    case Some(s) => '"' + s + '"' + '.' + partialName
   }
+
+  val journalTableName = config.getString("journalTableName")
+  val fullJournalTableName: String = getFullName(journalTableName)
 
   val rowIdSequenceName: String = s"${journalTableName}_rowid_seq"
+  val fullRowIdSequenceName: String = getFullName(rowIdSequenceName)
 
-  val fullRowIdSequenceName: String = journalSchemaName match {
-    case None => rowIdSequenceName
-    case Some(s) => '"' + s + '"' + '.' + '"' + rowIdSequenceName + '"'
-  }
-
-
-  val snapshotSchemaName: Option[String] = PluginConfig.asOption(config.getString("snapshotSchemaName"))
   val snapshotTableName = config.getString("snapshotTableName")
+  val fullSnapshotTableName: String = getFullName(snapshotTableName)
 
   def shutdownDataSource() = {
     database.close()
   }
 
-  val pgPostgresDriver = new PgPostgresDriverImpl(config.getString("pgjson") match {
+  val jsonType = config.getString("pgjson")
+
+  val pgPostgresDriver = new PgPostgresDriverImpl(jsonType match {
         case "jsonb"   => "jsonb"
         case "json"    => "json"
         case a: String => sys.error(s"unsupported value for pgjson '$a'. Only 'json' or 'jsonb' supported")
       })
 
-  lazy val database = createDatabase
+  lazy val database: JdbcBackend.DatabaseDef = createDatabase
 
-  def createDatabase = {
-    val dbConfig = config.getConfig("db")
+  val throttled: Boolean = config.getBoolean("db.throttled")
+  val throttleThreads: Int = {
+    Try {
+      config.getInt("db.throttle.numThreads")
+    } match {
+      case Success(numThreads) => numThreads
+      case Failure(_) => dbConfig.getInt("numThreads") * 4
+    }
+  }
+  val throttleTimeout: Timeout = Timeout(config.getDuration("db.throttle.timeout").toMillis, TimeUnit.MILLISECONDS)
 
+  lazy val dbConfig: Config = config.getConfig("db")
+
+  def createDatabase: JdbcBackend.DatabaseDef = {
     def asyncExecutor(name: String): AsyncExecutor = {
       AsyncExecutor(s"$name executor", dbConfig.getInt("numThreads"), dbConfig.getInt("queueSize"))
     }
@@ -79,7 +90,7 @@ class PluginConfig(systemConfig: Config) {
             simpleDataSource.setUser(dbConfig.getString("user"))
             simpleDataSource.setPassword(dbConfig.getString("password"))
             simpleDataSource.setPrepareThreshold(1)
-            JdbcBackend.Database.forDataSource(simpleDataSource, asyncExecutor("unpooled"))
+            JdbcBackend.Database.forDataSource(simpleDataSource, asyncExecutor("akkapg-unpooled"))
 
           case _ =>
             //Slick's Database.forConfig does NOT use the 'url' when also configuring using a JDBC DataSource instead of
@@ -92,7 +103,10 @@ class PluginConfig(systemConfig: Config) {
               case (k, v)          => props.put(k, v)
             }
             val urlConfig = ConfigFactory.parseProperties(props).atPath("properties")
-            JdbcBackend.Database.forConfig("", dbConfig.withFallback(urlConfig))
+            val sourceConfig = dbConfig.withFallback(urlConfig).withoutPath("url")
+            val source = JdbcDataSource.forConfig(sourceConfig, null, "", ClassLoaderUtil.defaultClassLoader)
+            val executor = AsyncExecutor("akkapg-pooled", sourceConfig.getInt("numThreads"), sourceConfig.getInt("queueSize"))
+            JdbcBackend.Database.forSource(source, executor)
         }
 
     }
@@ -100,7 +114,7 @@ class PluginConfig(systemConfig: Config) {
   }
 
   lazy val eventStoreConfig = new EventStoreConfig(config.getConfig("eventstore"),
-    journalSchemaName,
+    schema,
     journalTableName)
 
   lazy val eventStore: Option[EventStore] = {
@@ -130,7 +144,7 @@ class PluginConfig(systemConfig: Config) {
 }
 
 case class EventStoreConfig(cfg: Config,
-                            journalSchemaName: Option[String],
+                            schema: Option[String],
                             journalTableName: String) {
 
   val idColumnName: String = cfg.getString("idColumnName")
@@ -139,7 +153,7 @@ case class EventStoreConfig(cfg: Config,
   val schemaName: Option[String] = if (useView) {
     PluginConfig.asOption(cfg.getString("schemaName"))
   } else {
-    journalSchemaName
+    schema
   }
 
   val tableName: String = if (useView) {
@@ -157,7 +171,8 @@ case class EventStoreConfig(cfg: Config,
 
   val eventTagger: EventTagger = {
     PluginConfig.asOption(cfg.getString("tagger")) match {
-      case None => DefaultTagger
+      case None => NotTagged
+      case Some("default") => DefaultTagger
       case Some(clazz) => Thread.currentThread().getContextClassLoader.loadClass(clazz).asInstanceOf[Class[_ <: EventTagger]].newInstance()
     }
   }

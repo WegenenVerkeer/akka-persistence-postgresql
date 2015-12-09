@@ -1,7 +1,8 @@
-package akka.persistence.pg
+package akka.persistence.pg.query
 
 import akka.actor.Props
 import akka.persistence.pg.TestActor._
+import akka.persistence.pg._
 import akka.persistence.pg.journal.query.PostgresReadJournal
 import akka.persistence.query.PersistenceQuery
 import akka.stream.ActorMaterializer
@@ -10,6 +11,10 @@ import org.scalatest.concurrent.Eventually
 
 import scala.language.postfixOps
 
+/**
+  * uses the default RowIdUpdating write strategy and will use the "rowid" column of the journal
+  * table for queries
+ */
 class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
   implicit val materializer = ActorMaterializer()

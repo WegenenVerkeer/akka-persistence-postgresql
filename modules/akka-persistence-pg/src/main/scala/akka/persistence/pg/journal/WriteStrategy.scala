@@ -6,43 +6,59 @@ import java.util.concurrent.TimeUnit
 import akka.actor.{Status, ActorSystem, ActorRef}
 import akka.pattern.ask
 import akka.persistence.pg.journal.StoreActor.{StoreSuccess, Store}
-import akka.persistence.pg.{PluginConfig, PgConfig}
+import akka.persistence.pg.PluginConfig
 import akka.util.Timeout
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
+
+import scala.language.postfixOps
 
 trait WriteStrategy {
-  self: PgConfig =>
+
+  def pluginConfig: PluginConfig
+  lazy val driver = pluginConfig.pgPostgresDriver
 
   import driver.api._
 
-  def store(actions: Seq[DBIO[_]]): Future[Unit]
+  trait DbLike {
+    def run[R](a: DBIOAction[R, NoStream, Nothing])
+              (implicit executionContext: ExecutionContext): Future[R]
+  }
+
+  def store(actions: Seq[DBIO[_]])
+           (implicit executionContext: ExecutionContext): Future[Unit]
   def system: ActorSystem
 
-}
-
-class NonTransactionalWriteStrategy(override val pluginConfig: PluginConfig,
-                                    override val system: ActorSystem) extends WriteStrategy
-with PgConfig {
-
-  import driver.api._
-
-  def store(actions: Seq[DBIO[_]]): Future[Unit] = {
-    database.run { DBIO.seq(actions:_*) }
+  val throttler = if (pluginConfig.throttled) {
+    new ConcurrentMessagesThrottlerImpl(pluginConfig.throttleThreads, system, pluginConfig.throttleTimeout)
+  } else {
+    NotThrottled
   }
+
+  lazy val database = {
+    new DbLike {
+      override def run[R](a: DBIOAction[R, NoStream, Nothing])
+                         (implicit executionContext: ExecutionContext): Future[R] = {
+        throttler.throttled {
+          pluginConfig.database.run(a)
+        }
+      }
+    }
+  }
+
 }
 
 class SingleThreadedBatchWriteStrategy(override val pluginConfig: PluginConfig,
-                                       override val system: ActorSystem) extends WriteStrategy
-  with PgConfig {
+                                       override val system: ActorSystem) extends WriteStrategy {
 
   import driver.api._
   implicit val timeout = Timeout(10, TimeUnit.SECONDS)
-  import scala.concurrent.ExecutionContext.Implicits.global
 
-  private val eventStoreActor: ActorRef = system.actorOf(StoreActor.props(pluginConfig))
+  private val eventStoreActor: ActorRef = system.actorOf(StoreActor.props(pluginConfig.pgPostgresDriver, database))
 
-  def store(actions: Seq[DBIO[_]]): Future[Unit] = {
+  def store(actions: Seq[DBIO[_]])
+           (implicit executionContext: ExecutionContext): Future[Unit] = {
     eventStoreActor ? Store(actions) flatMap {
       case StoreSuccess      => Future.successful(())
       case Status.Failure(t) => Future.failed(t)
@@ -52,13 +68,32 @@ class SingleThreadedBatchWriteStrategy(override val pluginConfig: PluginConfig,
 
 }
 
+/**
+  * This writestrategy can lead to missing events, only usefull as a benchmarking baseline
+  *
+  * @param pluginConfig
+  * @param system
+  */
 class TransactionalWriteStrategy(override val pluginConfig: PluginConfig,
-                                 override val system: ActorSystem) extends WriteStrategy
-  with PgConfig {
+                                 override val system: ActorSystem) extends WriteStrategy {
 
-  import driver.api._
+  system.log.warning(
+    """
+      |!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      |!                                                                                                          !
+      |!  TransactionalWriteStrategy is configured:                                                               !
+      |!                                                                                                          !
+      |!  A possible, but likely consequence is that while reading events, some events might be missed            !
+      |!  This strategy is only useful for benchmarking!                                                          !
+      |!  Use with caution, YOLO !!!                                                                              !
+      |!                                                                                                          !
+      |!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    """.stripMargin)
 
-  def store(actions: Seq[DBIO[_]]): Future[Unit] = {
+  import pluginConfig.pgPostgresDriver.api._
+
+  def store(actions: Seq[DBIO[_]])
+           (implicit executionContext: ExecutionContext): Future[Unit] = {
     database.run {
       DBIO.seq(actions:_*).transactionally
     }
@@ -66,12 +101,12 @@ class TransactionalWriteStrategy(override val pluginConfig: PluginConfig,
 }
 
 class TableLockingWriteStrategy(override val pluginConfig: PluginConfig,
-                                override val system: ActorSystem) extends WriteStrategy
-  with PgConfig {
+                                override val system: ActorSystem) extends WriteStrategy {
 
-  import driver.api._
+  import pluginConfig.pgPostgresDriver.api._
 
-  def store(actions: Seq[DBIO[_]]): Future[Unit] = {
+  def store(actions: Seq[DBIO[_]])
+           (implicit executionContext: ExecutionContext): Future[Unit] = {
     database.run {
       DBIO.seq((sqlu"""lock table #${pluginConfig.fullJournalTableName} in share update exclusive mode"""
         +: actions):_*).transactionally
@@ -81,20 +116,17 @@ class TableLockingWriteStrategy(override val pluginConfig: PluginConfig,
 }
 
 class RowIdUpdatingStrategy(override val pluginConfig: PluginConfig,
-                            override val system: ActorSystem) extends WriteStrategy
-  with PgConfig {
+                            override val system: ActorSystem) extends WriteStrategy {
 
   import driver.api._
-  import system.dispatcher
 
-  private val rowIdUpdater: ActorRef = system.actorOf(RowIdUpdater.props(pluginConfig))
+  private val rowIdUpdater: ActorRef = system.actorOf(RowIdUpdater.props(pluginConfig, pluginConfig.pgPostgresDriver, database), "AkkaPgRowIdUpdater")
 
-  def store(actions: Seq[DBIO[_]]): Future[Unit] = {
-    val r = database.run(DBIO.seq(actions:_*).transactionally)
-    r.onSuccess { case _ =>
-      rowIdUpdater ! RowIdUpdater.UpdateRowIds
-    }
-    r
+  def store(actions: Seq[DBIO[_]])
+           (implicit executionContext: ExecutionContext): Future[Unit] = {
+    database
+      .run(DBIO.seq(actions:_*).transactionally)
+      .map { _ => rowIdUpdater ! RowIdUpdater.UpdateRowIds }
   }
 
 }
