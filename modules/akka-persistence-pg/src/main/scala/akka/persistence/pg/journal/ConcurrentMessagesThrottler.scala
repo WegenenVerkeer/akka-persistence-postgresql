@@ -1,7 +1,7 @@
 package akka.persistence.pg.journal
 
 import akka.actor._
-import akka.dispatch.{DequeBasedMessageQueueSemantics, RequiresMessageQueue, BoundedDequeBasedMessageQueueSemantics, BoundedMessageQueueSemantics}
+import akka.dispatch.{RequiresMessageQueue, BoundedDequeBasedMessageQueueSemantics}
 import akka.pattern.ask
 import akka.util.Timeout
 
@@ -28,7 +28,7 @@ class ConcurrentMessagesThrottlerImpl(val maxOutstandingMessages: Int,
                                       val system: ActorSystem,
                                       implicit val timeout: Timeout) extends ConcurrentMessagesThrottler {
 
-  private val throttlingActor = system.actorOf(Props(new ThrottlingActor()).withMailbox("akka.persistence.pg.throttler-mailbox"))
+  private val throttlingActor = system.actorOf(Props(new ThrottlingActor()).withMailbox("pg-persistence.throttler-mailbox"))
 
   def throttled[T](f: => Future[T])
                   (implicit executionContext: ExecutionContext): Future[T] = {

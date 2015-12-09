@@ -1,6 +1,6 @@
 package akka.persistence.pg
 
-import akka.persistence.pg.perf.PerfActor.Alter
+import akka.persistence.pg.perf.Messages.Alter
 import akka.persistence.pg.perf.ReadModelUpdateActor
 import akka.persistence.pg.perf.ReadModelUpdateActor.TextNotUnique
 import akka.persistence.pg.util.{CreateTables, PersistentActorTest, RecreateSchema}

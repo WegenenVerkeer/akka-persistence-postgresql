@@ -9,6 +9,8 @@ object AkkaPgBuild extends Build with BuildSettings with Dependencies {
       playJson, slf4jSimple)
 
     project("akka-persistence-pg")
+      .configs(config("it") extend(Test))
+      .settings(Defaults.itSettings: _*)
       .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies)
 
   }
@@ -18,6 +20,8 @@ object AkkaPgBuild extends Build with BuildSettings with Dependencies {
     val mainDeps = Seq(akkaPersistence, akkaTest)
 
     project("akka-es")
+      .configs(config("it") extend(Test))
+      .settings(Defaults.itSettings: _*)
       .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies)
       .dependsOn(akkaPersistencePgModule % "test->test;compile->compile")
 

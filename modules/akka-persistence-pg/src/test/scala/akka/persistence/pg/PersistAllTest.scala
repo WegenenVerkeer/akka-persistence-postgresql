@@ -1,12 +1,12 @@
 package akka.persistence.pg
 
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
 
 import akka.actor._
 import akka.pattern.ask
 import akka.persistence.pg.perf.Messages.Alter
-import akka.persistence.pg.perf.ReadModelUpdateActor
+import akka.persistence.pg.perf.{PersistAllActor}
 import akka.persistence.pg.util.{CreateTables, RecreateSchema}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
@@ -14,11 +14,10 @@ import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Milliseconds, Seconds, Span}
 
-import scala.collection.JavaConverters._
 import scala.language.postfixOps
 import scala.util.Random
 
-class ReadModelUpdateTest extends FunSuite
+class PersistAllTest extends FunSuite
   with BeforeAndAfterEach
   with ShouldMatchers
   with BeforeAndAfterAll
@@ -30,7 +29,7 @@ class ReadModelUpdateTest extends FunSuite
 
   override implicit val patienceConfig = PatienceConfig(timeout = Span(3, Seconds), interval = Span(100, Milliseconds))
 
-  val config = ConfigFactory.load("pg-readmodelupdate.conf")
+  val config = ConfigFactory.load("pg-persistall.conf")
   val system =  ActorSystem("TestCluster", config)
   override val pluginConfig = PluginConfig(system)
 
@@ -39,27 +38,37 @@ class ReadModelUpdateTest extends FunSuite
   import scala.concurrent.ExecutionContext.Implicits.global
 
   implicit val timeOut = Timeout(1, TimeUnit.MINUTES)
-  val numActors = 20
+  val numActors = 2
   var actors: Seq[ActorRef] = _
-  val expected = 500
-  val readModelTable = pluginConfig.getFullName("READMODEL")
+  val expected = 10
 
-  test("writing events should update readmodel and not block") {
-    val map = writeEvents()
-    database.run(countEvents).futureValue shouldBe expected
-    database.run(sql"""select count(*) from #$readModelTable where txt is not NULL""".as[Long]).futureValue.head shouldBe actors.size
-    map.asScala.foreach { case (i, s) =>
-        database.run(sql"""select txt from #$readModelTable where id = $i""".as[String]).futureValue.head shouldEqual s
+  test("writing events should respect order") {
+    writeEvents()
+    database.run(countEvents).futureValue shouldBe expected*10
+
+    actors.zipWithIndex.foreach { case (actor, i) =>
+      val persistenceId = s"PersistAllActor_${i+1}"
+      val r: Vector[(Long, Long)] = database.run(
+        sql"""select id, rowid from #${pluginConfig.fullJournalTableName}
+             where persistenceid = $persistenceId order by id asc""".as[(Long, Long)]
+      ).futureValue
+
+      //check if ids are sorted => of course they are
+      val ids = r map { case (id, rowid) => id }
+      ids shouldEqual ids.sorted
+
+      //check if rowids are sorted
+      val rowIds = r map { case (id, rowid) => rowid }
+      rowIds shouldEqual rowIds.sorted
     }
+
   }
 
   def writeEvents() = {
     val received: AtomicInteger = new AtomicInteger(0)
-    val map: ConcurrentHashMap[Int, String] = new ConcurrentHashMap()
 
     def sendMessage(i: Int) = {
       actors(i) ? Alter(Random.alphanumeric.take(16).mkString) map { case s: String =>
-        map.put(i+1, s)
         received.incrementAndGet()
       }
     }
@@ -69,22 +78,13 @@ class ReadModelUpdateTest extends FunSuite
     }
 
     waitUntilEventsWritten(expected, received)
-
-    map
-
   }
 
   override def beforeAll() {
-    ReadModelUpdateActor.reset()
-    database.run(
-      recreateSchema.andThen(createTables).andThen(sqlu"""create table #$readModelTable (
-                                                          "id" BIGSERIAL NOT NULL PRIMARY KEY,
-                                                          "cnt" INTEGER,
-                                                          "txt" VARCHAR(255) DEFAULT NULL)""")
-    ).futureValue
+    PersistAllActor.reset()
+    database.run(recreateSchema.andThen(createTables)).futureValue
     actors = 1 to numActors map { i =>
-      database.run(sqlu"""insert into #$readModelTable values ($i, 0, null)""").futureValue
-      system.actorOf(ReadModelUpdateActor.props(driver, pluginConfig.getFullName("READMODEL")))
+      system.actorOf(PersistAllActor.props)
     }
 
   }

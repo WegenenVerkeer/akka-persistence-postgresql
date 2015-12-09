@@ -10,7 +10,9 @@ import akka.persistence.pg.PluginConfig
 import akka.util.Timeout
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
 
+import scala.language.postfixOps
 
 trait WriteStrategy {
 
@@ -29,7 +31,7 @@ trait WriteStrategy {
   def system: ActorSystem
 
   val throttler = if (pluginConfig.throttled) {
-    new ConcurrentMessagesThrottlerImpl(pluginConfig.dbConfig.getInt("numThreads"), system, pluginConfig.throttleTimeout)
+    new ConcurrentMessagesThrottlerImpl(pluginConfig.throttleThreads, system, pluginConfig.throttleTimeout)
   } else {
     NotThrottled
   }
@@ -66,8 +68,27 @@ class SingleThreadedBatchWriteStrategy(override val pluginConfig: PluginConfig,
 
 }
 
+/**
+  * This writestrategy can lead to missing events, only usefull as a benchmarking baseline
+  *
+  * @param pluginConfig
+  * @param system
+  */
 class TransactionalWriteStrategy(override val pluginConfig: PluginConfig,
                                  override val system: ActorSystem) extends WriteStrategy {
+
+  system.log.warning(
+    """
+      |!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      |!                                                                                                          !
+      |!  TransactionalWriteStrategy is configured:                                                               !
+      |!                                                                                                          !
+      |!  A possible, but likely consequence is that while reading events, some events might be missed            !
+      |!  This strategy is only useful for benchmarking!                                                          !
+      |!  Use with caution, YOLO !!!                                                                              !
+      |!                                                                                                          !
+      |!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    """.stripMargin)
 
   import pluginConfig.pgPostgresDriver.api._
 
@@ -98,16 +119,14 @@ class RowIdUpdatingStrategy(override val pluginConfig: PluginConfig,
                             override val system: ActorSystem) extends WriteStrategy {
 
   import driver.api._
-  
-  private val rowIdUpdater: ActorRef = system.actorOf(RowIdUpdater.props(pluginConfig))
+
+  private val rowIdUpdater: ActorRef = system.actorOf(RowIdUpdater.props(pluginConfig, pluginConfig.pgPostgresDriver, database), "AkkaPgRowIdUpdater")
 
   def store(actions: Seq[DBIO[_]])
            (implicit executionContext: ExecutionContext): Future[Unit] = {
-    val r = database.run(DBIO.seq(actions:_*).transactionally)
-    r.onSuccess { case _ =>
-      rowIdUpdater ! RowIdUpdater.UpdateRowIds
-    }
-    r
+    database
+      .run(DBIO.seq(actions:_*).transactionally)
+      .map { _ => rowIdUpdater ! RowIdUpdater.UpdateRowIds }
   }
 
 }

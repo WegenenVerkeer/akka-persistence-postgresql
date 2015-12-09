@@ -7,9 +7,10 @@ import akka.actor._
 import akka.pattern.{ask, pipe}
 import akka.persistence.pg.event._
 import akka.persistence.pg.journal.JournalTable
+import akka.persistence.pg.perf.Messages.Alter
 import akka.persistence.pg.perf.{PerfActor, RandomDelayPerfActor}
 import akka.persistence.pg.util.{CreateTables, RecreateSchema}
-import akka.persistence.pg.{PgConfig, PluginConfig}
+import akka.persistence.pg.{WaitForEvents, PgConfig, PluginConfig}
 import akka.util.Timeout
 import com.typesafe.config.Config
 import org.scalatest._
@@ -29,6 +30,7 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
   with RecreateSchema
   with CreateTables
   with PgConfig
+  with WaitForEvents
   with ScalaFutures {
 
   val system =  ActorSystem("TestCluster", config)
@@ -54,14 +56,7 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
       }
     }
 
-    var noProgressCount = 0
-    var numEvents = received.get()
-    while (numEvents != expected && noProgressCount < 50) {
-      Thread.sleep(100L)
-      val numExtra = received.get() - numEvents
-      if (numExtra == 0) noProgressCount += 1
-      else numEvents += numExtra
-    }
+    waitUntilEventsWritten(expected, received)
 
     //just sleep a bit so the EventReader has seen the last events
     Thread.sleep(1000)

@@ -1,15 +1,13 @@
 package gatlin
 
 import akka.actor.ActorSystem
-import akka.persistence.pg.perf.PerfActor
-import PerfActor.Alter
+import akka.persistence.pg.perf.Messages.Alter
 import akka.persistence.pg.util.{CreateTables, RecreateSchema}
 import akka.persistence.pg.{PgConfig, PluginConfig}
 import com.typesafe.config.Config
-import io.gatling.core.Predef._
 import io.gatling.core.scenario.Simulation
 import io.gatling.core.session.{Session => GSession, Expression}
-import io.gatling.core.validation.Validation
+import io.gatling.core.validation.{Success, Validation}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -44,7 +42,7 @@ abstract class AbstractPersistenceSimulation(val config: Config)
 
   case class AlterMessage(text: Expression[String]) extends AskMessage {
     override def apply(session: GSession): Validation[Any] = {
-      text(session).flatMap { s => Alter(s) }
+      text(session).flatMap { s => Success(Alter(s)) }
     }
   }
 

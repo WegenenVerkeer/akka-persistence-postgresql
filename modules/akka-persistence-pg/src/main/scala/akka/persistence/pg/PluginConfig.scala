@@ -13,6 +13,7 @@ import slick.jdbc.{JdbcDataSource, JdbcBackend}
 import slick.util.{ClassLoaderUtil, AsyncExecutor}
 
 import scala.collection.JavaConverters._
+import scala.util.{Failure, Success, Try}
 
 object PluginConfig {
   def apply(system: ActorSystem) = new PluginConfig(system.settings.config)
@@ -59,6 +60,14 @@ class PluginConfig(systemConfig: Config) {
   lazy val database: JdbcBackend.DatabaseDef = createDatabase
 
   val throttled: Boolean = config.getBoolean("db.throttled")
+  val throttleThreads: Int = {
+    Try {
+      config.getInt("db.throttle.numThreads")
+    } match {
+      case Success(numThreads) => numThreads
+      case Failure(_) => dbConfig.getInt("numThreads") * 4
+    }
+  }
   val throttleTimeout: Timeout = Timeout(config.getDuration("db.throttle.timeout").toMillis, TimeUnit.MILLISECONDS)
 
   lazy val dbConfig: Config = config.getConfig("db")

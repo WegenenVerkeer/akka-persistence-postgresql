@@ -6,11 +6,10 @@ import akka.actor.Props
 import akka.persistence.PersistentActor
 import akka.persistence.pg.event.{EventWrapper, ReadModelUpdate}
 import akka.persistence.pg.PgPostgresDriver
+import akka.persistence.pg.perf.Messages.{Altered, Alter}
 import akka.persistence.pg.perf.ReadModelUpdateActor.TextNotUnique
 import org.postgresql.util.PSQLException
 import slick.jdbc.{PositionedResult, GetResult}
-
-import scala.util.Random
 
 object ReadModelUpdateActor {
   case object TextNotUnique
@@ -23,8 +22,6 @@ object ReadModelUpdateActor {
 
 
 class ReadModelUpdateActor(driver: PgPostgresDriver, fullTableName: String, id: Int) extends PersistentActor {
-
-  import PerfActor._
 
   override val persistenceId: String = s"TestActor_$id"
 

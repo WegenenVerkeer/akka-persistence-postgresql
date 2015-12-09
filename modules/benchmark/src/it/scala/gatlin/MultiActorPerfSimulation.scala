@@ -2,8 +2,8 @@ package gatlin
 
 import akka.actor.ActorRef
 import akka.pattern.ask
+import akka.persistence.pg.perf.Messages.Alter
 import akka.persistence.pg.perf.PerfActor
-import PerfActor.Alter
 import akka.util.Timeout
 import com.typesafe.config.Config
 import gatlin.Predef._
