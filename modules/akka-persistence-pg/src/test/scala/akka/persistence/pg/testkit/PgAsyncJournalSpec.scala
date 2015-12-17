@@ -30,7 +30,7 @@ class PgAsyncJournalSpec extends JournalSpec(ConfigFactory.load("pg-application.
   override def beforeAll() {
     pluginConfig.database.run(recreateSchema
       .andThen(journals.schema.create)
-      .andThen(createRowIdSequence)).futureValue
+    ).futureValue
     super.beforeAll()
   }
 

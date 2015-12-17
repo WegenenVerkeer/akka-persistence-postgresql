@@ -80,7 +80,7 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
 
   override def beforeAll() {
     database.run(
-      recreateSchema.andThen(journals.schema.create).andThen(createRowIdSequence)
+      recreateSchema.andThen(journals.schema.create)
     ).futureValue
     actors = 1 to 10 map { _ => system.actorOf(RandomDelayPerfActor.props(driver)) }
   }
