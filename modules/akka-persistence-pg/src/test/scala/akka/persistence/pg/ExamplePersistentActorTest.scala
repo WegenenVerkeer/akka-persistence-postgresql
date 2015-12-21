@@ -41,6 +41,8 @@ class ExamplePersistentActorTest extends PersistentActorTest
     ()
   }
 
+  override protected def afterAll(): Unit = database.close()
+
   val id = UUID.randomUUID().toString
 
   test("check journal entries are stored") { db =>

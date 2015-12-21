@@ -2,7 +2,7 @@ package akka.persistence.pg.testkit
 
 import akka.persistence.pg.journal.NotPartitioned
 import akka.persistence.pg.snapshot.PgSnapshotStore
-import akka.persistence.pg.{PgConfig, PluginConfig}
+import akka.persistence.pg.{PgExtension, PgConfig, PluginConfig}
 import akka.persistence.pg.util.RecreateSchema
 import akka.persistence.snapshot.SnapshotStoreSpec
 import akka.serialization.{Serialization, SerializationExtension}
@@ -20,14 +20,14 @@ class PgSnapshotStoreSpec extends SnapshotStoreSpec(ConfigFactory.load("pg-appli
 
   override implicit val patienceConfig = PatienceConfig(timeout = Span(1, Second), interval = Span(100, Milliseconds))
 
-  override val pluginConfig = PluginConfig(system)
+  override lazy val pluginConfig = PgExtension(system).pluginConfig
   override val serialization: Serialization = SerializationExtension(system)
   override val partitioner = NotPartitioned
 
   import driver.api._
 
   override def beforeAll() {
-    pluginConfig.database.run(recreateSchema.andThen(snapshots.schema.create)).futureValue
+    database.run(recreateSchema.andThen(snapshots.schema.create)).futureValue
     super.beforeAll()
   }
 

@@ -32,7 +32,7 @@ class ReadModelUpdateTest extends FunSuite
 
   val config = ConfigFactory.load("pg-readmodelupdate.conf")
   val system =  ActorSystem("TestCluster", config)
-  override val pluginConfig = PluginConfig(system)
+  override lazy val pluginConfig = PgExtension(system).pluginConfig
 
   import driver.api._
 

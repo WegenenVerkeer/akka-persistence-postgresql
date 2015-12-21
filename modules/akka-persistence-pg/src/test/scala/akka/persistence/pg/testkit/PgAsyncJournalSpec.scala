@@ -23,7 +23,7 @@ class PgAsyncJournalSpec extends JournalSpec(ConfigFactory.load("pg-application.
 
   override implicit val patienceConfig = PatienceConfig(timeout = Span(1, Second), interval = Span(100, Milliseconds))
 
-  override val pluginConfig = PluginConfig(system)
+  override lazy val pluginConfig = PgExtension(system).pluginConfig
 
   import driver.api._
 

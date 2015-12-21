@@ -29,11 +29,11 @@ abstract class AbstractEventStoreTest
   lazy val config = ConfigFactory.load("pg-eventstore.conf")
   implicit val system = ActorSystem("EventStoreTest", config)
 
-  override val pluginConfig = PluginConfig(system)
+  override lazy val pluginConfig = PgExtension(system).pluginConfig
 
   val testProbe = TestProbe()
 
-  override implicit val patienceConfig = PatienceConfig(timeout = Span(3, Seconds), interval = Span(100, Milliseconds))
+  override implicit val patienceConfig = PatienceConfig(timeout = Span(5, Seconds), interval = Span(100, Milliseconds))
 
   import driver.api._
 

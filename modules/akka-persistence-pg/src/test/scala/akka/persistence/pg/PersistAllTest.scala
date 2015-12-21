@@ -31,7 +31,7 @@ class PersistAllTest extends FunSuite
 
   val config = ConfigFactory.load("pg-persistall.conf")
   val system =  ActorSystem("TestCluster", config)
-  override val pluginConfig = PluginConfig(system)
+  override lazy val pluginConfig = PgExtension(system).pluginConfig
 
   import driver.api._
 

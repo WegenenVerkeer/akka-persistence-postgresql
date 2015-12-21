@@ -74,7 +74,7 @@ class PluginConfig(systemConfig: Config) {
 
   def createDatabase: JdbcBackend.DatabaseDef = {
     def asyncExecutor(name: String): AsyncExecutor = {
-      AsyncExecutor(s"$name executor", dbConfig.getInt("numThreads"), dbConfig.getInt("queueSize"))
+      AsyncExecutor(s"$name", dbConfig.getInt("numThreads"), dbConfig.getInt("queueSize"))
     }
 
     val db = PluginConfig.asOption(dbConfig.getString("jndiName")) match {

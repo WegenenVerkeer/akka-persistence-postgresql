@@ -44,6 +44,8 @@ class ReadModelUpdateActorTest extends PersistentActorTest
     ()
   }
 
+  override protected def afterAll(): Unit = database.close()
+
   val readModelTable = pluginConfig.getFullName("READMODEL")
   val countReadModelEntries = sql"""select count(*) from #$readModelTable where txt is not NULL""".as[Long]
 
