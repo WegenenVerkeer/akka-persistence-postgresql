@@ -97,8 +97,17 @@ object PgPluginTestUtil {
       session = Option(new RollbackSession(database))
     }
 
+    @annotation.tailrec
+    private def retry[T](n: Int)(fn: => T): T = {
+      util.Try { fn } match {
+        case util.Success(x) => x
+        case _ if n > 1 => Thread.sleep(50); retry(n - 1)(fn)
+        case util.Failure(e) => throw e
+      }
+    }
+
     override def createSession(): JdbcBackend.SessionDef = {
-      session.getOrElse(sys.error("make sure to call newRollbackSession first"))
+      retry(5)(session.get)
     }
 
     def rollbackAndClose() = {
