@@ -1,17 +1,14 @@
 package akka.persistence.pg.testkit
 
+import akka.persistence.CapabilityFlag
 import akka.persistence.journal.JournalSpec
-import akka.persistence.pg.event.{NotTagged, DefaultTagger, JsonEncoder, NoneJsonEncoder}
-import akka.persistence.pg.journal.{JournalTable, NotPartitioned, JournalStore}
+import akka.persistence.pg.journal.JournalTable
 import akka.persistence.pg.util.{CreateTables, RecreateSchema}
-import akka.persistence.pg.{PgConfig, PgExtension, PluginConfig}
-import akka.serialization.{Serialization, SerializationExtension}
+import akka.persistence.pg.{PgConfig, PgExtension}
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Milliseconds, Second, Span}
 
-import scala.concurrent.Await
-import scala.concurrent.duration._
 import scala.language.postfixOps
 
 class PgAsyncJournalSpec extends JournalSpec(ConfigFactory.load("pg-application.conf"))
@@ -40,7 +37,7 @@ class PgAsyncJournalSpec extends JournalSpec(ConfigFactory.load("pg-application.
     ()
   }
 
-
+  override protected def supportsRejectingNonSerializableObjects: CapabilityFlag = false
 }
 
 

@@ -1,10 +1,11 @@
 package testkit
 
 import akka.pattern.ask
+import akka.persistence.CapabilityFlag
 import akka.persistence.journal.JournalPerfSpec
 import akka.persistence.pg.journal.RowIdUpdater.IsBusy
-import akka.persistence.pg.{PgExtension, PluginConfig, PgConfig}
 import akka.persistence.pg.util.{CreateTables, RecreateSchema}
+import akka.persistence.pg.{PgConfig, PgExtension}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.ScalaFutures
@@ -61,4 +62,6 @@ with PgConfig {
     system.whenTerminated.futureValue
     ()
   }
+
+  override protected def supportsRejectingNonSerializableObjects: CapabilityFlag = false
 }
