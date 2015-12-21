@@ -27,12 +27,32 @@ class RowIdUpdater(pluginConfig: PluginConfig,
 
   import context.dispatcher
 
+  private case object Init
   private case object Marker
   private case object Done
   private case object Continue
+  private case class MaxRowId(rowid: Long)
 
   //TODO make configurable
   val max = 20000
+
+  var maxRowId: Long = _
+
+  //start initializing => find max rowid
+  self ! Init
+
+  override def receive: Receive = initializing
+
+  def initializing: Receive = {
+    case IsBusy          => sender ! true
+    case UpdateRowIds    => stash()
+    case Init            => findMaxRowId() map { MaxRowId } pipeTo self
+      ()
+    case MaxRowId(rowid) =>
+      maxRowId = rowid
+      unstashAll()
+      context become waitingForUpdateRequest
+  }
 
   def waitingForUpdateRequest: Receive = {
     case UpdateRowIds =>
@@ -66,24 +86,27 @@ class RowIdUpdater(pluginConfig: PluginConfig,
       stash()
   }
 
-  override def receive: Receive = waitingForUpdateRequest
-
   import driver.api._
+
+  def findMaxRowId(): Future[Long] = {
+    database.run(sql"""SELECT COALESCE(MAX(rowid), 0::bigint) FROM #${pluginConfig.fullJournalTableName}""".as[Long])
+      .map(_(0))
+  }
 
   def assignRowIds(): Future[Int] = {
     var updated = 0
+    val start = System.nanoTime()
     database.run(
       sql"""SELECT id FROM #${pluginConfig.fullJournalTableName} WHERE rowid IS NULL ORDER BY id limit #$max""".as[Long]
         .flatMap { ids =>
           updated += ids.size
           if (updated > 0) {
-            sql"""SELECT nextval('#${pluginConfig.fullRowIdSequenceName}') from generate_series(1, $updated)""".as[Long]
-              .flatMap { rowids =>
-                val values = ids.zip(rowids).map { case (id, rowid) => s"($id, $rowid)" }.mkString(",")
-                sqlu"""UPDATE #${pluginConfig.fullJournalTableName} SET rowid = data_table.rowid
-                    FROM (VALUES #$values) as data_table (id, rowid)
-                    WHERE #${pluginConfig.fullJournalTableName}.id = data_table.id"""
-              }
+              val values = ids.map { id =>
+                maxRowId += 1
+                s"($id, $maxRowId)" }.mkString(",")
+              sqlu"""UPDATE #${pluginConfig.fullJournalTableName} SET rowid = data_table.rowid
+                  FROM (VALUES #$values) as data_table (id, rowid)
+                  WHERE #${pluginConfig.fullJournalTableName}.id = data_table.id"""
           } else {
             DBIO.successful(())
           }
@@ -93,21 +116,5 @@ class RowIdUpdater(pluginConfig: PluginConfig,
         updated
       }
   }
-
-//  def assignRowIds2(): Future[Int] = {
-//    database.run(
-//      sqlu"""UPDATE #${pluginConfig.fullJournalTableName} SET rowid = newid
-//             FROM (SELECT id, nextval('#${pluginConfig.fullRowIdSequenceName}') as newid
-//                     FROM (SELECT id FROM #${pluginConfig.fullJournalTableName} WHERE rowid IS NULL ORDER BY id) AS pre_empty_ids ) as empty_ids
-//               WHERE
-//                #${pluginConfig.fullJournalTableName}.id = empty_ids.id
-//                AND #${pluginConfig.fullJournalTableName}.rowid IS NULL"""
-//
-//    ).map {
-//      c => log.debug("updated rowid for {} rows", c);
-//      c
-//    }
-//  }
-
 
 }

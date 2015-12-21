@@ -47,6 +47,7 @@ class AggregateRootSuite extends PersistentActorTest
     ()
   }
 
+  override protected def afterAll(): Unit = database.close()
 
   val countReadModel = sql"""select count(*) from #$readModelTable""".as[Long].head
   val selectFromReadModel = sql"""select * from #$readModelTable""".as[(String, String)].head

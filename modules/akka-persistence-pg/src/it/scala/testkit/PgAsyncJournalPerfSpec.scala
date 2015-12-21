@@ -3,7 +3,7 @@ package testkit
 import akka.pattern.ask
 import akka.persistence.journal.JournalPerfSpec
 import akka.persistence.pg.journal.RowIdUpdater.IsBusy
-import akka.persistence.pg.{PluginConfig, PgConfig}
+import akka.persistence.pg.{PgExtension, PluginConfig, PgConfig}
 import akka.persistence.pg.util.{CreateTables, RecreateSchema}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
@@ -23,13 +23,13 @@ with PgConfig {
   val logger = LoggerFactory.getLogger(getClass)
 
   override implicit val patienceConfig = PatienceConfig(timeout = Span(1, Second), interval = Span(100, Milliseconds))
-  override val pluginConfig = PluginConfig(system)
+  override lazy val pluginConfig = PgExtension(system).pluginConfig
 
   override def eventsCount = 5000
   override def awaitDurationMillis: Long = 30.seconds toMillis
 
   override def beforeAll() {
-    pluginConfig.database.run(recreateSchema
+    database.run(recreateSchema
       .andThen(createTables)).futureValue
     super.beforeAll()
   }
