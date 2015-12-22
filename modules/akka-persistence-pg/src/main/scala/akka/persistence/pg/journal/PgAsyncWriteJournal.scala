@@ -36,10 +36,7 @@ class PgAsyncWriteJournal
 
   def storeActions(entries: Seq[JournalEntryInfo]): Seq[DBIO[_]] = {
     val storeEventsActions: Seq[DBIO[_]] = Seq(journals ++= entries.map(_.entry))
-    val readModelUpdateActions: Seq[DBIO[_]] = entries.flatMap(_.readModelInfo).map(_.action) ++
-      pluginConfig.eventStore.fold (Seq.empty[DBIO[_]]) { (store: EventStore) =>
-        store.postStoreActions(entries.map { info => StoredEvent(info.entry.persistenceId, info.payload) })
-    }
+    val readModelUpdateActions: Seq[DBIO[_]] = entries.flatMap(_.readModelInfo).map(_.action)
     storeEventsActions ++ readModelUpdateActions
   }
 

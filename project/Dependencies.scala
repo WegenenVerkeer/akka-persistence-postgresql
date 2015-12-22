@@ -10,7 +10,7 @@ trait Dependencies { this: Build =>
   val akkaSlf4j               = "com.typesafe.akka"       %%  "akka-slf4j"                          % akkaVersion
   val akkaActor               = "com.typesafe.akka"       %%  "akka-actor"                          % akkaVersion
   val akkaPersistenceQuery    = "com.typesafe.akka"       %%  "akka-persistence-query-experimental" % akkaVersion
-  val akkaStreams             = "com.typesafe.akka"       %%  "akka-stream-experimental"            % "1.0"
+  val akkaStreams             = "com.typesafe.akka"       %%  "akka-stream-experimental"            % "2.0"
 
   val slick                   = "com.typesafe.slick"      %%  "slick"                      % slickVersion
   val slickHikariCp           = "com.typesafe.slick"      %%  "slick-hikaricp"             % slickVersion
