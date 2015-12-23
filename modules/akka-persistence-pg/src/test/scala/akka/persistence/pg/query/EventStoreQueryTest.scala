@@ -91,6 +91,78 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     checkSizeReceivedEvents(5)
   }
 
+  test("query all events") {
+
+    val test = system.actorOf(Props(new TestActor(testProbe.ref)))
+    testProbe.send(test, Alter("foo"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Alter("bar"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Increment(1))
+    testProbe.expectMsg("j")
+
+    val eventSource = startSource(0)
+
+    var events = List[TestActor.Event]()
+
+    def checkSizeReceivedEvents(size: Int) = {
+      eventually {
+        events should have size size
+      }
+    }
+
+    // a Sink that will append each event to the Events List
+    val sink = Sink.foreach[TestActor.Event] { e =>
+      events = events :+ e
+    }
+
+    eventSource.to(sink).run()
+
+    checkSizeReceivedEvents(3)
+    testProbe.send(test, Alter("bar"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Increment(1))
+    testProbe.expectMsg("j")
+    checkSizeReceivedEvents(5)
+
+  }
+
+  test("query events by persistenceId") {
+
+    val test = system.actorOf(Props(new TestActor(testProbe.ref)))
+    testProbe.send(test, Alter("foo"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Alter("bar"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Increment(1))
+    testProbe.expectMsg("j")
+
+    val eventSource = startSource("TestActor", 0)
+
+    var events = List[TestActor.Event]()
+
+    def checkSizeReceivedEvents(size: Int) = {
+      eventually {
+        events should have size size
+      }
+    }
+
+    // a Sink that will append each event to the Events List
+    val sink = Sink.foreach[TestActor.Event] { e =>
+      events = events :+ e
+    }
+
+    eventSource.to(sink).run()
+
+    checkSizeReceivedEvents(3)
+    testProbe.send(test, Alter("bar"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Increment(1))
+    testProbe.expectMsg("j")
+    checkSizeReceivedEvents(5)
+
+  }
+
 
   private def startSource(tags: Set[EventTag], fromRowId: Long): Source[TestActor.Event, Unit] = {
 
@@ -107,5 +179,32 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     }
   }
 
+  private def startSource(fromRowId: Long): Source[TestActor.Event, Unit] = {
+
+    val readJournal =
+      PersistenceQuery(system)
+        .readJournalFor[PostgresReadJournal](PostgresReadJournal.Identifier)
+
+    readJournal.events(fromRowId).map { env =>
+      env.event match {
+        case evt: TestActor.Event => evt
+        case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")
+      }
+    }
+  }
+
+  private def startSource(persistenceId: String, fromRowId: Long): Source[TestActor.Event, Unit] = {
+
+    val readJournal =
+      PersistenceQuery(system)
+        .readJournalFor[PostgresReadJournal](PostgresReadJournal.Identifier)
+
+    readJournal.eventsByPersistenceId(persistenceId, fromRowId, Long.MaxValue).map { env =>
+      env.event match {
+        case evt: TestActor.Event => evt
+        case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")
+      }
+    }
+  }
 
 }

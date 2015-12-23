@@ -11,14 +11,18 @@ import com.typesafe.config.Config
 import scala.concurrent.duration._
 import akka.persistence.pg.EventTag
 
-class PostgresReadJournal(system: ExtendedActorSystem, config: Config) extends ReadJournal with EventsByTags {
+class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
+  extends ReadJournal
+  with EventsByTags
+  with AllEvents
+  with EventsByPersistenceIdQuery {
 
 
   private val refreshInterval = config.getDuration("refresh-interval", MILLISECONDS).millis
   private val writeJournalPluginId: String = config.getString("write-plugin")
   private val maxBufSize: Int = config.getInt("max-buffer-size")
 
-  def eventsByTags(tags: Set[EventTag], fromRowId: Long, toRowId: Long = Long.MaxValue): Source[EventEnvelope, Unit] = {
+  override def eventsByTags(tags: Set[EventTag], fromRowId: Long, toRowId: Long = Long.MaxValue): Source[EventEnvelope, Unit] = {
     Source.actorPublisher[EventEnvelope](
       EventsByTagsPublisher.props(
         tags = tags,
@@ -33,7 +37,33 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config) extends R
 
   }
 
+  def events(fromRowId: Long, toRowId: Long = Long.MaxValue): Source[EventEnvelope, Unit] = {
+    Source.actorPublisher[EventEnvelope](
+      EventsPublisher.props(
+        fromOffset = fromRowId,
+        toOffset = toRowId,
+        refreshInterval = refreshInterval,
+        maxBufSize = maxBufSize,
+        writeJournalPluginId = writeJournalPluginId
+      )
+    ).mapMaterializedValue(_ => ())
+      .named("events-")
 
+  }
+
+  override def eventsByPersistenceId(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long): Source[EventEnvelope, Unit] = {
+    Source.actorPublisher[EventEnvelope](
+      EventsByPersistenceIdPublisher.props(
+        persistenceId = persistenceId,
+        fromOffset = fromSequenceNr,
+        toOffset = toSequenceNr,
+        refreshInterval = refreshInterval,
+        maxBufSize = maxBufSize,
+        writeJournalPluginId = writeJournalPluginId
+      )
+    ).mapMaterializedValue(_ => ())
+      .named("eventsByPersistenceId-" + URLEncoder.encode(persistenceId, ByteString.UTF_8))
+  }
 }
 
 object PostgresReadJournal {
