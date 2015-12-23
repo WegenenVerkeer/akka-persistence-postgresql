@@ -29,7 +29,8 @@ object PgPluginTestUtil {
 
   /**
    * Initialize the global state. This will be called when the TestPgSyncWriteJournal is instantiated by akka-persistence
-   * @param db the database
+    *
+    * @param db the database
    */
   private[pg] def initialize(db: JdbcBackend.DatabaseDef, actorSystem: ActorSystem): RollbackDatabase = {
     if (this.db == null) {
@@ -107,7 +108,13 @@ object PgPluginTestUtil {
     }
 
     override def createSession(): JdbcBackend.SessionDef = {
-      retry(5)(session.get)
+      try {
+        retry(5)(session.get)
+      } catch {
+        case e: InterruptedException =>
+          Thread.currentThread().interrupt()
+          session.get
+      }
     }
 
     def rollbackAndClose() = {
