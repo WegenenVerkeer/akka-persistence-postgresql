@@ -2,6 +2,7 @@ package akka.persistence.pg.journal.query
 
 import java.net.URLEncoder
 
+import akka.NotUsed
 import akka.actor.ExtendedActorSystem
 import akka.persistence.query.EventEnvelope
 import akka.persistence.query.scaladsl._
@@ -22,7 +23,7 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
   private val writeJournalPluginId: String = config.getString("write-plugin")
   private val maxBufSize: Int = config.getInt("max-buffer-size")
 
-  override def eventsByTags(tags: Set[EventTag], fromRowId: Long, toRowId: Long = Long.MaxValue): Source[EventEnvelope, Unit] = {
+  override def eventsByTags(tags: Set[EventTag], fromRowId: Long, toRowId: Long = Long.MaxValue): Source[EventEnvelope, NotUsed] = {
     Source.actorPublisher[EventEnvelope](
       EventsByTagsPublisher.props(
         tags = tags,
@@ -32,12 +33,12 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
         maxBufSize = maxBufSize,
         writeJournalPluginId = writeJournalPluginId
       )
-    ).mapMaterializedValue(_ => ())
+    ).mapMaterializedValue(_ => NotUsed)
       .named("eventsByTags-" + URLEncoder.encode(tags.mkString("-"), ByteString.UTF_8))
 
   }
 
-  def events(fromRowId: Long, toRowId: Long = Long.MaxValue): Source[EventEnvelope, Unit] = {
+  def events(fromRowId: Long, toRowId: Long = Long.MaxValue): Source[EventEnvelope, NotUsed] = {
     Source.actorPublisher[EventEnvelope](
       EventsPublisher.props(
         fromOffset = fromRowId,
@@ -46,12 +47,12 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
         maxBufSize = maxBufSize,
         writeJournalPluginId = writeJournalPluginId
       )
-    ).mapMaterializedValue(_ => ())
+    ).mapMaterializedValue(_ => NotUsed)
       .named("events-")
 
   }
 
-  override def eventsByPersistenceId(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long): Source[EventEnvelope, Unit] = {
+  override def eventsByPersistenceId(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long): Source[EventEnvelope, NotUsed] = {
     Source.actorPublisher[EventEnvelope](
       EventsByPersistenceIdPublisher.props(
         persistenceId = persistenceId,
@@ -61,7 +62,7 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
         maxBufSize = maxBufSize,
         writeJournalPluginId = writeJournalPluginId
       )
-    ).mapMaterializedValue(_ => ())
+    ).mapMaterializedValue(_ => NotUsed)
       .named("eventsByPersistenceId-" + URLEncoder.encode(persistenceId, ByteString.UTF_8))
   }
 }
