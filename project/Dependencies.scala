@@ -2,13 +2,13 @@ import sbt._
 
 trait Dependencies { this: Build =>
 
-  val akkaVersion = "2.4.0"
+    val akkaVersion = "2.4.2-RC2"
 
-  val akkaPersistence         = "com.typesafe.akka"       %%  "akka-persistence"                    % akkaVersion
-  val akkaSlf4j               = "com.typesafe.akka"       %%  "akka-slf4j"                          % akkaVersion
-  val akkaActor               = "com.typesafe.akka"       %%  "akka-actor"                          % akkaVersion
-  val akkaPersistenceQuery    = "com.typesafe.akka"       %%  "akka-persistence-query-experimental" % akkaVersion
-  val akkaStreams             = "com.typesafe.akka"       %%  "akka-stream-experimental"            % "1.0"
+    val akkaPersistence         = "com.typesafe.akka"       %%  "akka-persistence"                    % akkaVersion
+    val akkaSlf4j               = "com.typesafe.akka"       %%  "akka-slf4j"                          % akkaVersion
+    val akkaActor               = "com.typesafe.akka"       %%  "akka-actor"                          % akkaVersion
+    val akkaPersistenceQuery    = "com.typesafe.akka"       %%  "akka-persistence-query-experimental" % akkaVersion
+    val akkaStreams             = "com.typesafe.akka"       %%  "akka-stream"                         % akkaVersion
 
   val slick                   = "com.typesafe.slick"      %%  "slick"                      % "3.0.2"
   val slickPg                 = "com.github.tminglei"     %%  "slick-pg"                   % "0.9.2"    

@@ -1,5 +1,6 @@
 package akka.persistence.pg
 
+import akka.NotUsed
 import akka.actor.Props
 import akka.persistence.pg.TestActor._
 import akka.persistence.pg.journal.query.PostgresReadJournal
@@ -87,7 +88,7 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
   }
 
 
-  private def startSource(tags: Set[EventTag], fromRowId: Long): Source[TestActor.Event, Unit] = {
+  private def startSource(tags: Set[EventTag], fromRowId: Long): Source[TestActor.Event, NotUsed] = {
 
     val readJournal =
       PersistenceQuery(system)
