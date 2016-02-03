@@ -1,0 +1,10 @@
+# Wanneer je volgende boodschap tegenkomt:
+# Error: image library/gebruikersdb:latest not found
+# voer uit in project gebruikersdb:
+# ./scripts/docker/build_gebruikersdb_docker_image
+# Op Mac dien je eerst volgende uit te voeren: brew install dpkg fakeroot
+db:
+  build: docker/app-postgres
+  hostname: db
+  ports:
+   - "5432:5432"
