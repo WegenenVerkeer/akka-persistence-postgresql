@@ -65,7 +65,7 @@ class PluginConfig(systemConfig: Config) {
       config.getInt("db.throttle.numThreads")
     } match {
       case Success(numThreads) => numThreads
-      case Failure(_) => dbConfig.getInt("numThreads") * 4
+      case Failure(_) => dbConfig.getInt("numThreads") * 3
     }
   }
   val throttleTimeout: Timeout = Timeout(config.getDuration("db.throttle.timeout").toMillis, TimeUnit.MILLISECONDS)
