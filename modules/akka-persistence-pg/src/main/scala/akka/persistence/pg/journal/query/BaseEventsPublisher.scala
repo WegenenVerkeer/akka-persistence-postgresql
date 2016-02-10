@@ -117,7 +117,7 @@ abstract class BaseEventsPublisher(fromOffset: Long,
       log.debug(s"stopping after recovery: buffer is empty and $currOffset > $toOffset")
       onCompleteThenStop()
     } else {
-      if (newEventsWhileReplaying) replay()
+      if (newEventsWhileReplaying || highestRowId > currOffset) replay()
       else context.become(idle)
     }
   }
