@@ -16,8 +16,9 @@ class PersistAllActor(id: Int) extends PersistentActor with ActorLogging {
 
   override def receiveCommand: Receive = {
     case Alter(txt) =>
+      val created = System.currentTimeMillis()
       val events = 1 to 10 map { i =>
-        Altered(s"${txt}_$i")
+        Altered(s"${txt}_$i", created)
       }
       persistAll(events) { _ => sender ! txt }
   }

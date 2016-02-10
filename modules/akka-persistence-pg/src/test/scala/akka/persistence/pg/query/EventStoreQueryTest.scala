@@ -129,7 +129,7 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
   test("query events by persistenceId") {
 
-    val test = system.actorOf(Props(new TestActor(testProbe.ref)))
+    val test = system.actorOf(Props(new TestActor(testProbe.ref, Some("TestActor"))))
     testProbe.send(test, Alter("foo"))
     testProbe.expectMsg("j")
     testProbe.send(test, Alter("bar"))
@@ -163,48 +163,5 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
   }
 
-
-  private def startSource(tags: Set[EventTag], fromRowId: Long): Source[TestActor.Event, Unit] = {
-
-    val readJournal =
-      PersistenceQuery(system)
-        .readJournalFor[PostgresReadJournal](PostgresReadJournal.Identifier)
-
-    readJournal.eventsByTags(tags, fromRowId).map { env =>
-      // and this will blow up if something different than a DomainEvent comes in!!
-      env.event match {
-        case evt: TestActor.Event => evt
-        case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")
-      }
-    }
-  }
-
-  private def startSource(fromRowId: Long): Source[TestActor.Event, Unit] = {
-
-    val readJournal =
-      PersistenceQuery(system)
-        .readJournalFor[PostgresReadJournal](PostgresReadJournal.Identifier)
-
-    readJournal.events(fromRowId).map { env =>
-      env.event match {
-        case evt: TestActor.Event => evt
-        case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")
-      }
-    }
-  }
-
-  private def startSource(persistenceId: String, fromRowId: Long): Source[TestActor.Event, Unit] = {
-
-    val readJournal =
-      PersistenceQuery(system)
-        .readJournalFor[PostgresReadJournal](PostgresReadJournal.Identifier)
-
-    readJournal.eventsByPersistenceId(persistenceId, fromRowId, Long.MaxValue).map { env =>
-      env.event match {
-        case evt: TestActor.Event => evt
-        case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")
-      }
-    }
-  }
 
 }

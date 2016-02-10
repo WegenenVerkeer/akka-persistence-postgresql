@@ -5,12 +5,13 @@ import akka.pattern.pipe
 import akka.persistence.pg.journal.RowIdUpdater.{IsBusy, UpdateRowIds}
 import akka.persistence.pg.{PgPostgresDriver, PluginConfig}
 
+import scala.collection.immutable.Queue
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 object RowIdUpdater {
 
-  case object UpdateRowIds
+  case class UpdateRowIds(notifier: Notifier)
   case object IsBusy
 
   def props(pluginConfig: PluginConfig,
@@ -37,6 +38,7 @@ class RowIdUpdater(pluginConfig: PluginConfig,
   val max = 20000
 
   var maxRowId: Long = _
+  var notifiers: Queue[Notifier] = Queue.empty
 
   //start initializing => find max rowid
   self ! Init
@@ -45,7 +47,7 @@ class RowIdUpdater(pluginConfig: PluginConfig,
 
   def initializing: Receive = {
     case IsBusy          => sender ! true
-    case UpdateRowIds    => stash()
+    case UpdateRowIds(_) => stash()
     case Init            => findMaxRowId() map { MaxRowId } pipeTo self
       ()
     case MaxRowId(rowid) =>
@@ -55,7 +57,8 @@ class RowIdUpdater(pluginConfig: PluginConfig,
   }
 
   def waitingForUpdateRequest: Receive = {
-    case UpdateRowIds =>
+    case UpdateRowIds(notifier) =>
+      notifiers = notifiers.enqueue(notifier)
       self ! Marker
       context become ignoreUntilMarker
     case IsBusy => sender ! false
@@ -63,7 +66,8 @@ class RowIdUpdater(pluginConfig: PluginConfig,
 
   def ignoreUntilMarker: Receive = {
     case IsBusy => sender ! true
-    case UpdateRowIds =>
+    case UpdateRowIds(notifier) =>
+      notifiers = notifiers.enqueue(notifier)
     case Marker       =>
       assignRowIds() map { updated =>
         if (updated == max) Continue else Done
@@ -77,16 +81,23 @@ class RowIdUpdater(pluginConfig: PluginConfig,
     case IsBusy => sender ! true
     case Done =>
       unstashAll()
+      notifyEventsAvailable()
       context become waitingForUpdateRequest
     case Continue =>
       unstashAll()
+      notifyEventsAvailable()
       self ! Marker
       context become ignoreUntilMarker
-    case UpdateRowIds =>
+    case UpdateRowIds(_) =>
       stash()
   }
 
   import driver.api._
+
+  def notifyEventsAvailable(): Unit = {
+    notifiers.foreach { _.eventsAvailable() }
+    notifiers = Queue.empty
+  }
 
   def findMaxRowId(): Future[Long] = {
     database.run(sql"""SELECT COALESCE(MAX(rowid), 0::bigint) FROM #${pluginConfig.fullJournalTableName}""".as[Long])

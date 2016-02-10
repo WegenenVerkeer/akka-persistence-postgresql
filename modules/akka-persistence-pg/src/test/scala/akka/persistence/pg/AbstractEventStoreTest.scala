@@ -3,8 +3,11 @@ package akka.persistence.pg
 import akka.actor.ActorSystem
 import akka.persistence.pg.event._
 import akka.persistence.pg.journal.JournalTable
+import akka.persistence.pg.journal.query.PostgresReadJournal
 import akka.persistence.pg.snapshot.SnapshotTable
 import akka.persistence.pg.util.{CreateTables, RecreateSchema}
+import akka.persistence.query.PersistenceQuery
+import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import com.typesafe.config.ConfigFactory
 import org.scalatest._
@@ -54,4 +57,48 @@ abstract class AbstractEventStoreTest
     system.whenTerminated.futureValue
     ()
   }
+
+  def startSource(tags: Set[EventTag], fromRowId: Long): Source[TestActor.Event, Unit] = {
+
+    val readJournal =
+      PersistenceQuery(system)
+        .readJournalFor[PostgresReadJournal](PostgresReadJournal.Identifier)
+
+    readJournal.eventsByTags(tags, fromRowId).map { env =>
+      // and this will blow up if something different than a DomainEvent comes in!!
+      env.event match {
+        case evt: TestActor.Event => evt
+        case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")
+      }
+    }
+  }
+
+  def startSource(fromRowId: Long): Source[TestActor.Event, Unit] = {
+
+    val readJournal =
+      PersistenceQuery(system)
+        .readJournalFor[PostgresReadJournal](PostgresReadJournal.Identifier)
+
+    readJournal.events(fromRowId).map { env =>
+      env.event match {
+        case evt: TestActor.Event => evt
+        case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")
+      }
+    }
+  }
+
+  def startSource(persistenceId: String, fromRowId: Long): Source[TestActor.Event, Unit] = {
+
+    val readJournal =
+      PersistenceQuery(system)
+        .readJournalFor[PostgresReadJournal](PostgresReadJournal.Identifier)
+
+    readJournal.eventsByPersistenceId(persistenceId, fromRowId, Long.MaxValue).map { env =>
+      env.event match {
+        case evt: TestActor.Event => evt
+        case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")
+      }
+    }
+  }
+
 }

@@ -31,7 +31,7 @@ class RandomDelayPerfActor(driver: PgPostgresDriver) extends PersistentActor wit
 
       override def failureHandler = PartialFunction.empty
 
-      override def event: Altered = Altered(txt)
+      override def event: Altered = Altered(txt, System.currentTimeMillis())
     }
     ) { _ => sender ! txt }
   }

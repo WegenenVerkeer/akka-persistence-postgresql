@@ -1,17 +1,18 @@
 package akka.persistence.pg
 
 import java.time.OffsetDateTime
+import java.util.UUID
 
 import akka.actor.{ActorLogging, ActorRef}
 import akka.persistence.pg.event.Created
 import akka.persistence.{SaveSnapshotSuccess, SaveSnapshotFailure, SnapshotOffer, PersistentActor}
 
 
-class TestActor(testProbe: ActorRef) extends PersistentActor with ActorLogging {
+class TestActor(testProbe: ActorRef, id: Option[String] = None) extends PersistentActor with ActorLogging {
 
   import akka.persistence.pg.TestActor._
 
-  override def persistenceId: String = "TestActor"
+  override def persistenceId: String = id.getOrElse(s"TestActor")
 
   var state = TheState()
 
