@@ -17,3 +17,5 @@ scalacOptions in ThisBuild ++= Seq(
 //  "-Xfatal-warnings",
   "-language:reflectiveCalls"
 )
+
+parallelExecution in Global := false
