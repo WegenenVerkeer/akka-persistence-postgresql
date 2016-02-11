@@ -2,11 +2,9 @@ FROM 162510209540.dkr.ecr.us-east-1.amazonaws.com/postgres94
 
 ENV PGPASSWORD docker
 
-ADD init-db.sh /tmp/init-db.sh
-CHMOD 700 /tmp/init-db.sh
-
 RUN /etc/my_runalways/startup-postgresql &&\
-    /tmp/init-db.sh 0.0.0.0 &&\
-    /etc/init.d/postgresql stop && \
-    rm -f /tmp/*gz
+    psql -U docker -d postgres -h 0.0.0.0 --command "CREATE USER akkapg WITH SUPERUSER PASSWORD 'akkapg';" &&\
+    createdb -E UTF8 -U docker -h 0.0.0.0 -O akkapg akkapg --template template0  &&\
+    psql -U docker -d akkapg -h 0.0.0.0 	--command "create EXTENSION IF NOT EXISTS hstore;" &&\
+    /etc/init.d/postgresql stop 
 
