@@ -19,3 +19,4 @@ scalacOptions in ThisBuild ++= Seq(
 )
 
 parallelExecution in Global := false
+parallelExecution in ThisBuild := false
