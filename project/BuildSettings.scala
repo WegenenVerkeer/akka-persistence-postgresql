@@ -26,6 +26,8 @@ trait BuildSettings {
 
     val projectSettings = Seq(
       parallelExecution in Test := false,
+      parallelExecution in Global := false,
+      parallelExecution in ThisBuild := false,
       resolvers ++= Seq(
         "Local Maven" at Path.userHome.asFile.toURI.toURL + ".m2/repository",
         Resolver.typesafeRepo("releases"),
