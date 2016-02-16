@@ -2,7 +2,7 @@ import sbt._
 
 trait Dependencies { this: Build =>
 
-  val akkaVersion    = "2.4.2-RC2"
+  val akkaVersion    = "2.4.2-RC3"
   val slickVersion   = "3.1.1"
   val slickPgVersion = "0.11.2"
 
