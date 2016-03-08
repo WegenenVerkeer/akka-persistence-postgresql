@@ -2,7 +2,7 @@ import sbt._
 
 trait Dependencies { this: Build =>
 
-  val akkaVersion    = "2.4.1"
+  val akkaVersion    = "2.4.2"
   val slickVersion   = "3.1.1"
   val slickPgVersion = "0.11.2"
 
@@ -10,7 +10,7 @@ trait Dependencies { this: Build =>
   val akkaSlf4j               = "com.typesafe.akka"       %%  "akka-slf4j"                          % akkaVersion
   val akkaActor               = "com.typesafe.akka"       %%  "akka-actor"                          % akkaVersion
   val akkaPersistenceQuery    = "com.typesafe.akka"       %%  "akka-persistence-query-experimental" % akkaVersion
-  val akkaStreams             = "com.typesafe.akka"       %%  "akka-stream-experimental"            % "2.0.3"
+  val akkaStreams             = "com.typesafe.akka"       %%  "akka-stream"                         % akkaVersion
 
   val slick                   = "com.typesafe.slick"      %%  "slick"                      % slickVersion
   val slickHikariCp           = "com.typesafe.slick"      %%  "slick-hikaricp"             % slickVersion

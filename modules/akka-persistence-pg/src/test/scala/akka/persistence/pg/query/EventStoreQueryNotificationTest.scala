@@ -2,6 +2,7 @@ package akka.persistence.pg.query
 
 import java.util.concurrent.TimeUnit
 
+import akka.NotUsed
 import akka.actor.{ActorRef, Props}
 import akka.persistence.pg.TestActor._
 import akka.persistence.pg._
@@ -39,7 +40,7 @@ class EventStoreQueryNotificationTest extends AbstractEventStoreTest
       events = events :+ e
     }
 
-    val graph: RunnableGraph[Unit] = startSource(0).to(sink)
+    val graph: RunnableGraph[NotUsed] = startSource(0).to(sink)
 
     1 to expected foreach { i =>
       actors.values.toSeq(Random.nextInt(actors.size)) ! Alter(i.toString)
@@ -63,7 +64,7 @@ class EventStoreQueryNotificationTest extends AbstractEventStoreTest
     var expectedForPersistenceId = 0
     val index = Random.nextInt(actors.size)
     val persistenceId = actors.keys.toSeq(index)
-    val graph: RunnableGraph[Unit] = startSource(persistenceId, 0).to(sink)
+    val graph: RunnableGraph[NotUsed] = startSource(persistenceId, 0).to(sink)
 
     1 to expected foreach { i =>
       val chosen = Random.nextInt(actors.size)
@@ -87,7 +88,7 @@ class EventStoreQueryNotificationTest extends AbstractEventStoreTest
       events = events :+ e
     }
 
-    val graph: RunnableGraph[Unit] =  startSource(Set(TestTags.alteredTag), 0).to(sink)
+    val graph: RunnableGraph[NotUsed] =  startSource(Set(TestTags.alteredTag), 0).to(sink)
 
     1 to expected foreach { i =>
       actors.values.toSeq(Random.nextInt(actors.size)) ! Alter(i.toString)

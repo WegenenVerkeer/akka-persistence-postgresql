@@ -112,6 +112,7 @@ class PgAsyncWriteJournal
     val selectedEntries: Query[JournalTable, JournalEntry, Seq] = journals
       .filter(_.persistenceId === persistenceId)
       .filter(_.sequenceNr <= toSequenceNr)
+      .filter(_.deleted === false)
       .filter(byPartitionKey(persistenceId))
       .sortBy(_.sequenceNr.desc)
 

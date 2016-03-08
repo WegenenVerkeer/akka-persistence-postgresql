@@ -1,5 +1,6 @@
 package akka.persistence.pg
 
+import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.persistence.pg.event._
 import akka.persistence.pg.journal.JournalTable
@@ -58,7 +59,7 @@ abstract class AbstractEventStoreTest
     ()
   }
 
-  def startSource(tags: Set[EventTag], fromRowId: Long): Source[TestActor.Event, Unit] = {
+  def startSource(tags: Set[EventTag], fromRowId: Long): Source[TestActor.Event, NotUsed] = {
 
     val readJournal =
       PersistenceQuery(system)
@@ -73,7 +74,7 @@ abstract class AbstractEventStoreTest
     }
   }
 
-  def startSource(fromRowId: Long): Source[TestActor.Event, Unit] = {
+  def startSource(fromRowId: Long): Source[TestActor.Event, NotUsed] = {
 
     val readJournal =
       PersistenceQuery(system)
@@ -87,7 +88,7 @@ abstract class AbstractEventStoreTest
     }
   }
 
-  def startSource(persistenceId: String, fromRowId: Long): Source[TestActor.Event, Unit] = {
+  def startSource(persistenceId: String, fromRowId: Long): Source[TestActor.Event, NotUsed] = {
 
     val readJournal =
       PersistenceQuery(system)

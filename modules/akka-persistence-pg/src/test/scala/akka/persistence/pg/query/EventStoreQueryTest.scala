@@ -1,5 +1,6 @@
 package akka.persistence.pg.query
 
+import akka.NotUsed
 import akka.actor.Props
 import akka.persistence.pg.TestActor._
 import akka.persistence.pg._
@@ -162,6 +163,5 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     checkSizeReceivedEvents(5)
 
   }
-
 
 }
