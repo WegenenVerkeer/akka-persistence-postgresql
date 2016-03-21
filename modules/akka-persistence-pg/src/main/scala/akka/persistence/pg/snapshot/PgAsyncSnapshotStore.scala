@@ -26,12 +26,12 @@ class PgAsyncSnapshotStore extends akka.persistence.snapshot.SnapshotStore
   import driver.api._
 
   override def loadAsync(persistenceId: String, criteria: SnapshotSelectionCriteria): Future[Option[SelectedSnapshot]] = {
-    log.debug(s"loading snapshot for persistenceId: $persistenceId, criteria: $criteria")
-    selectSnapshotsFor(persistenceId, criteria) map { _.headOption }
+    log.debug(s"loading snapshot for persistenceId: {}, criteria: {}", persistenceId, criteria)
+    selectMostRecentSnapshotFor(persistenceId, criteria)
   }
 
   override def saveAsync(metadata: SnapshotMetadata, snapshot: Any): Future[Unit] = {
-    log.debug(s"saving snapshot for metadata: $metadata")
+    log.debug(s"saving snapshot for metadata {}",metadata)
     val serialized: Array[Byte] = serialization.serialize(Snapshot(snapshot)).get
     database.run(snapshotsQuery(metadata).length
       .result.flatMap { result: Int =>
@@ -45,16 +45,16 @@ class PgAsyncSnapshotStore extends akka.persistence.snapshot.SnapshotStore
   }
 
   override def deleteAsync(metadata: SnapshotMetadata): Future[Unit] = {
-    log.debug(s"deleting: $metadata")
+    log.debug(s"deleting: {}",metadata)
     deleteSnapshot(metadata).map { _ =>
-      log.debug(s"deleted snapshot $metadata")
+      log.debug(s"deleted snapshot {}",metadata)
     }
   }
 
   override def deleteAsync(persistenceId: String, criteria: SnapshotSelectionCriteria): Future[Unit] = {
-    log.debug(s"deleting for persistenceId: $persistenceId and criteria: $criteria")
+    log.debug(s"deleting for persistenceId: {} and criteria: {}",persistenceId, criteria)
     database.run(selectSnapshotsQuery(persistenceId, criteria).delete).map { deleted =>
-      log.debug(s"deleted $deleted snapshots"); ()
+      log.debug(s"deleted {} snapshots", deleted); ()
     }
   }
 

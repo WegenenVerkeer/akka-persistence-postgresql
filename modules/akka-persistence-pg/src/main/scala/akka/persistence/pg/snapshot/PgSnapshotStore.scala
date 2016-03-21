@@ -32,15 +32,16 @@ trait PgSnapshotStore extends SnapshotTable {
     }
   }
 
-  def selectSnapshotsFor(persistenceId: String, criteria: SnapshotSelectionCriteria): Future[List[SelectedSnapshot]] = {
+  def selectMostRecentSnapshotFor(persistenceId: String, criteria: SnapshotSelectionCriteria): Future[Option[SelectedSnapshot]] = {
     database.run {
       selectSnapshotsQuery(persistenceId, criteria)
         .sortBy(_.sequenceNr.desc)
-        .result
+        .take(1)
+        .result.headOption
     } map {
       _ map { r =>
         SelectedSnapshot(SnapshotMetadata(r._1, r._2, r._4), serialization.deserialize(r._5, classOf[Snapshot]).get.data)
-      } toList
+      }
     }
   }
 
