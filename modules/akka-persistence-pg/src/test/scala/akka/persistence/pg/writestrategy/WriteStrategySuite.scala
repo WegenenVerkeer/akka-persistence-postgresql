@@ -10,7 +10,7 @@ import akka.persistence.pg.journal.JournalTable
 import akka.persistence.pg.perf.Messages.Alter
 import akka.persistence.pg.perf.{PerfActor, RandomDelayPerfActor}
 import akka.persistence.pg.util.{CreateTables, RecreateSchema}
-import akka.persistence.pg.{WaitForEvents, PgConfig, PluginConfig}
+import akka.persistence.pg.{PgExtension, WaitForEvents, PgConfig, PluginConfig}
 import akka.util.Timeout
 import com.typesafe.config.Config
 import org.scalatest._
@@ -34,7 +34,7 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
   with ScalaFutures {
 
   val system =  ActorSystem("TestCluster", config)
-  override val pluginConfig = PluginConfig(system)
+  override lazy val pluginConfig = PgExtension(system).pluginConfig
 
   import PerfActor._
   import driver.api._
@@ -59,7 +59,7 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
     waitUntilEventsWritten(expected, received)
 
     //just sleep a bit so the EventReader has seen the last events
-    Thread.sleep(1000)
+    Thread.sleep(2000)
     Await.result((eventReader ? "stop").mapTo[Seq[Long]], 10 seconds)
 
   }
@@ -80,7 +80,7 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
 
   override def beforeAll() {
     database.run(
-      recreateSchema.andThen(journals.schema.create).andThen(createRowIdSequence)
+      recreateSchema.andThen(journals.schema.create)
     ).futureValue
     actors = 1 to 10 map { _ => system.actorOf(RandomDelayPerfActor.props(driver)) }
   }

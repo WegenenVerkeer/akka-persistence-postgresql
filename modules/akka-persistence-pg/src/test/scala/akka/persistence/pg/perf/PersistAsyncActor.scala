@@ -10,8 +10,9 @@ class PersistAsyncActor(override val persistenceId: String) extends PersistentAc
 
   override def receiveCommand: Receive = {
     case Alter(txt) =>
+      val created = System.currentTimeMillis()
       val events = 1 to 10 map { i =>
-        Altered(s"${txt}_$i")
+        Altered(s"${txt}_$i", created)
       }
       persistAllAsync(events) { _ => sender ! txt }
   }

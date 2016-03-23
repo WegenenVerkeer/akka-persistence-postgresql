@@ -2,7 +2,6 @@ package akka.persistence.pg
 
 import akka.actor._
 import akka.persistence.Persistence
-import akka.persistence.pg.event.PgEventReader
 
 import scala.reflect.ClassTag
 
@@ -28,17 +27,5 @@ class PgExtension(system: ExtendedActorSystem) extends Extension {
   def getClassFor[T: ClassTag](s: String): Class[_ <: T] = {
     system.dynamicAccess.getClassFor[T](s).getOrElse(sys.error(s"could not find class with name $s"))
   }
-
-  def actorRefOf(s: String): ActorRef = {
-    system.provider.resolveActorRef(s)
-  }
-
-  lazy val eventReader: ActorRef = {
-    //TODO allow to configure separate dispatcher
-    //val pluginDispatcherId = if (pluginConfig.hasPath("plugin-dispatcher")) pluginConfig.getString("plugin-dispatcher") else dispatcherSelector(pluginClass)
-    system.systemActorOf(Props[PgEventReader].withDispatcher(DefaultPluginDispatcherId), "pg-eventreader")
-  }
-
-
 
 }

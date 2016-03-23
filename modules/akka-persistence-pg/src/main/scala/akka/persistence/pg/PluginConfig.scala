@@ -65,7 +65,7 @@ class PluginConfig(systemConfig: Config) {
       config.getInt("db.throttle.numThreads")
     } match {
       case Success(numThreads) => numThreads
-      case Failure(_) => dbConfig.getInt("numThreads") * 4
+      case Failure(_) => dbConfig.getInt("numThreads") * 3
     }
   }
   val throttleTimeout: Timeout = Timeout(config.getDuration("db.throttle.timeout").toMillis, TimeUnit.MILLISECONDS)
@@ -74,7 +74,7 @@ class PluginConfig(systemConfig: Config) {
 
   def createDatabase: JdbcBackend.DatabaseDef = {
     def asyncExecutor(name: String): AsyncExecutor = {
-      AsyncExecutor(s"$name executor", dbConfig.getInt("numThreads"), dbConfig.getInt("queueSize"))
+      AsyncExecutor(s"$name", dbConfig.getInt("numThreads"), dbConfig.getInt("queueSize"))
     }
 
     val db = PluginConfig.asOption(dbConfig.getString("jndiName")) match {

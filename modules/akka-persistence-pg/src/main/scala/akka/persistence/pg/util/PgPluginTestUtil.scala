@@ -29,7 +29,8 @@ object PgPluginTestUtil {
 
   /**
    * Initialize the global state. This will be called when the TestPgSyncWriteJournal is instantiated by akka-persistence
-   * @param db the database
+    *
+    * @param db the database
    */
   private[pg] def initialize(db: JdbcBackend.DatabaseDef, actorSystem: ActorSystem): RollbackDatabase = {
     if (this.db == null) {
@@ -76,18 +77,11 @@ object PgPluginTestUtil {
     override val conn: Connection = database.source.createConnection()
     conn.setAutoCommit(false)
 
-    override def rollback(): Unit = {
-    }
-
     override def capabilities: JdbcBackend.DatabaseCapabilities = new JdbcBackend.DatabaseCapabilities(this)
 
     override def metaData: DatabaseMetaData = conn.getMetaData
 
     override def close(): Unit = {
-    }
-
-    override def withTransaction[T](f: => T): T = {
-      f
     }
 
     def endInTransaction(f: => Unit): Unit = {}
@@ -104,8 +98,23 @@ object PgPluginTestUtil {
       session = Option(new RollbackSession(database))
     }
 
+    @annotation.tailrec
+    private def retry[T](n: Int)(fn: => T): T = {
+      util.Try { fn } match {
+        case util.Success(x) => x
+        case _ if n > 1 => Thread.sleep(50); retry(n - 1)(fn)
+        case util.Failure(e) => throw e
+      }
+    }
+
     override def createSession(): JdbcBackend.SessionDef = {
-      session.getOrElse(sys.error("make sure to call newRollbackSession first"))
+      try {
+        retry(5)(session.get)
+      } catch {
+        case e: InterruptedException =>
+          Thread.currentThread().interrupt()
+          session.get
+      }
     }
 
     def rollbackAndClose() = {

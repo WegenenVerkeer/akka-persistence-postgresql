@@ -61,6 +61,5 @@ trait JournalTable {
   }
 
   val journals = TableQuery[JournalTable]
-  lazy val rowIdSequence = Sequence[Long](pluginConfig.fullRowIdSequenceName)
 
 }

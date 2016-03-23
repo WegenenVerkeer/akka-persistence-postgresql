@@ -1,5 +1,6 @@
 package akka.persistence.pg.query
 
+import akka.NotUsed
 import akka.actor.Props
 import akka.persistence.pg.TestActor._
 import akka.persistence.pg._
@@ -91,21 +92,76 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     checkSizeReceivedEvents(5)
   }
 
+  test("query all events") {
 
-  private def startSource(tags: Set[EventTag], fromRowId: Long): Source[TestActor.Event, Unit] = {
+    val test = system.actorOf(Props(new TestActor(testProbe.ref)))
+    testProbe.send(test, Alter("foo"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Alter("bar"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Increment(1))
+    testProbe.expectMsg("j")
 
-    val readJournal =
-      PersistenceQuery(system)
-        .readJournalFor[PostgresReadJournal](PostgresReadJournal.Identifier)
+    val eventSource = startSource(0)
 
-    readJournal.eventsByTags(tags, fromRowId).map { env =>
-      // and this will blow up if something different than a DomainEvent comes in!!
-      env.event match {
-        case evt: TestActor.Event => evt
-        case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")
+    var events = List[TestActor.Event]()
+
+    def checkSizeReceivedEvents(size: Int) = {
+      eventually {
+        events should have size size
       }
     }
+
+    // a Sink that will append each event to the Events List
+    val sink = Sink.foreach[TestActor.Event] { e =>
+      events = events :+ e
+    }
+
+    eventSource.to(sink).run()
+
+    checkSizeReceivedEvents(3)
+    testProbe.send(test, Alter("bar"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Increment(1))
+    testProbe.expectMsg("j")
+    checkSizeReceivedEvents(5)
+
   }
 
+  test("query events by persistenceId") {
+
+    val test = system.actorOf(Props(new TestActor(testProbe.ref, Some("TestActor"))))
+    testProbe.send(test, Alter("foo"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Alter("bar"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Increment(1))
+    testProbe.expectMsg("j")
+
+    val eventSource = startSource("TestActor", 0)
+
+    var events = List[TestActor.Event]()
+
+    def checkSizeReceivedEvents(size: Int) = {
+      eventually {
+        events should have size size
+      }
+    }
+
+    // a Sink that will append each event to the Events List
+    val sink = Sink.foreach[TestActor.Event] { e =>
+      events = events :+ e
+    }
+
+    eventSource.to(sink).run()
+
+    checkSizeReceivedEvents(3)
+    testProbe.send(test, Alter("bar"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Increment(1))
+    testProbe.expectMsg("j")
+    checkSizeReceivedEvents(5)
+
+  }
 
 }

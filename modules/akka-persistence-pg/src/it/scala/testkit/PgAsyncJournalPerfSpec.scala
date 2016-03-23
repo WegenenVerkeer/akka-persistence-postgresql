@@ -1,10 +1,11 @@
 package testkit
 
 import akka.pattern.ask
+import akka.persistence.CapabilityFlag
 import akka.persistence.journal.JournalPerfSpec
 import akka.persistence.pg.journal.RowIdUpdater.IsBusy
-import akka.persistence.pg.{PluginConfig, PgConfig}
 import akka.persistence.pg.util.{CreateTables, RecreateSchema}
+import akka.persistence.pg.{PgConfig, PgExtension}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.ScalaFutures
@@ -23,13 +24,13 @@ with PgConfig {
   val logger = LoggerFactory.getLogger(getClass)
 
   override implicit val patienceConfig = PatienceConfig(timeout = Span(1, Second), interval = Span(100, Milliseconds))
-  override val pluginConfig = PluginConfig(system)
+  override lazy val pluginConfig = PgExtension(system).pluginConfig
 
   override def eventsCount = 5000
   override def awaitDurationMillis: Long = 30.seconds toMillis
 
   override def beforeAll() {
-    pluginConfig.database.run(recreateSchema
+    database.run(recreateSchema
       .andThen(createTables)).futureValue
     super.beforeAll()
   }
@@ -61,4 +62,6 @@ with PgConfig {
     system.whenTerminated.futureValue
     ()
   }
+
+  override protected def supportsRejectingNonSerializableObjects: CapabilityFlag = false
 }

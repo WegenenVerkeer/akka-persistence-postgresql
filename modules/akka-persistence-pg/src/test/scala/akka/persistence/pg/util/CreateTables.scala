@@ -34,13 +34,11 @@ trait CreateTables {
   lazy val createUniqueIndex = sqlu"""CREATE unique INDEX journal_pidseq_idx ON #${pluginConfig.fullJournalTableName} (persistenceid, sequencenr)"""
   lazy val createEventIndex = sqlu"""CREATE INDEX journal_event_idx ON #${pluginConfig.fullJournalTableName} USING gin (event)"""
   lazy val createRowIdIndex = sqlu"""CREATE unique INDEX journal_rowid_idx ON #${pluginConfig.fullJournalTableName} (rowid)"""
-  lazy val createRowIdSequence = sqlu"""create sequence #${pluginConfig.fullRowIdSequenceName}"""
 
   lazy val createTables = createJournal
       .andThen(createUniqueIndex)
       .andThen(createRowIdIndex)
       .andThen(createSnapshot)
-      .andThen(createRowIdSequence)
 
   def countEvents                = sql"""select count(*) from #${pluginConfig.fullJournalTableName}""".as[Long].head
   def countEvents(id: String)    = sql"""select count(*) from #${pluginConfig.fullJournalTableName} where persistenceid = $id""".as[Long].head
