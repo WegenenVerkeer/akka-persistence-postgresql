@@ -13,6 +13,7 @@ import akka.serialization.{Serialization, SerializationExtension}
 
 import scala.collection.{immutable, mutable}
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 class PgAsyncWriteJournal
@@ -51,6 +52,7 @@ class PgAsyncWriteJournal
         .map { Success.apply }
       result.onFailure {
         case e: BatchUpdateException => log.error(e.getNextException, "problem storing events")
+        case NonFatal(e) => log.error(e, "problem storing events")
       }
       result
     }

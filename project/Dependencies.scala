@@ -2,9 +2,9 @@ import sbt._
 
 trait Dependencies { this: Build =>
 
-  val akkaVersion    = "2.4.2"
+  val akkaVersion    = "2.4.3"
   val slickVersion   = "3.1.1"
-  val slickPgVersion = "0.11.2"
+  val slickPgVersion = "0.12.1"
 
   val akkaPersistence         = "com.typesafe.akka"       %%  "akka-persistence"                    % akkaVersion
   val akkaSlf4j               = "com.typesafe.akka"       %%  "akka-slf4j"                          % akkaVersion
@@ -19,17 +19,17 @@ trait Dependencies { this: Build =>
   val slickPgPlayJson         = "com.github.tminglei"     %%  "slick-pg_play-json"         % slickPgVersion
   val slickPgDate2            = "com.github.tminglei"     %%  "slick-pg_date2"             % slickPgVersion
 
-  val playJson                = "com.typesafe.play"       %%  "play-json"                  % "2.4.6"
+  val playJson                = "com.typesafe.play"       %%  "play-json"                  % "2.5.1"
   
   // Test dependencies
   val scalaTest               = "org.scalatest"           %%  "scalatest"                  % "2.2.6"        % "test,it"
   val akkaTest                = "com.typesafe.akka"       %%  "akka-testkit"               % akkaVersion    % "test,it"
   val akkaPersistenceTestkit  = "com.typesafe.akka"       %%  "akka-persistence-tck"       % akkaVersion    % "test,it"
-  val slf4jSimple             = "org.slf4j"               %   "slf4j-simple"               % "1.7.15"       % "test,it"
+  val slf4jSimple             = "org.slf4j"               %   "slf4j-simple"               % "1.7.21"       % "test,it"
   val gatlinHighcharts        = "io.gatling.highcharts"   %   "gatling-charts-highcharts"  % "2.1.7"     //% "test"
   val gatling                 = "io.gatling"              %   "gatling-test-framework"     % "2.1.7"     //% "test"
 
-  val hikariCp                = "com.zaxxer"              %   "HikariCP"                   % "2.4.3"
+  val hikariCp                = "com.zaxxer"              %   "HikariCP"                   % "2.4.5"
 
   val mainTestDependencies = Seq (
     scalaTest
