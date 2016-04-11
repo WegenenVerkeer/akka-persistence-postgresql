@@ -5,7 +5,7 @@ object AkkaPgBuild extends Build with BuildSettings with Dependencies {
 
   lazy val akkaPersistencePgModule = {
 
-    val mainDeps = Seq(slick, slickHikariCp, hikariCp, slickPg, slickPgPlayJson, slickPgDate2,
+    val mainDeps = Seq(scalaJava8Compat, slick, slickHikariCp, hikariCp, slickPg, slickPgPlayJson, slickPgDate2,
       akkaPersistence, akkaPersistenceQuery, akkaActor, akkaStreams, akkaTest, akkaPersistenceTestkit,
       playJson, slf4jSimple)
 
@@ -18,7 +18,7 @@ object AkkaPgBuild extends Build with BuildSettings with Dependencies {
    
   lazy val akkaEsModule = {
 
-    val mainDeps = Seq(akkaPersistence, akkaTest)
+    val mainDeps = Seq(scalaJava8Compat, akkaPersistence, akkaTest)
 
     project("akka-es")
       .configs(config("it") extend(Test))
@@ -30,7 +30,7 @@ object AkkaPgBuild extends Build with BuildSettings with Dependencies {
 
   lazy val benchmarkModule = {
 
-    val mainDeps = Seq(gatling, gatlinHighcharts)
+    val mainDeps = Seq(scalaJava8Compat, gatling, gatlinHighcharts)
 
     import io.gatling.sbt.GatlingPlugin
 

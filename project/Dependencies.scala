@@ -6,6 +6,8 @@ trait Dependencies { this: Build =>
   val slickVersion   = "3.1.1"
   val slickPgVersion = "0.12.1"
 
+  val scalaJava8Compat      = "org.scala-lang.modules"     %%    "scala-java8-compat"             % "0.7.0"
+
   val akkaPersistence         = "com.typesafe.akka"       %%  "akka-persistence"                    % akkaVersion
   val akkaSlf4j               = "com.typesafe.akka"       %%  "akka-slf4j"                          % akkaVersion
   val akkaActor               = "com.typesafe.akka"       %%  "akka-actor"                          % akkaVersion

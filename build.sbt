@@ -15,5 +15,7 @@ scalacOptions in ThisBuild ++= Seq(
   "-Ywarn-inaccessible",
   //  "-Ywarn-dead-code",
 //  "-Xfatal-warnings",
-  "-language:reflectiveCalls"
+  "-language:reflectiveCalls",
+  "-Ybackend:GenBCode",
+  "-Ydelambdafy:method"
 )
