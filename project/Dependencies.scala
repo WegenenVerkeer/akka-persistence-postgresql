@@ -2,9 +2,9 @@ import sbt._
 
 trait Dependencies { this: Build =>
 
-  val akkaVersion    = "2.4.3"
+  val akkaVersion    = "2.4.4"
   val slickVersion   = "3.1.1"
-  val slickPgVersion = "0.12.1"
+  val slickPgVersion = "0.12.2"
 
   val scalaJava8Compat      = "org.scala-lang.modules"     %%    "scala-java8-compat"             % "0.7.0"
 
@@ -28,8 +28,8 @@ trait Dependencies { this: Build =>
   val akkaTest                = "com.typesafe.akka"       %%  "akka-testkit"               % akkaVersion    % "test,it"
   val akkaPersistenceTestkit  = "com.typesafe.akka"       %%  "akka-persistence-tck"       % akkaVersion    % "test,it"
   val slf4jSimple             = "org.slf4j"               %   "slf4j-simple"               % "1.7.21"       % "test,it"
-  val gatlinHighcharts        = "io.gatling.highcharts"   %   "gatling-charts-highcharts"  % "2.1.7"     //% "test"
-  val gatling                 = "io.gatling"              %   "gatling-test-framework"     % "2.1.7"     //% "test"
+  val gatlinHighcharts        = "io.gatling.highcharts"   %   "gatling-charts-highcharts"  % "2.2.0"     //% "test"
+  val gatling                 = "io.gatling"              %   "gatling-test-framework"     % "2.2.0"     //% "test"
 
   val hikariCp                = "com.zaxxer"              %   "HikariCP"                   % "2.4.5"
 
