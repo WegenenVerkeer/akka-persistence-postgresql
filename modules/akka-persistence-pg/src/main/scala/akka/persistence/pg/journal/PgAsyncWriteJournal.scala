@@ -95,7 +95,9 @@ class PgAsyncWriteJournal
     log.debug("Async replay for persistenceId [{}], from sequenceNr: [{}], to sequenceNr: [{}] with max records: [{}]",
       persistenceId, fromSequenceNr, toSequenceNr, max)
 
-    database.run {
+    // stream the results instead of reading them in a list
+    // we don't need all results at once, and this potentially creates a big memory pressure in the case we're replaying lots of events
+    val stream = database.stream {
       journals
         .filter(_.persistenceId === persistenceId)
         .filter(_.sequenceNr >= fromSequenceNr)
@@ -104,8 +106,10 @@ class PgAsyncWriteJournal
         .sortBy(_.sequenceNr)
         .take(max)
         .result
-    } map {
-      _.map(toPersistentRepr).foreach(replayCallback)
+    }
+
+    stream.foreach { row =>
+      replayCallback(toPersistentRepr(row))
     }
   }
 
