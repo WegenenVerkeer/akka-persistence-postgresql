@@ -10,6 +10,8 @@ import akka.persistence.pg.journal.PgAsyncWriteJournal._
 import akka.persistence.pg.{EventTag, PgConfig, PgExtension}
 import akka.persistence.{AtomicWrite, PersistentRepr}
 import akka.serialization.{Serialization, SerializationExtension}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
+import akka.stream.scaladsl.{Keep, Sink, Source}
 
 import scala.collection.{immutable, mutable}
 import scala.concurrent.Future
@@ -89,15 +91,15 @@ class PgAsyncWriteJournal
       j.partitionKey.isEmpty && partitionKey.isEmpty || j.partitionKey === partitionKey
   }
 
+  implicit val materializer = ActorMaterializer(Some(ActorMaterializerSettings(context.system).withInputBuffer(16, 1024)))
+
   override def asyncReplayMessages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)
                                   (replayCallback: (PersistentRepr) => Unit): Future[Unit] = {
 
     log.debug("Async replay for persistenceId [{}], from sequenceNr: [{}], to sequenceNr: [{}] with max records: [{}]",
       persistenceId, fromSequenceNr, toSequenceNr, max)
 
-    // stream the results instead of reading them in a list
-    // we don't need all results at once, and this potentially creates a big memory pressure in the case we're replaying lots of events
-    val stream = database.stream {
+    val publisher = database.stream {
       journals
         .filter(_.persistenceId === persistenceId)
         .filter(_.sequenceNr >= fromSequenceNr)
@@ -108,9 +110,12 @@ class PgAsyncWriteJournal
         .result
     }
 
-    stream.foreach { row =>
-      replayCallback(toPersistentRepr(row))
-    }
+    Source.fromPublisher(publisher)
+      .toMat(
+        Sink.foreach[JournalTable#TableElementType] { e =>
+          replayCallback(toPersistentRepr(e))
+        }
+      )(Keep.right).run().map(_ => ())
   }
 
   override def asyncDeleteMessagesTo(persistenceId: String, toSequenceNr: Long): Future[Unit] = {
