@@ -21,6 +21,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.Random
+import scala.util.control.NonFatal
 
 abstract class WriteStrategySuite(config: Config) extends FunSuite
   with BeforeAndAfterEach
@@ -114,6 +115,8 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
             _ map {
               _.id
             }
+          } recover {
+            case NonFatal(e) => e.printStackTrace(); Seq.empty
           } map EventIds pipeTo self
           ()
       case EventIds(ids) => this.ids ++= ids
