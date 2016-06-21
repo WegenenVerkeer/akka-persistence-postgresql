@@ -28,13 +28,14 @@ trait BuildSettings {
       parallelExecution in Test := false,
       resolvers ++= Seq(
         "Local Maven" at Path.userHome.asFile.toURI.toURL + ".m2/repository",
-        Resolver.typesafeRepo("releases"),
-        "akka snapshots" at "http://repo.akka.io/snapshots"
+        "AWV nexus releases" at "https://collab.mow.vlaanderen.be/nexus/content/repositories/releases",
+        "AWV nexus snapshot" at "https://collab.mow.vlaanderen.be/nexus/content/repositories/snapshots",
+        Resolver.typesafeRepo("releases")
       ),
       credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
       updateOptions := updateOptions.value.withCachedResolution(true),
       organization := "be.wegenenverkeer",
-      scalaVersion := "2.11.7"
+      scalaVersion := "2.11.8"
     )
 
     Defaults.coreDefaultSettings ++ projectSettings

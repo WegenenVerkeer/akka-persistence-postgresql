@@ -1,5 +1,5 @@
 
-scalaVersion := "2.11.7"
+scalaVersion := "2.11.8"
 
 organization := "be.wegenenverkeer"
 
@@ -15,5 +15,7 @@ scalacOptions in ThisBuild ++= Seq(
   "-Ywarn-inaccessible",
   //  "-Ywarn-dead-code",
 //  "-Xfatal-warnings",
-  "-language:reflectiveCalls"
+  "-language:reflectiveCalls",
+  "-Ybackend:GenBCode",
+  "-Ydelambdafy:method"
 )
