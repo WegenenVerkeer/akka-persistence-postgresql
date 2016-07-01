@@ -103,10 +103,8 @@ class PluginConfig(systemConfig: Config) {
               case (k, v)          => props.put(k, v)
             }
             val urlConfig = ConfigFactory.parseProperties(props).atPath("properties")
-            val sourceConfig = dbConfig.withFallback(urlConfig).withoutPath("url")
-            val source = JdbcDataSource.forConfig(sourceConfig, null, "", ClassLoaderUtil.defaultClassLoader)
-            val executor = AsyncExecutor("akkapg-pooled", sourceConfig.getInt("numThreads"), sourceConfig.getInt("queueSize"))
-            JdbcBackend.Database.forSource(source, executor)
+            val sourceConfig = dbConfig.withFallback(urlConfig).withoutPath("url").atPath("akkapg-pooled")
+            JdbcBackend.Database.forConfig("akkapg-pooled", sourceConfig)
         }
 
     }
