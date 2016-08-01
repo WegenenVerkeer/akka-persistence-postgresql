@@ -2,9 +2,9 @@ import sbt._
 
 trait Dependencies { this: Build =>
 
-  val akkaVersion    = "2.4.7"
+  val akkaVersion    = "2.4.8"
   val slickVersion   = "3.1.1"
-  val slickPgVersion = "0.14.1"
+  val slickPgVersion = "0.14.3"
   val gatlinVersion  = "2.2.1"
   val playVersion    = "2.5.4"
 
@@ -33,9 +33,8 @@ trait Dependencies { this: Build =>
   val gatlinHighcharts        = "io.gatling.highcharts"   %   "gatling-charts-highcharts"  % "2.2.2"     //% "test"
   val gatling                 = "io.gatling"              %   "gatling-test-framework"     % "2.2.2"     //% "test"
 
-  val hikariCp                = "com.zaxxer"              %   "HikariCP"                   % "2.4.6"
-//  val postgres                = "org.postgresql"          % "postgresql"                   % "9.4.1208" //werkt enkel als prepareThreshold = 0, probleem met dateparsen zie https://github.com/pgjdbc/pgjdbc/pull/490 en https://github.com/pgjdbc/pgjdbc/issues/130
-  val postgres                = "org.postgresql"          % "postgresql"                   % "9.4-1201-jdbc41"
+  val hikariCp                = "com.zaxxer"              %   "HikariCP"                   % "2.4.7"
+  val postgres                = "org.postgresql"          %   "postgresql"                 % "9.4.1209"
 
   val mainTestDependencies = Seq (
     scalaTest, akkaSlf4j
