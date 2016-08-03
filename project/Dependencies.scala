@@ -4,7 +4,7 @@ trait Dependencies { this: Build =>
 
   val akkaVersion    = "2.4.8"
   val slickVersion   = "3.1.1"
-  val slickPgVersion = "0.14.3"
+  val slickPgVersion = "0.14.1"
   val gatlinVersion  = "2.2.1"
   val playVersion    = "2.5.4"
 
