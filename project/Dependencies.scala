@@ -1,10 +1,9 @@
 import sbt._
 
-trait Dependencies { this: Build =>
+trait Dependencies {
 
   val akkaVersion    = "2.4.8"
   val slickVersion   = "3.1.1"
-  val slickPgVersion = "0.14.1"
   val gatlinVersion  = "2.2.1"
   val playVersion    = "2.5.4"
 
@@ -17,11 +16,7 @@ trait Dependencies { this: Build =>
   val akkaStreams             = "com.typesafe.akka"       %%  "akka-stream"                         % akkaVersion
 
   val slick                   = "com.typesafe.slick"      %%  "slick"                      % slickVersion
-  val slickHikariCp           = "com.typesafe.slick"      %%  "slick-hikaricp"             % slickVersion
-
-  val slickPg                 = "com.github.tminglei"     %%  "slick-pg"                   % slickPgVersion
-  val slickPgPlayJson         = "com.github.tminglei"     %%  "slick-pg_play-json"         % slickPgVersion
-  val slickPgDate2            = "com.github.tminglei"     %%  "slick-pg_date2"             % slickPgVersion
+  val slickHikariCp           = "com.typesafe.slick"      %%  "slick-hikaricp"             % slickVersion    exclude("com.zaxxer", "HikariCP-java6")
 
   val playJson                = "com.typesafe.play"       %%  "play-json"                  % playVersion
 

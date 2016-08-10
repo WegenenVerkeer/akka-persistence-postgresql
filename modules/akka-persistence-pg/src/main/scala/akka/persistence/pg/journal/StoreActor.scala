@@ -4,7 +4,6 @@ import akka.actor._
 import akka.pattern.pipe
 import akka.persistence.pg.PgPostgresDriver
 import akka.persistence.pg.journal.StoreActor.{Store, StoreSuccess}
-import slick.jdbc.JdbcBackend
 
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
