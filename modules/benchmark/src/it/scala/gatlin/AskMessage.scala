@@ -1,7 +1,7 @@
 package gatlin
 
 import io.gatling.core.session.Session
-import io.gatling.core.validation.Validation
+import io.gatling.commons.validation.Validation
 
 /**
  * Created by peter on 01/10/15.

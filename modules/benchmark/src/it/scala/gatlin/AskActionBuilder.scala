@@ -1,12 +1,12 @@
 package gatlin
 
-import akka.actor.{Props, ActorRef}
+import io.gatling.core.action.Action
 import io.gatling.core.action.builder.ActionBuilder
-import io.gatling.core.config.Protocols
+import io.gatling.core.structure.ScenarioContext
 
 class AskActionBuilder(val message: AskMessage) extends ActionBuilder {
 
-  override def build(next: ActorRef, protocols: Protocols): ActorRef = {
-    system.actorOf(Props(new AskAction(next, message, "")))
+  override def build(ctx: ScenarioContext, next: Action): Action = {
+    new AskAction(next, message, ctx.coreComponents.statsEngine, ctx.system.dispatcher)
   }
 }

@@ -7,7 +7,7 @@ import akka.persistence.pg.{PgConfig, PluginConfig}
 import com.typesafe.config.Config
 import io.gatling.core.scenario.Simulation
 import io.gatling.core.session.{Session => GSession, Expression}
-import io.gatling.core.validation.{Success, Validation}
+import io.gatling.commons.validation.{Success, Validation}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
