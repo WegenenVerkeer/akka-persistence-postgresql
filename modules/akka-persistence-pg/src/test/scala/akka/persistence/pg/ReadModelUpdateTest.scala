@@ -20,7 +20,7 @@ import scala.util.Random
 
 class ReadModelUpdateTest extends FunSuite
   with BeforeAndAfterEach
-  with ShouldMatchers
+  with Matchers
   with BeforeAndAfterAll
   with CreateTables
   with RecreateSchema

@@ -3,10 +3,10 @@ package akka.persistence.pg
 import java.util.UUID
 
 import akka.actor.Props
-import akka.persistence.pg.util.{CreateTables, RecreateSchema, PersistentActorTest}
-import akka.persistence.{SnapshotOffer, PersistentActor}
-import com.typesafe.config.{ConfigFactory, Config}
-import org.scalatest.{BeforeAndAfterAll, ShouldMatchers}
+import akka.persistence.pg.util.{CreateTables, PersistentActorTest, RecreateSchema}
+import akka.persistence.{PersistentActor, SnapshotOffer}
+import com.typesafe.config.{Config, ConfigFactory}
+import org.scalatest.{BeforeAndAfterAll, Matchers}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.{Seconds, Span}
 
@@ -21,7 +21,7 @@ class ExamplePersistentActorTest extends PersistentActorTest
     with ScalaFutures
     with Eventually
     with RecreateSchema
-    with ShouldMatchers
+    with Matchers
     with BeforeAndAfterAll
     with CreateTables
     with PgConfig {

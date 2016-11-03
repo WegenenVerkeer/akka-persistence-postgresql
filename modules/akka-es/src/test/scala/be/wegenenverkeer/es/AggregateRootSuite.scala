@@ -26,7 +26,7 @@ object AggregateRootSuite {
 class AggregateRootSuite extends PersistentActorTest
   with ScalaFutures
   with BeforeAndAfterAll
-  with ShouldMatchers
+  with Matchers
   with RecreateSchema
   with CreateTables
   with PgConfig {

@@ -2,7 +2,6 @@ import sbt.Keys._
 import sbt._
 
 trait BuildSettings {
-  this: Build =>
 
   val projectName = "akka-persistence-postgresql"
 
@@ -42,13 +41,13 @@ trait BuildSettings {
   }
 
   def publishSettings: Seq[Setting[_]] = Seq(
-    publishTo <<= version { (v: String) =>
+    publishTo := version { (v: String) =>
       val nexus = "https://collab.mow.vlaanderen.be/nexus/content/repositories/"
       if (v.trim.endsWith("SNAPSHOT"))
         Some("collab snapshots" at nexus + "snapshots")
       else
         Some("collab releases" at nexus + "releases")
-    },
+    }.value,
     //    publishMavenStyle := true,
     publishArtifact in Compile := true,
     publishArtifact in Test := true

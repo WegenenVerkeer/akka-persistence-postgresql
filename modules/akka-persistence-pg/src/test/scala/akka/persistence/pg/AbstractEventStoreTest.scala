@@ -20,7 +20,7 @@ import scala.language.postfixOps
 abstract class AbstractEventStoreTest
   extends FunSuite
   with BeforeAndAfterEach
-  with ShouldMatchers
+  with Matchers
   with BeforeAndAfterAll
   with JournalTable
   with SnapshotTable

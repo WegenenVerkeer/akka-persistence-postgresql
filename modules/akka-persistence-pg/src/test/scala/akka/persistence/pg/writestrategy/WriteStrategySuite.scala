@@ -25,7 +25,7 @@ import scala.util.control.NonFatal
 
 abstract class WriteStrategySuite(config: Config) extends FunSuite
   with BeforeAndAfterEach
-  with ShouldMatchers
+  with Matchers
   with BeforeAndAfterAll
   with JournalTable
   with RecreateSchema

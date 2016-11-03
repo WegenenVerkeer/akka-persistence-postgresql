@@ -1,7 +1,7 @@
 import sbt.Keys._
 import sbt._
 
-object AkkaPgBuild extends Build with BuildSettings with Dependencies {
+object AkkaPgBuild extends  with BuildSettings with Dependencies {
 
   lazy val akkaPersistencePgModule = {
 

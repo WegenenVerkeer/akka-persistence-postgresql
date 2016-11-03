@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import akka.actor._
 import akka.pattern.ask
 import akka.persistence.pg.perf.Messages.Alter
-import akka.persistence.pg.perf.{PersistAllActor}
+import akka.persistence.pg.perf.PersistAllActor
 import akka.persistence.pg.util.{CreateTables, RecreateSchema}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
@@ -19,7 +19,7 @@ import scala.util.Random
 
 class PersistAllTest extends FunSuite
   with BeforeAndAfterEach
-  with ShouldMatchers
+  with Matchers
   with BeforeAndAfterAll
   with CreateTables
   with RecreateSchema

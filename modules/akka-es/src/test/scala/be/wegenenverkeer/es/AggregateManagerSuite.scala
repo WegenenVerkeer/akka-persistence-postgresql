@@ -5,7 +5,7 @@ import akka.testkit.{TestProbe, TestKit}
 import be.wegenenverkeer.es.actor.{PassivationConfig, GracefulPassivation}
 import be.wegenenverkeer.es.domain.AggregateRoot.Command
 import be.wegenenverkeer.es.service.AggregateManager
-import org.scalatest.{ShouldMatchers, BeforeAndAfterEach, FunSuiteLike}
+import org.scalatest.{Matchers, BeforeAndAfterEach, FunSuiteLike}
 
 //messages intended for testing AggregateManager to check its state
 case object GetAggregateCreatedCount
@@ -56,7 +56,7 @@ class FooAggregate extends Actor with GracefulPassivation {
 
 class AggregateManagerSuite extends TestKit(ActorSystem())
   with FunSuiteLike
-  with ShouldMatchers
+  with Matchers
   with BeforeAndAfterEach {
 
   var testProbe: TestProbe = _
