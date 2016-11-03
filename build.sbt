@@ -1,3 +1,5 @@
+import BuildSettings._
+import Dependencies._
 
 scalaVersion := "2.11.8"
 
@@ -18,4 +20,47 @@ scalacOptions in ThisBuild ++= Seq(
   "-language:reflectiveCalls",
   "-Ybackend:GenBCode",
   "-Ydelambdafy:method"
+)
+
+lazy val akkaPersistencePgModule = {
+
+  val mainDeps = Seq(scalaJava8Compat, slick, slickHikariCp, hikariCp, postgres,
+    akkaPersistence, akkaPersistenceQuery, akkaActor, akkaStreams, akkaTest, akkaPersistenceTestkit,
+    playJson, slf4jSimple)
+
+  subProject("akka-persistence-pg")
+    .configs(config("it") extend Test)
+    .settings(Defaults.itSettings: _*)
+    .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies)
+
+}
+
+lazy val akkaEsModule = {
+
+  val mainDeps = Seq(scalaJava8Compat, akkaPersistence, akkaTest)
+
+  subProject("akka-es")
+    .configs(config("it") extend Test)
+    .settings(Defaults.itSettings: _*)
+    .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies)
+    .dependsOn(akkaPersistencePgModule % "test->test;compile->compile")
+
+}
+
+lazy val benchmarkModule = {
+
+  val mainDeps = Seq(scalaJava8Compat, gatling, gatlinHighcharts)
+
+  import io.gatling.sbt.GatlingPlugin
+
+  subProject("benchmark")
+    .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies)
+    .dependsOn(akkaPersistencePgModule % "it->test;test->test;compile->compile", akkaEsModule)
+    .enablePlugins(GatlingPlugin)
+}
+
+val main = mainProject(
+  akkaPersistencePgModule,
+  akkaEsModule,
+  benchmarkModule
 )

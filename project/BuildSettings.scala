@@ -1,11 +1,11 @@
 import sbt.Keys._
 import sbt._
 
-trait BuildSettings {
+object BuildSettings {
 
   val projectName = "akka-persistence-postgresql"
 
-  def project(moduleName: String): Project = {
+  def subProject(moduleName: String): Project = {
     Project(
       id = moduleName,
       base = file("modules/" + moduleName),
@@ -21,7 +21,7 @@ trait BuildSettings {
     ).aggregate(modules: _*)
   }
 
-  private def projectSettings() = {
+  def projectSettings() = {
 
     val projectSettings = Seq(
       parallelExecution in Test := false,
@@ -48,7 +48,6 @@ trait BuildSettings {
       else
         Some("collab releases" at nexus + "releases")
     }.value,
-    //    publishMavenStyle := true,
     publishArtifact in Compile := true,
     publishArtifact in Test := true
   )
