@@ -2,14 +2,18 @@ package gatlin
 
 import java.util.concurrent.TimeUnit
 
-import akka.actor.ActorRef
+import akka.actor.{Actor, ActorRef, Props}
+import akka.pattern.ask
 import akka.util.Timeout
-import io.gatling.core.action.{Chainable, Action}
-import io.gatling.core.result.message._
-import io.gatling.core.result.writer.DataWriterClient
+import io.gatling.core.action.{Action, ChainableAction}
+import io.gatling.commons.stats._
 import io.gatling.core.session.Session
-import io.gatling.core.util.TimeHelper.nowMillis
+import io.gatling.commons.util.TimeHelper.nowMillis
+import io.gatling.core.stats.StatsEngine
+import io.gatling.core.stats.message.ResponseTimings
+import io.gatling.core.util.NameGen
 
+import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
 object AskAction {
@@ -18,12 +22,14 @@ object AskAction {
 
 }
 
-class AskAction(val next: ActorRef,
+class AskAction(val next: Action,
                 val message: AskMessage,
-                requestName: String)
-  extends Action
-  with DataWriterClient
-  with Chainable {
+                val statsEngine: StatsEngine,
+                implicit val executionContext: ExecutionContext)
+  extends ChainableAction
+  with NameGen {
+
+  override val name = genName("ask")
 
   import AskAction.timeout
 
@@ -37,13 +43,7 @@ class AskAction(val next: ActorRef,
       .recover { case NonFatal(t) => KO }
       .foreach { status =>
         val stop = nowMillis
-        writeRequestData(session,
-          "Request " + requestName,
-          start,
-          stop,
-          start,
-          stop,
-          status)
+        statsEngine.logResponse(session, "Request", ResponseTimings(start, stop), status, None, None)
         next ! (if (status == OK) session.markAsSucceeded else session.markAsFailed)
     }
   }

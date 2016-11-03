@@ -1,17 +1,10 @@
 package akka.persistence.pg
 
-import com.github.tminglei.slickpg._
+import slick.driver.PostgresDriver
 
-trait PgPostgresDriver extends ExPostgresDriver
-  with PgArraySupport
-  with PgDate2Support
-  with PgPlayJsonSupport
-  with PgHStoreSupport {
+trait PgPostgresDriver extends PostgresDriver with AkkaPgJdbcTypes {
 
-  override val api = new API with ArrayImplicits
-    with DateTimeImplicits
-    with PlayJsonImplicits
-    with HStoreImplicits {}
+  override val api = new API with AkkaPgImplicits {}
 
 }
 

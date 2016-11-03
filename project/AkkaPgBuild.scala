@@ -5,7 +5,7 @@ object AkkaPgBuild extends Build with BuildSettings with Dependencies {
 
   lazy val akkaPersistencePgModule = {
 
-    val mainDeps = Seq(scalaJava8Compat, slick, slickHikariCp, hikariCp, postgres, slickPg, slickPgPlayJson, slickPgDate2,
+    val mainDeps = Seq(scalaJava8Compat, slick, slickHikariCp, hikariCp, postgres,
       akkaPersistence, akkaPersistenceQuery, akkaActor, akkaStreams, akkaTest, akkaPersistenceTestkit,
       playJson, slf4jSimple)
 
