@@ -1,16 +1,11 @@
 package be.wegenenverkeer.es.actor
 
 import be.wegenenverkeer.es.domain.AggregateRoot
-import play.api.libs.json.{JsObject, Json}
 
 object Messages {
 
   def simpleName[AR <: AggregateRoot[_]](clazz: Class[AR]): String = {
     clazz.getSimpleName.replace("Aggregate", "").toLowerCase
-  }
-
-  def jsonErrorMessage(errorMessage: String): JsObject = {
-    Json.obj("status" -> "KO", "message" -> errorMessage)
   }
 
 }

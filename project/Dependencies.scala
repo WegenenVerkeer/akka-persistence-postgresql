@@ -5,7 +5,6 @@ object Dependencies {
   val akkaVersion    = "2.4.12"
   val slickVersion   = "3.1.1"
   val gatlinVersion  = "2.2.1"
-  val playVersion    = "2.5.9"
 
   val scalaJava8Compat      = "org.scala-lang.modules"     %%    "scala-java8-compat"             % "0.8.0"
 
@@ -17,8 +16,6 @@ object Dependencies {
 
   val slick                   = "com.typesafe.slick"      %%  "slick"                      % slickVersion
   val slickHikariCp           = "com.typesafe.slick"      %%  "slick-hikaricp"             % slickVersion    exclude("com.zaxxer", "HikariCP-java6")
-
-  val playJson                = "com.typesafe.play"       %%  "play-json"                  % playVersion
 
   // Test dependencies
   val scalaTest               = "org.scalatest"           %%  "scalatest"                  % "3.0.0"        % "test,it"

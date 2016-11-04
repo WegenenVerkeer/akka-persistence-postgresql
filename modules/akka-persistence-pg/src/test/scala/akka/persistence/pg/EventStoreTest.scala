@@ -6,6 +6,7 @@ import akka.actor.Props
 import akka.persistence.pg.TestActor._
 
 import scala.language.postfixOps
+import scala.util.parsing.json.JSON
 
 class EventStoreTest extends AbstractEventStoreTest {
 
@@ -52,7 +53,7 @@ class EventStoreTest extends AbstractEventStoreTest {
 
     database.run(events.size.result).futureValue shouldBe 1
     val storedEvent = database.run(events.result.head).futureValue
-    (storedEvent.event \ "created").as[String] shouldBe DateTimeFormatter.ISO_DATE_TIME.format(storedEvent.created)
+    getCreated(storedEvent.event) shouldBe  DateTimeFormatter.ISO_DATE_TIME.format(storedEvent.created)
   }
 
   //put on ignore because the assertion can NOT be guaranteed, the timestamps could very well be the same
@@ -66,7 +67,11 @@ class EventStoreTest extends AbstractEventStoreTest {
 
     database.run(events.size.result).futureValue shouldBe 1
     val storedEvent = database.run(events.result.head).futureValue
-    (storedEvent.event \ "created").as[String] shouldNot be(DateTimeFormatter.ISO_DATE_TIME.format(storedEvent.created))
+    getCreated(storedEvent.event) shouldNot  be(DateTimeFormatter.ISO_DATE_TIME.format(storedEvent.created))
+  }
+
+  def getCreated(jsonString: JsonString): Any = {
+    JSON.parseFull(jsonString.value).get.asInstanceOf[Map[String, Any]]("created")
   }
 
   test("generate snapshots") {

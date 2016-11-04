@@ -5,9 +5,8 @@ import java.util.UUID
 
 import akka.persistence.PersistentRepr
 import akka.persistence.pg.event._
-import akka.persistence.pg.{PgConfig, PgExtension}
+import akka.persistence.pg.{JsonString, PgConfig, PgExtension}
 import akka.serialization.Serialization
-import play.api.libs.json.JsValue
 
 import scala.concurrent.Future
 import scala.util.Try
@@ -43,7 +42,7 @@ trait JournalStore extends JournalTable {
     }
   }
 
-  private[this] def serializePayload(payload: Any): (Option[JsValue], Option[Array[Byte]]) = {
+  private[this] def serializePayload(payload: Any): (Option[JsonString], Option[Array[Byte]]) = {
     if (eventEncoder.toJson.isDefinedAt(payload)) {
       val json = eventEncoder.toJson(payload)
       require(eventEncoder.fromJson.isDefinedAt((json, payload.getClass)),
@@ -111,7 +110,7 @@ trait JournalStore extends JournalTable {
 
     (entry.payload, entry.json) match {
       case (Some(payload), _) => toRepr(serialization.deserialize(payload, clazz).get)
-      case (_, Some(event)) => toRepr(eventEncoder.fromJson((event.value, clazz)))
+      case (_, Some(event)) => toRepr(eventEncoder.fromJson((event, clazz)))
       case (None, None) => sys.error( s"""both payload and event are null for journal table entry
             with id=${entry.id}, (persistenceid='${entry.persistenceId}' and sequencenr='${entry.sequenceNr}')
             This should NEVER happen!""")

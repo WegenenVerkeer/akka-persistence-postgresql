@@ -1,8 +1,8 @@
 package akka.persistence.pg.journal
 
 import java.time.OffsetDateTime
-import akka.persistence.pg.PgConfig
-import play.api.libs.json.JsValue
+
+import akka.persistence.pg.{JsonString, PgConfig}
 
 case class JournalEntry(id: Option[Long],
                         rowid: Option[Long],
@@ -16,7 +16,7 @@ case class JournalEntry(id: Option[Long],
                         writerUuid: String,
                         created: OffsetDateTime,
                         tags: Map[String, String],
-                        json: Option[JsValue])
+                        json: Option[JsonString])
 
 
 
@@ -47,7 +47,7 @@ trait JournalTable {
     def writerUuid          = column[String]("writeruuid")
     def created             = column[OffsetDateTime]("created", O.Default(OffsetDateTime.now()))
     def tags                = column[Map[String, String]]("tags", O.Default(Map.empty))
-    def event               = column[Option[JsValue]]("event")
+    def event               = column[Option[JsonString]]("event")
 
     def idForQuery =
       if (pluginConfig.idForQuery == "rowid") rowid

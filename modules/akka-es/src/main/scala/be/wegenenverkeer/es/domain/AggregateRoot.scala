@@ -5,7 +5,6 @@ import akka.persistence._
 import akka.persistence.pg.event.{EventWrapper, ReadModelUpdate, Tagged}
 import be.wegenenverkeer.es.actor.GracefulPassivation
 import be.wegenenverkeer.es.domain.AggregateRoot._
-import play.api.libs.json.Json
 import slick.dbio.DBIO
 
 object AggregateRoot {
@@ -61,7 +60,7 @@ object AggregateRoot {
                       version: Int,
                       attributes: Map[String, String])
 
-  implicit val metadataFormat = Json.format[Metadata]
+  //implicit val metadataFormat = Json.format[Metadata]
 
   /**
    * Represents an Event with tags
