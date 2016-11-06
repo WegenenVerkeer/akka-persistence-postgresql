@@ -59,17 +59,6 @@ class PluginConfig(systemConfig: Config) {
 
   lazy val database: JdbcBackend.DatabaseDef = createDatabase
 
-  val throttled: Boolean = config.getBoolean("db.throttled")
-  val throttleThreads: Int = {
-    Try {
-      config.getInt("db.throttle.numThreads")
-    } match {
-      case Success(numThreads) => numThreads
-      case Failure(_) => dbConfig.getInt("numThreads") * 3
-    }
-  }
-  val throttleTimeout: Timeout = Timeout(config.getDuration("db.throttle.timeout").toMillis, TimeUnit.MILLISECONDS)
-
   lazy val dbConfig: Config = config.getConfig("db")
 
   def createDatabase: JdbcBackend.DatabaseDef = {
