@@ -36,12 +36,12 @@ class PgAsyncWriteJournal
 
   def storeActions(entries: Seq[JournalEntryInfo]): Seq[DBIO[_]] = {
     val storeEventsActions: Seq[DBIO[_]] = Seq(journals ++= entries.map(_.entry))
-    val readModelUpdateActions: Seq[DBIO[_]] = entries.flatMap(_.readModelInfo).map(_.action)
-    storeEventsActions ++ readModelUpdateActions
+    val extraDBIOActions: Seq[DBIO[_]] = entries.flatMap(_.extraDBIOInfo).map(_.action)
+    storeEventsActions ++ extraDBIOActions
   }
 
   def failureHandlers(entries: Seq[JournalEntryInfo]): Seq[PartialFunction[Throwable, Unit]] = {
-    entries.flatMap(_.readModelInfo).map(_.failureHandler)
+    entries.flatMap(_.extraDBIOInfo).map(_.failureHandler)
   }
 
   override def asyncWriteMessages(writes: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {

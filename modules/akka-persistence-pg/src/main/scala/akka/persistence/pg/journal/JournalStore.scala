@@ -25,8 +25,8 @@ trait JournalStore extends JournalTable {
 
   import driver.api._
 
-  case class ReadModelUpdateInfo(action: DBIO[_], failureHandler: PartialFunction[Throwable, Unit])
-  case class JournalEntryInfo(entry: JournalEntry, payload: Any, readModelInfo: Option[ReadModelUpdateInfo])
+  case class ExtraDBIOInfo(action: DBIO[_], failureHandler: PartialFunction[Throwable, Unit])
+  case class JournalEntryInfo(entry: JournalEntry, payload: Any, extraDBIOInfo: Option[ExtraDBIOInfo])
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -70,8 +70,8 @@ trait JournalStore extends JournalTable {
           case _ => message.payload
         }
         val tags: Map[String, String] = eventTagger.tags(message.payload)
-        val update: Option[ReadModelUpdateInfo] = message.payload match {
-          case r: ReadModelUpdate => Some(ReadModelUpdateInfo(r.readModelAction, r.failureHandler))
+        val update: Option[ExtraDBIOInfo] = message.payload match {
+          case r: ExtraDBIOSupport => Some(ExtraDBIOInfo(r.extraDBIO, r.failureHandler))
           case _ => None
         }
 

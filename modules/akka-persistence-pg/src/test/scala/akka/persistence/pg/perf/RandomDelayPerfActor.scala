@@ -5,7 +5,7 @@ import java.util.UUID
 import akka.actor.{Props, ActorLogging}
 import akka.persistence.PersistentActor
 import akka.persistence.pg.PgPostgresDriver
-import akka.persistence.pg.event.{EventWrapper, ReadModelUpdate}
+import akka.persistence.pg.event.{EventWrapper, ExtraDBIOSupport}
 import akka.persistence.pg.perf.Messages.{Altered, Alter}
 import slick.jdbc.{GetResult, PositionedResult}
 
@@ -23,11 +23,11 @@ class RandomDelayPerfActor(driver: PgPostgresDriver) extends PersistentActor wit
   override def receiveRecover: Receive = { case _ => }
 
   override def receiveCommand: Receive = {
-    case Alter(txt) => persist(new ReadModelUpdate with EventWrapper[Altered] {
+    case Alter(txt) => persist(new ExtraDBIOSupport with EventWrapper[Altered] {
       import driver.api._
       implicit object GetUnit extends GetResult[Unit] { def apply(rs: PositionedResult) = { rs.nextObject(); () } }
 
-      override def readModelAction: DBIO[_] = sql"""select pg_sleep(${Random.nextInt(150)/1000})""".as[Unit]
+      override def extraDBIO: DBIO[_] = sql"""select pg_sleep(${Random.nextInt(150)/1000})""".as[Unit]
 
       override def failureHandler = PartialFunction.empty
 

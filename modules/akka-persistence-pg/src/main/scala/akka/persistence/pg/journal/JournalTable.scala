@@ -28,8 +28,8 @@ trait JournalTable {
 
   import driver.api._
 
-  case class JournalEntryWithReadModelUpdates(entry: JournalEntry,
-                                              readModelUpdates: Seq[DBIO[_]])
+  case class JournalEntryWithExtraDBIO(entry: JournalEntry,
+                                       extraDBIO: Seq[DBIO[_]])
 
   class JournalTable(tag: Tag) extends Table[JournalEntry](
     tag, pluginConfig.schema, pluginConfig.journalTableName) {

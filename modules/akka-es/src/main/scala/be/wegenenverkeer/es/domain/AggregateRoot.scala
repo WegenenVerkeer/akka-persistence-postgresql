@@ -2,7 +2,7 @@ package be.wegenenverkeer.es.domain
 
 import akka.actor._
 import akka.persistence._
-import akka.persistence.pg.event.{EventWrapper, ReadModelUpdate, Tagged}
+import akka.persistence.pg.event.{EventWrapper, ExtraDBIOSupport, Tagged}
 import be.wegenenverkeer.es.actor.GracefulPassivation
 import be.wegenenverkeer.es.domain.AggregateRoot._
 import slick.dbio.DBIO
@@ -72,27 +72,27 @@ object AggregateRoot {
   /**
     * Represents an Event which will, when stored, also update the read-model in the same tx
     * @param event the wrapped event
-    * @param readModelAction the action to apply to the read-model
+    * @param extraDBIO the action to apply to the read-model
     * @param failureHandler a partial function, which can handle specific failures, originating from updating the read-model
     * @tparam E Event subclass
     */
   case class ReadModelUpdateEvent[E <: Event](event: E,
-                                              readModelAction: DBIO[_],
-                                              failureHandler: PartialFunction[Throwable, Unit]) extends EventWrapper[E] with ReadModelUpdate
+                                              extraDBIO: DBIO[_],
+                                              failureHandler: PartialFunction[Throwable, Unit]) extends EventWrapper[E] with ExtraDBIOSupport
 
   /**
     * Represents an Event containing SQL statements to update the read-model in the same transaction as storing the event
     * Your read-model will be 'strict' consistent with your events
     * @param event the wrapped event
     * @param tags the tags
-    * @param readModelAction the SQL statements to execute inside the tx that also stores the events
+    * @param extraDBIO the SQL statements to execute inside the tx that also stores the events
     * @param failureHandler a partial function, which can handle specific failures, originating from updating the read-model
     * @tparam E Event subclass
     */
   case class CQRSEvent[E <: Event](event: E,
                                    tags: Map[String, String],
-                                   readModelAction: DBIO[_],
-                                   failureHandler: PartialFunction[Throwable, Unit]) extends EventWrapper[E] with Tagged with ReadModelUpdate
+                                   extraDBIO: DBIO[_],
+                                   failureHandler: PartialFunction[Throwable, Unit]) extends EventWrapper[E] with Tagged with ExtraDBIOSupport
 
   /**
    * Specifies how many events should be processed before new snapshot is taken.
