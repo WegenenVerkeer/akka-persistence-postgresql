@@ -70,7 +70,7 @@ trait JournalStore extends JournalTable {
           case w: EventWrapper[_] => w.event
           case _ => message.payload
         }
-        val tags: Map[String, String] = eventTagger.tag(message.payload)
+        val tags: Map[String, String] = eventTagger.tags(message.payload)
         val update: Option[ReadModelUpdateInfo] = message.payload match {
           case r: ReadModelUpdate => Some(ReadModelUpdateInfo(r.readModelAction, r.failureHandler))
           case _ => None
