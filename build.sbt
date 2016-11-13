@@ -34,18 +34,6 @@ lazy val akkaPersistencePgModule = {
 
 }
 
-lazy val akkaEsModule = {
-
-  val mainDeps = Seq(scalaJava8Compat, akkaPersistence, akkaTest)
-
-  subProject("akka-es")
-    .configs(config("it") extend Test)
-    .settings(Defaults.itSettings: _*)
-    .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies)
-    .dependsOn(akkaPersistencePgModule % "test->test;compile->compile")
-
-}
-
 lazy val benchmarkModule = {
 
   val mainDeps = Seq(scalaJava8Compat, gatling, gatlinHighcharts)
@@ -54,12 +42,11 @@ lazy val benchmarkModule = {
 
   subProject("benchmark")
     .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies)
-    .dependsOn(akkaPersistencePgModule % "it->test;test->test;compile->compile", akkaEsModule)
+    .dependsOn(akkaPersistencePgModule % "it->test;test->test;compile->compile")
     .enablePlugins(GatlingPlugin)
 }
 
 val main = mainProject(
   akkaPersistencePgModule,
-  akkaEsModule,
   benchmarkModule
 )
