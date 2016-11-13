@@ -25,6 +25,7 @@ object BuildSettings {
 
     val projectSettings = Seq(
       parallelExecution in Test := false,
+      concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
       resolvers ++= Seq(
         "Local Maven" at Path.userHome.asFile.toURI.toURL + ".m2/repository",
         "AWV nexus releases" at "https://collab.mow.vlaanderen.be/nexus/content/repositories/releases",
