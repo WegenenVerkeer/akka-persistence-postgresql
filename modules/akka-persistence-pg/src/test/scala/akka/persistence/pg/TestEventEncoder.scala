@@ -14,13 +14,13 @@ class TestEventEncoder extends JsonEncoder {
 
   override def toJson = {
     case a: Altered => JsonString(s"""{
-                                  | type: "altered",
-                                  | id: ${a.id},
-                                  | created: "${DateTimeFormatter.ISO_DATE_TIME.format(a.created)}"
+                                  | "type": "altered",
+                                  | "id": "${a.id}",
+                                  | "created": "${DateTimeFormatter.ISO_DATE_TIME.format(a.created)}"
                                   |}""".stripMargin)
     case i: Incremented => JsonString(s"""{
-                                          | count: ${i.count}
-                                          | created: "${DateTimeFormatter.ISO_DATE_TIME.format(i.created)}"
+                                          | "count": ${i.count},
+                                          | "created": "${DateTimeFormatter.ISO_DATE_TIME.format(i.created)}"
                                           |}""".stripMargin)
   }
 
@@ -33,7 +33,7 @@ class TestEventEncoder extends JsonEncoder {
   }
 
   private def incremented(jsValue: Map[String, Any]): Incremented = {
-    Incremented(jsValue("count").asInstanceOf[Int], parseDateTime(jsValue))
+    Incremented(jsValue("count").asInstanceOf[Double].toInt, parseDateTime(jsValue))
   }
 
   private def parseJsonString(jsonString: JsonString) = {

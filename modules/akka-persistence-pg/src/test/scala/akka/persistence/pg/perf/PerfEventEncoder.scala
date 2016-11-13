@@ -10,9 +10,9 @@ class PerfEventEncoder extends JsonEncoder {
 
   override def toJson = {
     case Altered(text, created) => JsonString(s"""{
-                                                  | type: "altered",
-                                                  | txt: $text,
-                                                  | created: $created
+                                                  | "type": "altered",
+                                                  | "txt": "$text",
+                                                  | "created": "$created"
                                                   |}""".stripMargin)
   }
 
