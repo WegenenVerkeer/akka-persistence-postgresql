@@ -60,8 +60,6 @@ object AggregateRoot {
                       version: Int,
                       attributes: Map[String, String])
 
-  //implicit val metadataFormat = Json.format[Metadata]
-
   /**
    * Represents an Event with tags
    * @param event the wrapped event
