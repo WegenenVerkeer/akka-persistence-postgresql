@@ -3,14 +3,13 @@ package akka.persistence.pg.journal
 
 import java.util.concurrent.TimeUnit
 
-import akka.actor.{Status, ActorSystem, ActorRef}
-import akka.pattern.ask
-import akka.persistence.pg.journal.StoreActor.{StoreSuccess, Store}
+import akka.actor.{ActorRef, ActorSystem, Status}
 import akka.persistence.pg.PluginConfig
+import akka.persistence.pg.journal.StoreActor.{Store, StoreSuccess}
+import akka.pattern.ask
 import akka.util.Timeout
 
 import scala.concurrent.{ExecutionContext, Future}
-
 import scala.language.postfixOps
 
 trait WriteStrategy {
@@ -33,7 +32,7 @@ class SingleThreadedBatchWriteStrategy(override val pluginConfig: PluginConfig,
   import driver.api._
   implicit val timeout = Timeout(10, TimeUnit.SECONDS)
 
-  private val eventStoreActor: ActorRef = system.actorOf(StoreActor.props(pluginConfig.pgPostgresDriver, pluginConfig.database))
+  private val eventStoreActor: ActorRef = system.actorOf(StoreActor.props(pluginConfig))
 
   override def store(actions: Seq[DBIO[_]],
                      notifier: Notifier)
@@ -93,7 +92,7 @@ class TableLockingWriteStrategy(override val pluginConfig: PluginConfig,
             notifier: Notifier)
            (implicit executionContext: ExecutionContext): Future[Unit] = {
     pluginConfig.database.run {
-      DBIO.seq((sqlu"""lock table #${pluginConfig.fullJournalTableName} in share update exclusive mode"""
+      DBIO.seq((sqlu"""lock table #${pluginConfig.fullJournalTableName} in share row exclusive mode"""
         +: actions):_*).transactionally
     }.map { _ =>
       notifier.eventsAvailable()
@@ -107,7 +106,7 @@ class RowIdUpdatingStrategy(override val pluginConfig: PluginConfig,
 
   import driver.api._
 
-  private val rowIdUpdater: ActorRef = system.actorOf(RowIdUpdater.props(pluginConfig, pluginConfig.pgPostgresDriver, pluginConfig.database), "AkkaPgRowIdUpdater")
+  private val rowIdUpdater: ActorRef = system.actorOf(RowIdUpdater.props(pluginConfig), "AkkaPgRowIdUpdater")
 
   def store(actions: Seq[DBIO[_]], notifier: Notifier)
            (implicit executionContext: ExecutionContext): Future[Unit] = {
