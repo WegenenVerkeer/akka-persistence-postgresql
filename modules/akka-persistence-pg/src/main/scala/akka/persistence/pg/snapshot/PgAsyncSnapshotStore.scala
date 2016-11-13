@@ -1,15 +1,12 @@
 package akka.persistence.pg.snapshot
 
 import akka.actor.{ActorLogging, ActorSystem}
-import akka.persistence.pg.journal.Partitioner
 import akka.persistence.pg.{PgConfig, PgExtension}
 import akka.persistence.serialization.Snapshot
 import akka.persistence.{SelectedSnapshot, SnapshotMetadata, SnapshotSelectionCriteria}
 import akka.serialization.{Serialization, SerializationExtension}
-import slick.dbio.Effect.Write
-import slick.profile.FixedSqlAction
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
 class PgAsyncSnapshotStore extends akka.persistence.snapshot.SnapshotStore
   with PgSnapshotStore
@@ -21,7 +18,6 @@ class PgAsyncSnapshotStore extends akka.persistence.snapshot.SnapshotStore
 
   override val serialization: Serialization = SerializationExtension(context.system)
   override lazy val pluginConfig = PgExtension(context.system).pluginConfig
-  override def partitioner: Partitioner = pluginConfig.journalPartitioner
 
   import driver.api._
 
@@ -35,7 +31,7 @@ class PgAsyncSnapshotStore extends akka.persistence.snapshot.SnapshotStore
     val serialized: Array[Byte] = serialization.serialize(Snapshot(snapshot)).get
     database.run(snapshotsQuery(metadata).length
       .result.flatMap { result: Int =>
-        val v = (metadata.persistenceId, metadata.sequenceNr, partitioner.partitionKey(metadata.persistenceId), metadata.timestamp, serialized)
+        val v = (metadata.persistenceId, metadata.sequenceNr, metadata.timestamp, serialized)
         if (result > 0) {
           snapshotsQuery(metadata).update(v)
         } else {

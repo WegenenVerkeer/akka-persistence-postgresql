@@ -1,19 +1,16 @@
 package akka.persistence.pg
 
 import java.util.Properties
-import java.util.concurrent.TimeUnit
 
 import akka.actor.{ActorContext, ActorSystem}
 import akka.persistence.pg.event._
-import akka.persistence.pg.journal.{WriteStrategy, DefaultRegexPartitioner, NotPartitioned, Partitioner}
-import akka.util.Timeout
+import akka.persistence.pg.journal.WriteStrategy
 import com.typesafe.config.{ConfigFactory, Config}
 import org.postgresql.ds.PGSimpleDataSource
-import slick.jdbc.{JdbcDataSource, JdbcBackend}
-import slick.util.{ClassLoaderUtil, AsyncExecutor}
+import slick.jdbc.JdbcBackend
+import slick.util.AsyncExecutor
 
 import scala.collection.JavaConverters._
-import scala.util.{Failure, Success, Try}
 
 object PluginConfig {
   def apply(system: ActorSystem) = new PluginConfig(system.settings.config)
@@ -100,7 +97,7 @@ class PluginConfig(systemConfig: Config) {
     db
   }
 
-  lazy val eventStoreConfig = new EventStoreConfig(config.getConfig("eventstore"),
+  lazy val eventStoreConfig = EventStoreConfig(config.getConfig("eventstore"),
     schema,
     journalTableName)
 
@@ -109,12 +106,6 @@ class PluginConfig(systemConfig: Config) {
       val storeClazz = Thread.currentThread.getContextClassLoader.loadClass(storeName).asInstanceOf[Class[_ <: EventStore]]
       storeClazz.getConstructor(classOf[PluginConfig]).newInstance(this)
     }
-  }
-
-  lazy val journalPartitioner: Partitioner = PluginConfig.asOption(config.getString("partitioner")) match {
-    case None => NotPartitioned
-    case Some("default") => DefaultRegexPartitioner
-    case Some(clazz) => Thread.currentThread.getContextClassLoader.loadClass(clazz).asInstanceOf[Class[_ <: Partitioner]].newInstance()
   }
 
   def writeStrategy(context: ActorContext): WriteStrategy = {

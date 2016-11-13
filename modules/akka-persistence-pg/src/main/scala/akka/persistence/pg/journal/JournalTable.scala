@@ -8,7 +8,6 @@ case class JournalEntry(id: Option[Long],
                         rowid: Option[Long],
                         persistenceId: String,
                         sequenceNr: Long,
-                        partitionKey: Option[String],
                         deleted: Boolean,
                         payload: Option[Array[Byte]],
                         manifest: String,
@@ -39,7 +38,6 @@ trait JournalTable {
     def rowid               = column[Option[Long]]("rowid")
     def persistenceId       = column[String]("persistenceid")
     def sequenceNr          = column[Long]("sequencenr")
-    def partitionKey        = column[Option[String]]("partitionkey")
     def deleted             = column[Boolean]("deleted", O.Default(false))
     def payload             = column[Option[Array[Byte]]]("payload")
     def manifest            = column[String]("manifest")
@@ -55,7 +53,7 @@ trait JournalTable {
 
     def pk = primaryKey(s"${pluginConfig.journalTableName}_pk", (persistenceId, sequenceNr))
 
-    def * = (id.?, rowid, persistenceId, sequenceNr, partitionKey, deleted, payload, manifest, uuid, writerUuid, created, tags, event) <>
+    def * = (id.?, rowid, persistenceId, sequenceNr, deleted, payload, manifest, uuid, writerUuid, created, tags, event) <>
       (JournalEntry.tupled, JournalEntry.unapply)
 
   }

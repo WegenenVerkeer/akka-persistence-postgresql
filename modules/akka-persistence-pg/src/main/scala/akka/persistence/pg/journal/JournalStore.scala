@@ -22,7 +22,6 @@ trait JournalStore extends JournalTable {
   def pgExtension: PgExtension
   def eventEncoder: JsonEncoder = pluginConfig.eventStoreConfig.eventEncoder
   def eventTagger: EventTagger = pluginConfig.eventStoreConfig.eventTagger
-  def partitioner: Partitioner = pluginConfig.journalPartitioner
 
   import driver.api._
 
@@ -81,7 +80,6 @@ trait JournalStore extends JournalTable {
           None,
           message.persistenceId,
           message.sequenceNr,
-          partitioner.partitionKey(message.persistenceId),
           deleted = false,
           payloadAsBytes,
           event.getClass.getName,
