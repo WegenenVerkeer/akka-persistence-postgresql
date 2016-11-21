@@ -18,7 +18,7 @@ addons:
 
 before_script:
   - psql -c 'create database akkapg;' -U postgres
-  - psql -c "create extension hstore;" -U postgres
+  - psql akkapg -c "create extension hstore;" -U postgres
   - psql -c "create user akkapg with password 'akkapg';" -U postgres
   - psql -c "grant all privileges on database akkapg to akkapg;" -U postgres
 
