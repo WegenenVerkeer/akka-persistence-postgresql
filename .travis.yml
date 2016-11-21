@@ -1,0 +1,36 @@
+language: scala
+
+scala:
+- 2.11.8
+
+script: sbt clean +test
+
+sudo: false
+
+jdk:
+- oraclejdk8
+
+services:
+- postgresql
+
+addons:
+  postgresql: "9.4"
+
+before_script:
+  - psql -c 'create database akkapg;' -U postgres
+  - psql -c "create extension hstore;" -U postgres
+  - psql -c "create user akkapg with password 'akkapg';" -U postgres
+  - psql -c "grant all privileges on database akkapg to akkapg;" -U postgres
+
+cache:
+  directories:
+    - '$HOME/.ivy2'
+    - '$HOME/.sbt'
+
+notifications:
+  email:
+    recipients:
+    - peter.mortier@gmail.com
+
+#after_success:
+#  - "[[ $TRAVIS_BRANCH == \"develop\" ]] && { sbt +publish; };"
