@@ -28,19 +28,6 @@ trait JournalStore extends JournalTable {
   case class ExtraDBIOInfo(action: DBIO[_], failureHandler: PartialFunction[Throwable, Unit])
   case class JournalEntryInfo(entry: JournalEntry, payload: Any, extraDBIOInfo: Option[ExtraDBIOInfo])
 
-  import scala.concurrent.ExecutionContext.Implicits.global
-
-  def selectMessage(persistenceId: String, sequenceNr: Long): Future[Option[PersistentRepr]] = {
-    database.run(
-      journals
-        .filter(_.persistenceId === persistenceId)
-        .filter(_.sequenceNr === sequenceNr)
-        .result
-    ) map {
-      _.headOption.map(toPersistentRepr)
-    }
-  }
-
   private[this] def serializePayload(payload: Any): (Option[JsonString], Option[Array[Byte]]) = {
     if (eventEncoder.toJson.isDefinedAt(payload)) {
       val json = eventEncoder.toJson(payload)
@@ -53,11 +40,22 @@ trait JournalStore extends JournalTable {
     }
   }
 
+  /**
+    * Returns the timestamp an event was created.
+    * By default this will return the created timestamp if your event extens Created, otherwise it returns the current time.
+    * @param event any event
+    * @return the timestamp this event was created
+    */
   def getCreated(event: Any): OffsetDateTime = event match {
     case e: Created => e.created
     case _ => OffsetDateTime.now()
   }
 
+  /**
+    * Returns a unique id for this event. By default this just generates a new UUID.
+    * @param event any event
+    * @return the unique id of the event
+    */
   def getUuid(event: Any): String = {
     UUID.randomUUID.toString
   }
