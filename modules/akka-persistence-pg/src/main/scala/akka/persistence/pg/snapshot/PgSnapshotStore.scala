@@ -5,7 +5,7 @@ import akka.persistence.serialization.Snapshot
 import akka.persistence.{SelectedSnapshot, SnapshotMetadata, SnapshotSelectionCriteria}
 import akka.serialization.Serialization
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
 trait PgSnapshotStore extends SnapshotTable {
@@ -14,8 +14,6 @@ trait PgSnapshotStore extends SnapshotTable {
   def serialization: Serialization
 
   import driver.api._
-
-  import scala.concurrent.ExecutionContext.Implicits.global
 
   def snapshotsQuery(metadata: SnapshotMetadata) = {
     snapshots
@@ -29,7 +27,8 @@ trait PgSnapshotStore extends SnapshotTable {
     }
   }
 
-  def selectMostRecentSnapshotFor(persistenceId: String, criteria: SnapshotSelectionCriteria): Future[Option[SelectedSnapshot]] = {
+  def selectMostRecentSnapshotFor(persistenceId: String, criteria: SnapshotSelectionCriteria)
+                                 (implicit executionContext: ExecutionContext): Future[Option[SelectedSnapshot]] = {
     database.run {
       selectSnapshotsQuery(persistenceId, criteria)
         .sortBy(_.sequenceNr.desc)
