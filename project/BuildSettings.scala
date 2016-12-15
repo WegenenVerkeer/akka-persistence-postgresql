@@ -28,11 +28,8 @@ object BuildSettings {
       concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
       resolvers ++= Seq(
         "Local Maven" at Path.userHome.asFile.toURI.toURL + ".m2/repository",
-        "AWV nexus releases" at "https://collab.mow.vlaanderen.be/nexus/content/repositories/releases",
-        "AWV nexus snapshot" at "https://collab.mow.vlaanderen.be/nexus/content/repositories/snapshots",
         Resolver.typesafeRepo("releases")
       ),
-      credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
       updateOptions := updateOptions.value.withCachedResolution(true),
       organization := "be.wegenenverkeer",
       scalaVersion := "2.11.8"
@@ -41,17 +38,51 @@ object BuildSettings {
     Defaults.coreDefaultSettings ++ projectSettings
   }
 
-  def publishSettings: Seq[Setting[_]] = Seq(
-    publishTo := version { (v: String) =>
-      val nexus = "https://collab.mow.vlaanderen.be/nexus/content/repositories/"
-      if (v.trim.endsWith("SNAPSHOT"))
-        Some("collab snapshots" at nexus + "snapshots")
+  val publishingCredentials = (for {
+    username <- Option(System.getenv().get("SONATYPE_USERNAME"))
+    password <- Option(System.getenv().get("SONATYPE_PASSWORD"))
+  } yield
+    Seq(Credentials(
+      "Sonatype Nexus Repository Manager",
+      "oss.sonatype.org",
+      username,
+      password)
+    )).getOrElse(Seq())
+
+
+  val publishSettings = Seq(
+    publishMavenStyle := true,
+    pomIncludeRepository := { _ => false},
+    publishTo := {
+      val nexus = "https://oss.sonatype.org/"
+      if (isSnapshot.value)
+        Some("snapshots" at nexus + "content/repositories/snapshots")
       else
-        Some("collab releases" at nexus + "releases")
-    }.value,
-    publishArtifact in Compile := true,
-    publishArtifact in Test := true
+        Some("releases" at nexus + "service/local/staging/deploy/maven2")
+    },
+    pomExtra := pomInfo,
+    credentials ++= publishingCredentials
   )
+
+  lazy val pomInfo = <url>https://github.com/WegenenVerkeer/akka-persistence-postgresql</url>
+    <licenses>
+      <license>
+        <name>MIT licencse</name>
+        <url>http://opensource.org/licenses/MIT</url>
+        <distribution>repo</distribution>
+      </license>
+    </licenses>
+    <scm>
+      <url>git@github.com:WegenenVerkeer/akka-persistence-postgresql.git</url>
+      <connection>scm:git:git@github.com:WegenenVerkeer/akka-persistence-postgresql.git</connection>
+    </scm>
+    <developers>
+      <developer>
+        <id>AWV</id>
+        <name>De ontwikkelaars van AWV</name>
+        <url>http://www.wegenenverkeer.be</url>
+      </developer>
+    </developers>
 
 
 }
