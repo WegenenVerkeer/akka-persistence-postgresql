@@ -80,7 +80,7 @@ abstract class AbstractEventStoreTest
       PersistenceQuery(system)
         .readJournalFor[PostgresReadJournal](PostgresReadJournal.Identifier)
 
-    readJournal.events(fromRowId).map { env =>
+    readJournal.allEvents(fromRowId).map { env =>
       env.event match {
         case evt: TestActor.Event => evt
         case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")

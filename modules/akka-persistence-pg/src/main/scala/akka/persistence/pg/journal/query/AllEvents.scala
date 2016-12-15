@@ -7,6 +7,6 @@ import akka.stream.scaladsl.Source
 
 trait AllEvents extends ReadJournal {
 
-  def events(fromRowId: Long, toRowId: Long = Long.MaxValue): Source[EventEnvelope, NotUsed]
+  def allEvents(fromRowId: Long, toRowId: Long = Long.MaxValue): Source[EventEnvelope, NotUsed]
 
 }
