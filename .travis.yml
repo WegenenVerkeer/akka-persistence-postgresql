@@ -1,36 +1,31 @@
 language: scala
-
 scala:
 - 2.11.8
-
 script: sbt clean +test
-
 sudo: false
-
 jdk:
 - oraclejdk8
-
 services:
 - postgresql
-
 addons:
-  postgresql: "9.4"
-
+  postgresql: '9.4'
 before_script:
-  - psql -c 'create database akkapg;' -U postgres
-  - psql akkapg -c "create extension hstore;" -U postgres
-  - psql -c "create user akkapg with password 'akkapg';" -U postgres
-  - psql -c "grant all privileges on database akkapg to akkapg;" -U postgres
-
+- psql -c 'create database akkapg;' -U postgres
+- psql akkapg -c "create extension hstore;" -U postgres
+- psql -c "create user akkapg with password 'akkapg';" -U postgres
+- psql -c "grant all privileges on database akkapg to akkapg;" -U postgres
 cache:
   directories:
-    - '$HOME/.ivy2'
-    - '$HOME/.sbt'
-
+  - "$HOME/.ivy2"
+  - "$HOME/.sbt"
 notifications:
   email:
     recipients:
     - peter.mortier@gmail.com
-
-#after_success:
-#  - "[[ $TRAVIS_BRANCH == \"develop\" ]] && { sbt +publish; };"
+    - karel@geovise.com
+after_success:
+- '[[ $TRAVIS_BRANCH == "develop" ]] && { sbt +publish; };'
+env:
+  global:
+  - secure: DZ6gnTwxX3MUmeuQMvr+xNQL4PGcwUGR0uDIf05+GNUNQ6wp3uTW/aBKkZWSPCD65Cbh9PWpdPaUtdhpzUc2C5cI4rKvSu3GxWOVNtrRqwNLoQG5Uls3Wru+b9zRc2ZbPei3X4I9owBxboJx1+4qd5H0kzWQ+BGVagJdEv8pUoGCYIECcd449/sHkm4H+jEKMZDGCDykNd6JMDvJRd2FpD6wfaDAMbVfG2CmGDRt9gNdWNVz/MfdFquoDCPu6XP13TTJjDFWXKQkZ5AYxnD0mgvlGf8zJ1I2gEaXF9+6oK9lDgf3J9aEdii2ei5l+WlIhvVycatVpRHqFvbEWPBU8B6qCv6HPKFG9/XRCrDFp+A2AwPVnUga9lvWsaU1fApJee8P7uAP++TdjXlJaNs/IeQABSHyt0GXn/mxq6YgaIAKenJCCNx1bdLSFj37VcUULuej075NxUGnI7PyF+B4DJ4latoHY0gqEdIHpn2nAylzUvsmk51lEOdoAectix5OpJYezhgOgSHaQdjo0lLY+1QbdaNMf0wVUSsd1c2JpLNuzr+PVfvfrKWKWxraxExP8wE7NXsCJDM3OKLwj+Jpk9hXdZ50e3KJq/VcIKjSdugZm7EPaNCCs0IfcSZytd7BwyVXCciirchRd8CgIvlLCvV1MNmu2sdy7knnSCw1QqE=
+  - secure: dQgbCmWfDdVIjBKiCtIMbnNs9T66DdAL7P2dkMaWIK8m3CNGGtSDtsY3jdCy0Oyk/QtjK3MJ/3kyhIkAoUW9uB2GGt19yGYPQR287te5SlFkdBnXpFQ6jTpcCRCTsxxcxLmEBmc4mVtLXwRO2a4TkPXoowh/JIlVSCHo1DuCBneOsWnAmpfwyhzUIqWWcgOLlA3PjHuq8zY68S8Eq2dhOsLyi5muYKKd8CsanO5UXcxWrvL/IKXvLQH0JCVQXZq0CkA+VH2RsohPuzYFWZpGyJdMH8yz0H//EHeljaX/5FFF/MC/TmuHncXQpOysuEL9s7/VhQH2zCU46yYSJsXLqz+j6lNc2NcwupIXDcR3HWRCY0H1HmGJZS9SGwGulYesOhpdLpmhPcb5YfvTHcKK6MA8DVvbipceSFSaIO7huiYuO2iFSM4VZAm6Tfjm51tP9oMgCkr1yD/ZsigaMgbQhI9kHb2Kbol2qANw+zqcszSI0H+EDgxg0ALiIz+j65gS4Cwa168uN4Y5RXWJ//bIRjMvCeypG7JMZu5zipcoHvftwxU4dD9U7lCepDqpPqo7TdJWigMfSLXyGw8l6ihngfd2K4ZHGNGMk4PJESZRUz/Sl9yyL32jHz53Hrsyu2IKhJ0cO4xfhxypaywrbg24lnt9D+1tEGUzrtb9gKy9Md8=
