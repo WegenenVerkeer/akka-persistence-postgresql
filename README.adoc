@@ -5,7 +5,7 @@ image::https://travis-ci.org/WegenenVerkeer/akka-persistence-postgresql.svg?bran
 akka-persistence-postgresql is a journal and snapshot store plugin for http://doc.akka.io/docs/akka/current/scala/persistence.html[akka-persistence] using Postgresql.
 It uses Slick to talk to a Postgresql database.
 
-Currently only scala 2.11, Java8, akka 2.4.x and slick 3.1.x are supported.
+Scala 2.11 & 2.12, Java8, akka 2.4.x and both slick 3.1.1, 3.2.0 are supported.
 
 The plugin supports the following functionality:
 
@@ -17,9 +17,18 @@ The plugin supports the following functionality:
 
 == Usage
 
-Just add the following dependency to your SBT dependencies
+Versions: The table below lists the versions and their main dependencies
+
+|===
+|Version to use|Scala |Akka |Slick
+|0.5.0 |2.11.x |2.4.x |3.1.x
+|0.6.0-SNAPSHOT|2.12.x or 2.11.x|2.4.x|3.2.0
+|===
+
+So you just need to add the following dependency to your SBT dependencies
 
  libraryDependencies += "be.wegenenverkeer" %% "akka-persistence-pg" % "0.5.0"
+
 
 == Configuration
 
@@ -195,7 +204,7 @@ Imaging the following scenario:
 
 * Two persistent actors, A en B, each want to store an event (eventA and eventB) using the journal.
 * Two transactions are started almost simulateneously. The first transaction (storing eventA) starts first
-and gets an id = 1000 from the sequence. The second transaction (storing eventB) get id = 1001.
+and gets an id = 1000 from the sequence. The second transaction (storing eventB) gets id = 1001.
 * For some reason however, the second transaction gets committed first.
 The journal table now has an entry with 1002 as it's highest entry.
 * The persistence query gets notified and reads this event with id = 1002 from the journal.
@@ -223,7 +232,7 @@ The persistence query plugin will now automatically use the 'rowid' column inste
 It is now simply impossible for events with a lower 'rowid' than the maximum 'rowid' present to appear in the journal after.
 
 This strategy has a better throughput than the TableLockingStrategy,
-but the latency between storing events and them being available for querying is higher.
+but the latency between storing events and them being available for querying is a bit higher.
 
 === SingleThreadedBatchWriteStrategy
 

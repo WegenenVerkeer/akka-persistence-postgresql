@@ -48,7 +48,7 @@ class PluginConfig(systemConfig: Config) {
 
   val jsonType = config.getString("pgjson")
 
-  val pgPostgresDriver = new PgPostgresDriverImpl(jsonType match {
+  val pgPostgresProfile = new PgPostgresProfileImpl(jsonType match {
         case "jsonb"   => "jsonb"
         case "json"    => "json"
         case a: String => sys.error(s"unsupported value for pgjson '$a'. Only 'json' or 'jsonb' supported")
@@ -65,7 +65,10 @@ class PluginConfig(systemConfig: Config) {
 
     val db = PluginConfig.asOption(dbConfig.getString("jndiName")) match {
       case Some(jndiName) =>
-        JdbcBackend.Database.forName(jndiName, asyncExecutor(jndiName))
+        JdbcBackend.Database.forName(jndiName,
+          Some(if (dbConfig.hasPath("maxConnections")) dbConfig.getInt("maxConnections") else dbConfig.getInt("numThreads")),
+          asyncExecutor(jndiName)
+        )
 
       case None           =>
         dbConfig.getString("connectionPool") match {
@@ -76,11 +79,10 @@ class PluginConfig(systemConfig: Config) {
             simpleDataSource.setUser(dbConfig.getString("user"))
             simpleDataSource.setPassword(dbConfig.getString("password"))
             simpleDataSource.setPrepareThreshold(1)
-            JdbcBackend.Database.forDataSource(simpleDataSource, asyncExecutor("akkapg-unpooled"))
+            JdbcBackend.Database.forDataSource(simpleDataSource, None, asyncExecutor("akkapg-unpooled"))
 
           case _ =>
-            //Slick's Database.forConfig does NOT use the 'url' when also configuring using a JDBC DataSource instead of
-            // a JDBC Driver class
+            //Slick's Database.forConfig does NOT use the 'url' when also configuring using a JDBC DataSource instead of a JDBC Driver class
             val props = new Properties()
             org.postgresql.Driver.parseURL(dbConfig.getString("url"), new Properties()).asScala foreach {
               case ("PGDBNAME", v) => props.put("databaseName", v)
