@@ -1,6 +1,6 @@
 = An akka-persistence plugin for Postgresql
 
-image::https://travis-ci.org/kwark/akka-persistence-postgresql.svg?branch=develop[alt="Build Status" link="https://travis-ci.org/WegenenVerkeer/akka-persistence-postgresql.svg?branch=develop"]
+image::https://travis-ci.org/WegenenVerkeer/akka-persistence-postgresql.svg?branch=develop[alt="Build Status" link="https://travis-ci.org/WegenenVerkeer/akka-persistence-postgresql.svg?branch=develop"]
 
 akka-persistence-postgresql is a journal and snapshot store plugin for http://doc.akka.io/docs/akka/current/scala/persistence.html[akka-persistence] using Postgresql.
 It uses Slick to talk to a Postgresql database.
