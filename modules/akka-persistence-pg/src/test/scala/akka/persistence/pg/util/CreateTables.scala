@@ -12,12 +12,11 @@ trait CreateTables {
                            "persistenceid" VARCHAR(254) NOT NULL,
                            "sequencenr" INT NOT NULL,
                            "rowid" BIGINT DEFAULT NULL,
-                           "partitionkey" VARCHAR(254) DEFAULT NULL,
                            "deleted" BOOLEAN DEFAULT false,
                            "payload" BYTEA,
                            "manifest" VARCHAR(512),
-                           "uuid" VARCHAR(254) NOT NULL,
-                           "writeruuid" VARCHAR(254) NOT NULL,
+                           "uuid" VARCHAR(36) NOT NULL,
+                           "writeruuid" VARCHAR(36) NOT NULL,
                            "created" timestamptz NOT NULL,
                            "tags" HSTORE,
                            "event" #${pluginConfig.jsonType},
@@ -26,7 +25,6 @@ trait CreateTables {
   lazy val createSnapshot = sqlu"""create table #${pluginConfig.fullSnapshotTableName} (
                             "persistenceid" VARCHAR(254) NOT NULL,
                             "sequencenr" INT NOT NULL,
-                            "partitionkey" VARCHAR(254) DEFAULT NULL,
                             "timestamp" bigint NOT NULL,
                             "snapshot" BYTEA,
                             PRIMARY KEY (persistenceid, sequencenr))"""

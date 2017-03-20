@@ -13,6 +13,7 @@
     <!-- Uncomment for logging ONLY FAILED HTTP request and responses -->
     <!-- 	<logger name="io.gatling.http.ahc.AsyncHandlerActor" level="DEBUG" /> -->
 
+    <logger name="akka.persistence.pg" level="WARN" />
     <logger name="slick" level="OFF" />
     <logger name="com.zaxxer.hikari.pool" level="INFO" />
 

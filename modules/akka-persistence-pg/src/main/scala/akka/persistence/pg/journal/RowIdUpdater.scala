@@ -3,7 +3,7 @@ package akka.persistence.pg.journal
 import akka.actor._
 import akka.pattern.pipe
 import akka.persistence.pg.journal.RowIdUpdater.{IsBusy, UpdateRowIds}
-import akka.persistence.pg.{PgPostgresDriver, PluginConfig}
+import akka.persistence.pg.PluginConfig
 
 import scala.collection.immutable.Queue
 import scala.concurrent.Future
@@ -14,15 +14,11 @@ object RowIdUpdater {
   case class UpdateRowIds(notifier: Notifier)
   case object IsBusy
 
-  def props(pluginConfig: PluginConfig,
-            driver: PgPostgresDriver,
-            database: WriteStrategy#DbLike) = Props(new RowIdUpdater(pluginConfig, driver, database))
+  def props(pluginConfig: PluginConfig) = Props(new RowIdUpdater(pluginConfig))
 
 }
 
-class RowIdUpdater(pluginConfig: PluginConfig,
-                   driver: PgPostgresDriver,
-                   database: WriteStrategy#DbLike) extends Actor
+class RowIdUpdater(pluginConfig: PluginConfig) extends Actor
   with Stash
   with ActorLogging {
 
@@ -92,22 +88,23 @@ class RowIdUpdater(pluginConfig: PluginConfig,
       stash()
   }
 
-  import driver.api._
-
   def notifyEventsAvailable(): Unit = {
     notifiers.foreach { _.eventsAvailable() }
     notifiers = Queue.empty
   }
 
+  import pluginConfig.pgPostgresDriver.api._
+
+
   def findMaxRowId(): Future[Long] = {
-    database.run(sql"""SELECT COALESCE(MAX(rowid), 0::bigint) FROM #${pluginConfig.fullJournalTableName}""".as[Long])
+    pluginConfig.database.run(sql"""SELECT COALESCE(MAX(rowid), 0::bigint) FROM #${pluginConfig.fullJournalTableName}""".as[Long])
       .map(_(0))
   }
 
   def assignRowIds(): Future[Int] = {
     var updated = 0
     val start = System.nanoTime()
-    database.run(
+    pluginConfig.database.run(
       sql"""SELECT id FROM #${pluginConfig.fullJournalTableName} WHERE rowid IS NULL ORDER BY id limit #$max""".as[Long]
         .flatMap { ids =>
           updated += ids.size

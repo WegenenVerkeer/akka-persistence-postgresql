@@ -36,12 +36,12 @@ class PgAsyncWriteJournal
 
   def storeActions(entries: Seq[JournalEntryInfo]): Seq[DBIO[_]] = {
     val storeEventsActions: Seq[DBIO[_]] = Seq(journals ++= entries.map(_.entry))
-    val readModelUpdateActions: Seq[DBIO[_]] = entries.flatMap(_.readModelInfo).map(_.action)
-    storeEventsActions ++ readModelUpdateActions
+    val extraDBIOActions: Seq[DBIO[_]] = entries.flatMap(_.extraDBIOInfo).map(_.action)
+    storeEventsActions ++ extraDBIOActions
   }
 
   def failureHandlers(entries: Seq[JournalEntryInfo]): Seq[PartialFunction[Throwable, Unit]] = {
-    entries.flatMap(_.readModelInfo).map(_.failureHandler)
+    entries.flatMap(_.extraDBIOInfo).map(_.failureHandler)
   }
 
   override def asyncWriteMessages(writes: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
@@ -76,19 +76,12 @@ class PgAsyncWriteJournal
     database.run {
       journals
         .filter(_.persistenceId === persistenceId)
-        .filter(byPartitionKey(persistenceId))
         .map((table: JournalTable) => table.sequenceNr)
         .max
         .result
     } map {
       _.getOrElse(0)
     }
-  }
-
-  private[this] def byPartitionKey(persistenceId: String): (JournalTable) => Rep[Option[Boolean]] = {
-    j =>
-      val partitionKey = partitioner.partitionKey(persistenceId)
-      j.partitionKey.isEmpty && partitionKey.isEmpty || j.partitionKey === partitionKey
   }
 
   implicit val materializer = ActorMaterializer(Some(ActorMaterializerSettings(context.system).withInputBuffer(16, 1024)))
@@ -104,7 +97,6 @@ class PgAsyncWriteJournal
         .filter(_.persistenceId === persistenceId)
         .filter(_.sequenceNr >= fromSequenceNr)
         .filter(_.sequenceNr <= toSequenceNr)
-        .filter(byPartitionKey(persistenceId))
         .sortBy(_.sequenceNr)
         .take(max)
         .result
@@ -124,7 +116,6 @@ class PgAsyncWriteJournal
       .filter(_.persistenceId === persistenceId)
       .filter(_.sequenceNr <= toSequenceNr)
       .filter(_.deleted === false)
-      .filter(byPartitionKey(persistenceId))
       .sortBy(_.sequenceNr.desc)
 
     database.run(selectedEntries.map(_.deleted).update(true)).map(_ => ())

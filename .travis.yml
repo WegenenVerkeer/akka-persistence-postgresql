@@ -1,0 +1,31 @@
+language: scala
+scala:
+- 2.11.8
+script: sbt clean +test
+sudo: false
+jdk:
+- oraclejdk8
+services:
+- postgresql
+addons:
+  postgresql: '9.4'
+before_script:
+- psql -c 'create database akkapg;' -U postgres
+- psql akkapg -c "create extension hstore;" -U postgres
+- psql -c "create user akkapg with password 'akkapg';" -U postgres
+- psql -c "grant all privileges on database akkapg to akkapg;" -U postgres
+cache:
+  directories:
+  - "$HOME/.ivy2"
+  - "$HOME/.sbt"
+notifications:
+  email:
+    recipients:
+    - peter.mortier@gmail.com
+    - karel@geovise.com
+after_success:
+- '[[ $TRAVIS_BRANCH == "develop" ]] && { sbt +publish; };'
+env:
+  global:
+  - SONATYPE_USERNAME=kmaesen
+  - secure: ZU+VxelX+z1nvPOJ+62hl4e6W8k3i2zjq/A1Sz1BSfgbjcTF94az+86YbiyCrpKYc6seUWGswneUOBSX6ib1PONFeLMlKwIUyRPXJIYuJxgYeF4uuJnGtSrzrpVxuFAh0e7Ju/p1A/EleKlfdtjdH4Lr9jFoHGKItcxMxVOQWk6NMvopevpD3+2asPY5dYv5rR5sCHT9fpCh0pvYVN9iQRl+0kzYBYUcC8En307USfx8rl7qHFaAiHe69g4JMBoBR2GmSbFfcSaq7/NCSz3qu/wpk7pNA9ieyChQaotrZxdlQLmO75Jo6mqw/8sCZIqw4OrWS7oNmMzZ1MPNsWEJ820vr56+S/ij0Vz8uns3xakxKky3bJ6Oeg8dFQe0Bj76MCN6y/V+aGQcqMcQmIovbskUyPC0KK62K9gMvwOm7zrrvT6xDOpsTSAVW4yZPGDGY6Jc5DJWT1833qgYJMYcAd+pZSnaE4gvINsjqSHieCIGjxtR+3xhqZ+xqyoDFQl3GejKpmVXbiGR+W2WE/GJRHNWQaC6nhg/Cy+zwObDl1B3TwBBwC0xi8FYfi8pUeNgqH5N35e3XWB9JiBRHWbfwnlcJOmquaduKhA6DMntB15EB/9mM2oLSRazvnkCtof45O9Zm2OTkpqbJ3I/jbaoOMKMWXmhLHsBBmvkxicPsao=

@@ -1,8 +1,7 @@
 package akka.persistence.pg.testkit
 
-import akka.persistence.pg.journal.NotPartitioned
 import akka.persistence.pg.snapshot.PgSnapshotStore
-import akka.persistence.pg.{PgExtension, PgConfig, PluginConfig}
+import akka.persistence.pg.{PgExtension, PgConfig}
 import akka.persistence.pg.util.RecreateSchema
 import akka.persistence.snapshot.SnapshotStoreSpec
 import akka.serialization.{Serialization, SerializationExtension}
@@ -22,7 +21,6 @@ class PgSnapshotStoreSpec extends SnapshotStoreSpec(ConfigFactory.load("pg-appli
 
   override lazy val pluginConfig = PgExtension(system).pluginConfig
   override val serialization: Serialization = SerializationExtension(system)
-  override val partitioner = NotPartitioned
 
   import driver.api._
 

@@ -2,7 +2,7 @@ package akka.persistence.pg.journal
 
 import akka.actor._
 import akka.pattern.pipe
-import akka.persistence.pg.PgPostgresDriver
+import akka.persistence.pg.PluginConfig
 import akka.persistence.pg.journal.StoreActor.{Store, StoreSuccess}
 
 import scala.util.control.NonFatal
@@ -10,8 +10,7 @@ import scala.util.{Failure, Success, Try}
 
 private object StoreActor {
 
-  def props(driver: PgPostgresDriver,
-            database: WriteStrategy#DbLike) = Props(new StoreActor(driver, database))
+  def props(pluginConfig: PluginConfig) = Props(new StoreActor(pluginConfig))
 
   import slick.dbio.DBIO
 
@@ -19,8 +18,7 @@ private object StoreActor {
   case object StoreSuccess
 }
 
-private class StoreActor(driver: PgPostgresDriver,
-                         database: WriteStrategy#DbLike)
+private class StoreActor(pluginConfig: PluginConfig)
   extends Actor
   with ActorLogging {
 
@@ -28,22 +26,22 @@ private class StoreActor(driver: PgPostgresDriver,
   case object Run
 
   import context.dispatcher
-  import driver.api._
+  import pluginConfig.pgPostgresDriver.api._
 
   private var senders: List[ActorRef] = List.empty[ActorRef]
-  private var actions: Seq[driver.api.DBIO[_]] = Seq.empty[DBIO[_]]
+  private var actions: Seq[pluginConfig.pgPostgresDriver.api.DBIO[_]] = Seq.empty[DBIO[_]]
 
   override def receive: Receive = idle
 
   def idle: Receive = {
-    case Store(actions) =>
-      this.actions ++= actions
+    case Store(as) =>
+      this.actions ++= as
       this.senders :+= sender()
       self ! Run
     case Run =>
       if (senders.nonEmpty) {
         val _senders = senders
-        database.run(DBIO.seq(this.actions: _*).transactionally)
+        pluginConfig.database.run(DBIO.seq(this.actions: _*).transactionally)
           .map { _ => Done(_senders, Success(())) }
           .recover { case NonFatal(t) => Done(_senders, Failure(t)) }
           .pipeTo(self)
@@ -54,10 +52,10 @@ private class StoreActor(driver: PgPostgresDriver,
   }
 
   def busy: Receive = {
-    case Done(senders, r) =>
+    case Done(ss, r) =>
       r match {
-        case Success(_) => senders foreach { _ ! StoreSuccess }
-        case Failure(t)  => senders foreach { _ ! Status.Failure(t) }
+        case Success(_) => ss foreach { _ ! StoreSuccess }
+        case Failure(t)  => ss foreach { _ ! Status.Failure(t) }
       }
       context become idle
       self ! Run
@@ -65,6 +63,5 @@ private class StoreActor(driver: PgPostgresDriver,
       this.actions ++= a
       this.senders :+= sender()
   }
-
 
 }

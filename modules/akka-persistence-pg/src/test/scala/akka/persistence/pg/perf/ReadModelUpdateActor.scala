@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import akka.actor.Props
 import akka.persistence.PersistentActor
-import akka.persistence.pg.event.{EventWrapper, ReadModelUpdate}
+import akka.persistence.pg.event.{EventWrapper, ExtraDBIOSupport}
 import akka.persistence.pg.PgPostgresDriver
 import akka.persistence.pg.perf.Messages.{Altered, Alter}
 import akka.persistence.pg.perf.ReadModelUpdateActor.TextNotUnique
@@ -28,13 +28,13 @@ class ReadModelUpdateActor(driver: PgPostgresDriver, fullTableName: String, id: 
   override def receiveRecover: Receive = { case _ => }
 
   override def receiveCommand: Receive = {
-    case Alter(txt) => persist(new ReadModelUpdate with EventWrapper[Altered] {
+    case Alter(txt) => persist(new ExtraDBIOSupport with EventWrapper[Altered] {
 
       import driver.api._
       import context.dispatcher
       implicit object GetUnit extends GetResult[Unit] { def apply(rs: PositionedResult) = { rs.nextObject(); () } }
 
-      override def readModelAction: DBIO[_] =
+      override def extraDBIO: DBIO[_] =
         sql"""select cnt from #$fullTableName where id = $id""".as[Long]
           .flatMap { c =>
             val i = c(0).toInt + 1
@@ -50,7 +50,7 @@ class ReadModelUpdateActor(driver: PgPostgresDriver, fullTableName: String, id: 
 
   override protected def onPersistRejected(cause: Throwable, event: Any, seqNr: Long): Unit = {
     event match {
-      case readModelUpdate: ReadModelUpdate =>
+      case readModelUpdate: ExtraDBIOSupport =>
         if (readModelUpdate.failureHandler.isDefinedAt(cause)) {
           readModelUpdate.failureHandler(cause)
         }

@@ -3,14 +3,13 @@ package akka.persistence.pg.journal
 
 import java.util.concurrent.TimeUnit
 
-import akka.actor.{Status, ActorSystem, ActorRef}
-import akka.pattern.ask
-import akka.persistence.pg.journal.StoreActor.{StoreSuccess, Store}
+import akka.actor.{ActorRef, ActorSystem, Status}
 import akka.persistence.pg.PluginConfig
+import akka.persistence.pg.journal.StoreActor.{Store, StoreSuccess}
+import akka.pattern.ask
 import akka.util.Timeout
 
 import scala.concurrent.{ExecutionContext, Future}
-
 import scala.language.postfixOps
 
 trait WriteStrategy {
@@ -20,32 +19,10 @@ trait WriteStrategy {
 
   import driver.api._
 
-  trait DbLike {
-    def run[R](a: DBIOAction[R, NoStream, Nothing])
-              (implicit executionContext: ExecutionContext): Future[R]
-  }
-
   def store(actions: Seq[DBIO[_]],
             notifier: Notifier)
            (implicit executionContext: ExecutionContext): Future[Unit]
   def system: ActorSystem
-
-  val throttler = if (pluginConfig.throttled) {
-    new ConcurrentMessagesThrottlerImpl(pluginConfig.throttleThreads, system, pluginConfig.throttleTimeout)
-  } else {
-    NotThrottled
-  }
-
-  lazy val database = {
-    new DbLike {
-      override def run[R](a: DBIOAction[R, NoStream, Nothing])
-                         (implicit executionContext: ExecutionContext): Future[R] = {
-        throttler.throttled {
-          pluginConfig.database.run(a)
-        }
-      }
-    }
-  }
 
 }
 
@@ -55,7 +32,7 @@ class SingleThreadedBatchWriteStrategy(override val pluginConfig: PluginConfig,
   import driver.api._
   implicit val timeout = Timeout(10, TimeUnit.SECONDS)
 
-  private val eventStoreActor: ActorRef = system.actorOf(StoreActor.props(pluginConfig.pgPostgresDriver, database))
+  private val eventStoreActor: ActorRef = system.actorOf(StoreActor.props(pluginConfig))
 
   override def store(actions: Seq[DBIO[_]],
                      notifier: Notifier)
@@ -98,7 +75,7 @@ class TransactionalWriteStrategy(override val pluginConfig: PluginConfig,
   def store(actions: Seq[DBIO[_]],
             notifier: Notifier)
            (implicit executionContext: ExecutionContext): Future[Unit] = {
-    database.run {
+    pluginConfig.database.run {
       DBIO.seq(actions:_*).transactionally
     }.map { _ =>
       notifier.eventsAvailable()
@@ -114,8 +91,8 @@ class TableLockingWriteStrategy(override val pluginConfig: PluginConfig,
   def store(actions: Seq[DBIO[_]],
             notifier: Notifier)
            (implicit executionContext: ExecutionContext): Future[Unit] = {
-    database.run {
-      DBIO.seq((sqlu"""lock table #${pluginConfig.fullJournalTableName} in share update exclusive mode"""
+    pluginConfig.database.run {
+      DBIO.seq((sqlu"""lock table #${pluginConfig.fullJournalTableName} in share row exclusive mode"""
         +: actions):_*).transactionally
     }.map { _ =>
       notifier.eventsAvailable()
@@ -129,11 +106,11 @@ class RowIdUpdatingStrategy(override val pluginConfig: PluginConfig,
 
   import driver.api._
 
-  private val rowIdUpdater: ActorRef = system.actorOf(RowIdUpdater.props(pluginConfig, pluginConfig.pgPostgresDriver, database), "AkkaPgRowIdUpdater")
+  private val rowIdUpdater: ActorRef = system.actorOf(RowIdUpdater.props(pluginConfig), "AkkaPgRowIdUpdater")
 
   def store(actions: Seq[DBIO[_]], notifier: Notifier)
            (implicit executionContext: ExecutionContext): Future[Unit] = {
-    database
+    pluginConfig.database
       .run(DBIO.seq(actions:_*).transactionally)
       .map { _ => rowIdUpdater ! RowIdUpdater.UpdateRowIds(notifier) }
   }

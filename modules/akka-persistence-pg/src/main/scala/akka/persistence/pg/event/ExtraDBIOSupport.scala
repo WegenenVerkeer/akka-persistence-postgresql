@@ -2,9 +2,9 @@ package akka.persistence.pg.event
 
 import slick.dbio.DBIO
 
-trait ReadModelUpdate {
+trait ExtraDBIOSupport {
 
-  def readModelAction: DBIO[_]
+  def extraDBIO: DBIO[_]
   def failureHandler: PartialFunction[Throwable, Unit]
 
 }

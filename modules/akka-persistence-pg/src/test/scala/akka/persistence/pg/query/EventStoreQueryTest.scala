@@ -1,13 +1,10 @@
 package akka.persistence.pg.query
 
-import akka.NotUsed
 import akka.actor.Props
 import akka.persistence.pg.TestActor._
 import akka.persistence.pg._
-import akka.persistence.pg.journal.query.PostgresReadJournal
-import akka.persistence.query.PersistenceQuery
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.Sink
 import org.scalatest.concurrent.Eventually
 
 import scala.language.postfixOps

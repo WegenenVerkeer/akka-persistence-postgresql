@@ -7,7 +7,7 @@ import akka.persistence.pg.util.{CreateTables, PersistentActorTest, RecreateSche
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.{Seconds, Span}
-import org.scalatest.{BeforeAndAfterAll, ShouldMatchers}
+import org.scalatest.{BeforeAndAfterAll, Matchers}
 
 import scala.language.postfixOps
 
@@ -15,7 +15,7 @@ class ReadModelUpdateActorTest extends PersistentActorTest
     with ScalaFutures
     with Eventually
     with RecreateSchema
-    with ShouldMatchers
+    with Matchers
     with BeforeAndAfterAll
     with CreateTables
     with PgConfig {

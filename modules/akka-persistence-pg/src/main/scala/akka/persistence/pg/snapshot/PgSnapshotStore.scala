@@ -1,29 +1,24 @@
 package akka.persistence.pg.snapshot
 
 import akka.persistence.pg.PgConfig
-import akka.persistence.pg.journal.Partitioner
 import akka.persistence.serialization.Snapshot
 import akka.persistence.{SelectedSnapshot, SnapshotMetadata, SnapshotSelectionCriteria}
 import akka.serialization.Serialization
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
 trait PgSnapshotStore extends SnapshotTable {
   self: PgConfig =>
 
   def serialization: Serialization
-  def partitioner: Partitioner = pluginConfig.journalPartitioner
 
   import driver.api._
-
-  import scala.concurrent.ExecutionContext.Implicits.global
 
   def snapshotsQuery(metadata: SnapshotMetadata) = {
     snapshots
       .filter(_.persistenceId === metadata.persistenceId)
       .filter(_.sequenceNr === metadata.sequenceNr)
-      .filter(byPartitionKey(metadata.persistenceId))
   }
 
   def deleteSnapshot(metadata: SnapshotMetadata): Future[Int] = {
@@ -32,7 +27,8 @@ trait PgSnapshotStore extends SnapshotTable {
     }
   }
 
-  def selectMostRecentSnapshotFor(persistenceId: String, criteria: SnapshotSelectionCriteria): Future[Option[SelectedSnapshot]] = {
+  def selectMostRecentSnapshotFor(persistenceId: String, criteria: SnapshotSelectionCriteria)
+                                 (implicit executionContext: ExecutionContext): Future[Option[SelectedSnapshot]] = {
     database.run {
       selectSnapshotsQuery(persistenceId, criteria)
         .sortBy(_.sequenceNr.desc)
@@ -40,23 +36,16 @@ trait PgSnapshotStore extends SnapshotTable {
         .result.headOption
     } map {
       _ map { r =>
-        SelectedSnapshot(SnapshotMetadata(r._1, r._2, r._4), serialization.deserialize(r._5, classOf[Snapshot]).get.data)
+        SelectedSnapshot(SnapshotMetadata(r._1, r._2, r._3), serialization.deserialize(r._4, classOf[Snapshot]).get.data)
       }
     }
   }
 
-  def selectSnapshotsQuery(persistenceId: String, criteria: SnapshotSelectionCriteria): Query[SnapshotTable, (String, Long, Option[String], Long, Array[Byte]), Seq] = {
+  def selectSnapshotsQuery(persistenceId: String, criteria: SnapshotSelectionCriteria): Query[SnapshotTable, (String, Long, Long, Array[Byte]), Seq] = {
     snapshots
       .filter(_.persistenceId === persistenceId)
       .filter(_.sequenceNr <= criteria.maxSequenceNr)
-      .filter(byPartitionKey(persistenceId))
       .filter(_.timestamp <= criteria.maxTimestamp)
   }
 
-  private[this] def byPartitionKey(persistenceId: String): (SnapshotTable) => Rep[Option[Boolean]] = {
-    s => {
-      val partitionKey = partitioner.partitionKey(persistenceId)
-      s.partitionKey.isEmpty && partitionKey.isEmpty || s.partitionKey === partitionKey
-    }
-  }
 }

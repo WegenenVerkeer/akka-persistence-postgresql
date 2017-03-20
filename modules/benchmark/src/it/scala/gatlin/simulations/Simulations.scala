@@ -9,9 +9,6 @@ class TransactionalMultiActorSimulation extends MultiActorPerfSimulation(ConfigF
 class RowIdUpdatingSingleActorSimulation extends SingleActorPerfSimulation(ConfigFactory.load("pg-perf-rowid.conf"))
 class RowIdUpdatingMultiActorSimulation extends MultiActorPerfSimulation(ConfigFactory.load("pg-perf-rowid.conf"))
 
-class RowIdThrottledUpdatingSingleActorSimulation extends SingleActorPerfSimulation(ConfigFactory.load("pg-perf-rowid-throttled.conf"))
-class RowIdThrottledUpdatingMultiActorSimulation extends MultiActorPerfSimulation(ConfigFactory.load("pg-perf-rowid-throttled.conf"))
-
 class SingleThreadedSingleActorSimulation extends SingleActorPerfSimulation(ConfigFactory.load("pg-perf-st.conf"))
 class SingleThreadedMultiActorSimulation extends MultiActorPerfSimulation(ConfigFactory.load("pg-perf-st.conf"))
 

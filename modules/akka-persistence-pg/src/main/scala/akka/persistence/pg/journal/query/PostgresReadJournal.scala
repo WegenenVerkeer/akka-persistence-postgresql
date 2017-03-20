@@ -38,7 +38,7 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
 
   }
 
-  def events(fromRowId: Long, toRowId: Long = Long.MaxValue): Source[EventEnvelope, NotUsed] = {
+  def allEvents(fromRowId: Long, toRowId: Long = Long.MaxValue): Source[EventEnvelope, NotUsed] = {
     Source.actorPublisher[EventEnvelope](
       EventsPublisher.props(
         fromOffset = fromRowId,

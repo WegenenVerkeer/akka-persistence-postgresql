@@ -2,8 +2,7 @@ package akka.persistence.pg.event
 
 import java.time.OffsetDateTime
 
-import akka.persistence.pg.{PgConfig, EventStoreConfig}
-import play.api.libs.json.JsValue
+import akka.persistence.pg.{EventStoreConfig, JsonString, PgConfig}
 
 case class Event(id: Long,
                  persistenceId: String,
@@ -12,7 +11,7 @@ case class Event(id: Long,
                  created: OffsetDateTime,
                  tags: Map[String, String],
                  className: String,
-                 event: JsValue)
+                 event: JsonString)
 
 case class StoredEvent(persistenceId: String, event: Any)
 
@@ -34,7 +33,7 @@ trait EventStore {
     def created             = column[OffsetDateTime]("created")
     def tags                = column[Map[String, String]]("tags")
     def className           = column[String]("manifest")
-    def event               = column[JsValue]("event")
+    def event               = column[JsonString]("event")
 
     def * = (id, persistenceId, sequenceNr, uuid, created, tags, className, event) <> (Event.tupled, Event.unapply)
 

@@ -5,7 +5,7 @@ import TestActor._
 
 class TestEventTagger extends EventTagger {
 
-  def tag(event: Any): Map[String, String] = {
+  def tags(event: Any): Map[String, String] = {
     event match {
       case evt: Altered => Map(TestTags.alteredTag)
       case evt: Incremented => Map(TestTags.incrementedTag)

@@ -18,9 +18,9 @@ import scala.collection.JavaConverters._
 import scala.language.postfixOps
 import scala.util.Random
 
-class ReadModelUpdateTest extends FunSuite
+class ExtraDBIOSupportTest extends FunSuite
   with BeforeAndAfterEach
-  with ShouldMatchers
+  with Matchers
   with BeforeAndAfterAll
   with CreateTables
   with RecreateSchema
@@ -83,7 +83,7 @@ class ReadModelUpdateTest extends FunSuite
                                                           "txt" VARCHAR(255) DEFAULT NULL)""")
     ).futureValue
     actors = 1 to numActors map { i =>
-      database.run(sqlu"""insert into #$readModelTable values ($i, 0, null)""").futureValue
+      database.run(sqlu"""  insert into #$readModelTable values ($i, 0, null)""").futureValue
       system.actorOf(ReadModelUpdateActor.props(driver, pluginConfig.getFullName("READMODEL")))
     }
 

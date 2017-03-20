@@ -6,7 +6,6 @@ import java.time.format.{DateTimeFormatter, DateTimeFormatterBuilder}
 import java.time.temporal.ChronoField
 
 import org.postgresql.util.HStoreConverter
-import play.api.libs.json.{JsValue, Json}
 import slick.ast.Library.SqlOperator
 import slick.ast.{FieldSymbol, TypedType}
 import slick.driver.{JdbcTypesComponent, PostgresDriver}
@@ -90,11 +89,11 @@ trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresDriver =>
       new HStoreColumnExtensionMethods[Map[String, String]](c)
     }
 
-    implicit val playJsonTypeMapper: JdbcType[JsValue] =
-      new GenericJdbcType[JsValue](
+    implicit val jsonStringTypeMapper: JdbcType[JsonString] =
+      new GenericJdbcType[JsonString](
         pgjson,
-        (v) => Json.parse(v),
-        (v) => Json.stringify(v),
+        (v) => JsonString(v),
+        (v) => v.value,
         hasLiteralForm = false
       )
 

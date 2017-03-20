@@ -1,26 +1,27 @@
 package akka.persistence.pg.event
 
-import play.api.libs.json.{JsError, JsSuccess, JsValue, Reads}
+import akka.persistence.pg.JsonString
 
 trait JsonEncoder {
 
-  def toJson: PartialFunction[Any, JsValue]
+  /**
+    * A partial function that serializes an event to a json representation
+    * @return the json representation
+    */
+  def toJson: PartialFunction[Any, JsonString]
 
-  def fromJson: PartialFunction[(JsValue, Class[_]), AnyRef]
-
-  def tryRead[T](json: JsValue)(implicit reads: Reads[T]): T = {
-    reads.reads(json) match {
-      case JsSuccess(v, _) => v
-      case JsError(e)      => sys.error(e.toString())
-    }
-  }
+  /**
+    * A partial function that deserializes an event from some json representation
+    * @return the event
+    */
+  def fromJson: PartialFunction[(JsonString, Class[_]), AnyRef]
 
 }
 
 object NoneJsonEncoder extends JsonEncoder {
 
-  override def toJson: PartialFunction[Any, JsValue] = PartialFunction.empty[Any, JsValue]
+  override def toJson: PartialFunction[Any, JsonString] = PartialFunction.empty[Any, JsonString]
 
-  override def fromJson: PartialFunction[(JsValue, Class[_]), AnyRef] = PartialFunction.empty[(JsValue, Class[_]), AnyRef]
+  override def fromJson: PartialFunction[(JsonString, Class[_]), AnyRef] = PartialFunction.empty[(JsonString, Class[_]), AnyRef]
 
 }
