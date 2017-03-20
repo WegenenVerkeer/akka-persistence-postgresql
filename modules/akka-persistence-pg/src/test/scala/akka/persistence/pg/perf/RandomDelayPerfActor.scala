@@ -4,7 +4,7 @@ import java.util.UUID
 
 import akka.actor.{Props, ActorLogging}
 import akka.persistence.PersistentActor
-import akka.persistence.pg.PgPostgresDriver
+import akka.persistence.pg.PgPostgresProfile
 import akka.persistence.pg.event.{EventWrapper, ExtraDBIOSupport}
 import akka.persistence.pg.perf.Messages.{Altered, Alter}
 import slick.jdbc.{GetResult, PositionedResult}
@@ -13,10 +13,10 @@ import scala.language.postfixOps
 import scala.util.Random
 
 object RandomDelayPerfActor {
-  def props(driver: PgPostgresDriver) = Props(new RandomDelayPerfActor(driver))
+  def props(driver: PgPostgresProfile) = Props(new RandomDelayPerfActor(driver))
 }
 
-class RandomDelayPerfActor(driver: PgPostgresDriver) extends PersistentActor with ActorLogging {
+class RandomDelayPerfActor(driver: PgPostgresProfile) extends PersistentActor with ActorLogging {
 
   override val persistenceId: String = "TestActor_"+UUID.randomUUID().toString
 

@@ -41,8 +41,9 @@ lazy val benchmarkModule = {
   import io.gatling.sbt.GatlingPlugin
 
   subProject("benchmark")
-    .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies)
-    .dependsOn(akkaPersistencePgModule % "it->test;test->test;compile->compile")
+    .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies,
+      Seq(publishLocal := {}, publish := {})
+    ).dependsOn(akkaPersistencePgModule % "it->test;test->test;compile->compile")
     .enablePlugins(GatlingPlugin)
 }
 

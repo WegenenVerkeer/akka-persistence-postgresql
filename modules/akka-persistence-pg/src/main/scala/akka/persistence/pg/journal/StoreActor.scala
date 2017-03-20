@@ -26,10 +26,10 @@ private class StoreActor(pluginConfig: PluginConfig)
   case object Run
 
   import context.dispatcher
-  import pluginConfig.pgPostgresDriver.api._
+  import pluginConfig.pgPostgresProfile.api._
 
   private var senders: List[ActorRef] = List.empty[ActorRef]
-  private var actions: Seq[pluginConfig.pgPostgresDriver.api.DBIO[_]] = Seq.empty[DBIO[_]]
+  private var actions: Seq[pluginConfig.pgPostgresProfile.api.DBIO[_]] = Seq.empty[DBIO[_]]
 
   override def receive: Receive = idle
 

@@ -8,15 +8,14 @@ import java.time.temporal.ChronoField
 import org.postgresql.util.HStoreConverter
 import slick.ast.Library.SqlOperator
 import slick.ast.{FieldSymbol, TypedType}
-import slick.driver.{JdbcTypesComponent, PostgresDriver}
-import slick.jdbc.JdbcType
+import slick.jdbc.{JdbcType, JdbcTypesComponent, PostgresProfile}
 import slick.lifted.ExtensionMethods
 
 import scala.collection.convert.{WrapAsJava, WrapAsScala}
 import scala.reflect.ClassTag
 import scala.language.implicitConversions
 
-trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresDriver =>
+trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresProfile =>
 
   def pgjson: String
 

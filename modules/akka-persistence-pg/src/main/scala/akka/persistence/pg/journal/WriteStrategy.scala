@@ -15,7 +15,7 @@ import scala.language.postfixOps
 trait WriteStrategy {
 
   def pluginConfig: PluginConfig
-  lazy val driver = pluginConfig.pgPostgresDriver
+  lazy val driver = pluginConfig.pgPostgresProfile
 
   import driver.api._
 
@@ -70,7 +70,7 @@ class TransactionalWriteStrategy(override val pluginConfig: PluginConfig,
       |!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     """.stripMargin)
 
-  import pluginConfig.pgPostgresDriver.api._
+  import pluginConfig.pgPostgresProfile.api._
 
   def store(actions: Seq[DBIO[_]],
             notifier: Notifier)
@@ -86,7 +86,7 @@ class TransactionalWriteStrategy(override val pluginConfig: PluginConfig,
 class TableLockingWriteStrategy(override val pluginConfig: PluginConfig,
                                 override val system: ActorSystem) extends WriteStrategy {
 
-  import pluginConfig.pgPostgresDriver.api._
+  import pluginConfig.pgPostgresProfile.api._
 
   def store(actions: Seq[DBIO[_]],
             notifier: Notifier)

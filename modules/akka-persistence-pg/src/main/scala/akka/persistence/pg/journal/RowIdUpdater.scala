@@ -93,7 +93,7 @@ class RowIdUpdater(pluginConfig: PluginConfig) extends Actor
     notifiers = Queue.empty
   }
 
-  import pluginConfig.pgPostgresDriver.api._
+  import pluginConfig.pgPostgresProfile.api._
 
 
   def findMaxRowId(): Future[Long] = {
