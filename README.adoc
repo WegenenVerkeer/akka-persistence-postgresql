@@ -21,8 +21,8 @@ Versions: The table below lists the versions and their main dependencies
 
 |===
 |Version to use|Scala |Akka |Slick
-|0.5.0 |2.11.x |2.4.x |3.1.x
-|0.6.0-SNAPSHOT|2.12.x or 2.11.x|2.4.x|3.2.0
+|0.5.0|2.11.x |2.4.x |3.1.x
+|0.6.0|2.12.x or 2.11.x|2.4.x|3.2.0
 |===
 
 So you just need to add the following dependency to your SBT dependencies
