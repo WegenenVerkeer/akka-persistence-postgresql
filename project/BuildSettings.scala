@@ -17,7 +17,7 @@ object BuildSettings {
     Project(
       id = projectName,
       base = file("."),
-      settings = projectSettings() ++ Seq(publishLocal := {}, publish := {})
+      settings = projectSettings() ++ Seq(publishLocal := {}, publish := {}, packagedArtifacts := Map.empty)
     ).aggregate(modules: _*)
   }
 
