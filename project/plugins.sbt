@@ -1,7 +1,6 @@
 logLevel := Level.Warn
 
-addSbtPlugin("io.gatling" % "gatling-sbt" % "2.2.0")
-addSbtPlugin("com.dwijnand" % "sbt-travisci" % "1.1.0")
+addSbtPlugin("io.gatling" % "gatling-sbt" % "2.2.1")
 
 // supports release in maven central
 

@@ -68,6 +68,7 @@ class PersistUsingJndiTest extends FunSuite
     new InitialContext().rebind("MyDS", simpleDataSource)
 
     database.run(recreateSchema.andThen(createTables)).futureValue
+    ()
   }
 
   override protected def afterAll(): Unit = {
