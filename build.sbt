@@ -42,7 +42,7 @@ lazy val benchmarkModule = {
 
   subProject("benchmark")
     .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies,
-      Seq(publishLocal := {}, publish := {})
+      Seq(publishLocal := {}, publish := {}, packagedArtifacts := Map.empty)
     ).dependsOn(akkaPersistencePgModule % "it->test;test->test;compile->compile")
     .enablePlugins(GatlingPlugin)
 }
