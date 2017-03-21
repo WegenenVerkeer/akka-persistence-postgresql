@@ -4,7 +4,7 @@ object Dependencies {
 
   val akkaVersion    = "2.4.17"
   val slickVersion   = "3.2.0"
-  val gatlinVersion  = "2.2.1"
+  val gatlinVersion  = "2.2.4"
 
   val scalaJava8Compat      = "org.scala-lang.modules"     %%    "scala-java8-compat"             % "0.8.0"
 
@@ -23,8 +23,10 @@ object Dependencies {
   val akkaPersistenceTestkit  = "com.typesafe.akka"       %%  "akka-persistence-tck"       % akkaVersion    % "test,it"
   val slf4jSimple             = "org.slf4j"               %   "slf4j-simple"               % "1.7.21"       % "test,it"
   val tyrex                   = "tyrex"                   %   "tyrex"                      % "1.0.1"        % "test,it"
-  val gatlinHighcharts        = "io.gatling.highcharts"   %   "gatling-charts-highcharts"  % "2.2.2"     //% "test"
-  val gatling                 = "io.gatling"              %   "gatling-test-framework"     % "2.2.2"     //% "test"
+
+  // gatling benchmark module
+  val gatlinHighcharts        = "io.gatling.highcharts"   %   "gatling-charts-highcharts"  % "2.2.4"
+  val gatling                 = "io.gatling"              %   "gatling-test-framework"     % "2.2.4"
 
   val hikariCp                = "com.zaxxer"              %   "HikariCP"                   % "2.6.1"
   val postgres                = "org.postgresql"          %   "postgresql"                 % "9.4.1212"
