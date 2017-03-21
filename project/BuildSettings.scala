@@ -64,7 +64,7 @@ object BuildSettings {
     credentials ++= publishingCredentials
   )
 
-  lazy val pomInfo = <url>https://github.com/WegenenVerkeer/akka-persistence-postgresql</url>
+  val pomInfo = (<url>https://github.com/WegenenVerkeer/akka-persistence-postgresql</url>
     <licenses>
       <license>
         <name>MIT licencse</name>
@@ -82,7 +82,7 @@ object BuildSettings {
         <name>De ontwikkelaars van AWV</name>
         <url>http://www.wegenenverkeer.be</url>
       </developer>
-    </developers>
+    </developers>)
 
 
 }
