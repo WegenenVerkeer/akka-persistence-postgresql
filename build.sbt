@@ -51,7 +51,7 @@ lazy val benchmarkModule = {
   Project(
     id = "benchmark",
     base = file("modules/benchmark"),
-    settings = Defaults.coreDefaultSettings ++ commonSettings ++ Seq(publishLocal := {}, publish := {})
+    settings = Defaults.coreDefaultSettings ++ commonSettings ++ Seq(publishLocal := {}, publish := {}, packagedArtifacts := Map.empty)
   )
     .dependsOn(akkaPersistencePgModule % "it->test;test->test;compile->compile")
     .enablePlugins(GatlingPlugin)
@@ -64,5 +64,5 @@ val main = Project(
   id = "akka-persistence-postgresql",
   base = file("."),
   settings = Defaults.coreDefaultSettings ++ commonSettings ++
-    Seq(publishLocal := {}, publish := {}, crossScalaVersions := Seq("2.11.8", "2.12.1"))
+    Seq(publishLocal := {}, publish := {}, packagedArtifacts := Map.empty, crossScalaVersions := Seq("2.11.8", "2.12.1"))
 ).aggregate(akkaPersistencePgModule, benchmarkModule)
