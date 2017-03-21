@@ -9,8 +9,9 @@ import akka.persistence.pg.event._
 import akka.persistence.pg.journal.JournalTable
 import akka.persistence.pg.perf.Messages.Alter
 import akka.persistence.pg.perf.{PerfActor, RandomDelayPerfActor}
+import akka.persistence.pg.snapshot.SnapshotTable
 import akka.persistence.pg.util.{CreateTables, RecreateSchema}
-import akka.persistence.pg.{PgExtension, WaitForEvents, PgConfig, PluginConfig}
+import akka.persistence.pg.{PgConfig, PgExtension, PluginConfig, WaitForEvents}
 import akka.util.Timeout
 import com.typesafe.config.Config
 import org.scalatest._
@@ -28,6 +29,7 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
   with Matchers
   with BeforeAndAfterAll
   with JournalTable
+  with SnapshotTable
   with RecreateSchema
   with CreateTables
   with PgConfig
@@ -81,7 +83,7 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
 
   override def beforeAll() {
     database.run(
-      recreateSchema.andThen(journals.schema.create)
+      recreateSchema.andThen(journals.schema.create).andThen(snapshots.schema.create)
     ).futureValue
     actors = 1 to 10 map { _ => system.actorOf(RandomDelayPerfActor.props(driver)) }
   }

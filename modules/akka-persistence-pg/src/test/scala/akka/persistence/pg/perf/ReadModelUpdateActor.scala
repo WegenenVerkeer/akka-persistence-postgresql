@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import akka.actor.Props
 import akka.persistence.PersistentActor
 import akka.persistence.pg.event.{EventWrapper, ExtraDBIOSupport}
-import akka.persistence.pg.PgPostgresDriver
+import akka.persistence.pg.PgPostgresProfile
 import akka.persistence.pg.perf.Messages.{Altered, Alter}
 import akka.persistence.pg.perf.ReadModelUpdateActor.TextNotUnique
 import org.postgresql.util.PSQLException
@@ -17,11 +17,11 @@ object ReadModelUpdateActor {
   private val id = new AtomicInteger(0)
   def reset() = id.set(0)
 
-  def props(driver: PgPostgresDriver, fullTableName: String) = Props(new ReadModelUpdateActor(driver, fullTableName, id.incrementAndGet()))
+  def props(driver: PgPostgresProfile, fullTableName: String) = Props(new ReadModelUpdateActor(driver, fullTableName, id.incrementAndGet()))
 }
 
 
-class ReadModelUpdateActor(driver: PgPostgresDriver, fullTableName: String, id: Int) extends PersistentActor {
+class ReadModelUpdateActor(driver: PgPostgresProfile, fullTableName: String, id: Int) extends PersistentActor {
 
   override val persistenceId: String = s"TestActor_$id"
 
