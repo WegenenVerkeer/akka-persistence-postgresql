@@ -11,7 +11,7 @@ import slick.ast.{FieldSymbol, TypedType}
 import slick.jdbc.{JdbcType, JdbcTypesComponent, PostgresProfile}
 import slick.lifted.ExtensionMethods
 
-import scala.collection.convert.{WrapAsJava, WrapAsScala}
+import scala.collection.JavaConverters
 import scala.reflect.ClassTag
 import scala.language.implicitConversions
 
@@ -57,7 +57,7 @@ trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresProfile =>
     case finite => format(finite)
   }
 
-  val date2TzDateTimeFormatter =
+  private val date2TzDateTimeFormatter =
     new DateTimeFormatterBuilder()
       .append(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
       .optionalStart()
@@ -79,12 +79,12 @@ trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresProfile =>
     implicit val simpleHStoreTypeMapper: JdbcType[Map[String, String]] =
       new GenericJdbcType[Map[String, String]](
         "hstore",
-        (v) => WrapAsScala.mapAsScalaMap(HStoreConverter.fromString(v)).toMap,
-        (v) => HStoreConverter.toString(WrapAsJava.mapAsJavaMap(v)),
+        (v) => JavaConverters.mapAsScalaMap(HStoreConverter.fromString(v)).toMap,
+        (v) => HStoreConverter.toString(JavaConverters.mapAsJavaMap(v)),
         hasLiteralForm = false
       )
 
-    implicit def simpleHStoreColumnExtensionMethods(c: Rep[Map[String, String]]) = {
+    implicit def simpleHStoreColumnExtensionMethods(c: Rep[Map[String, String]]): HStoreColumnExtensionMethods[Map[String, String]] = {
       new HStoreColumnExtensionMethods[Map[String, String]](c)
     }
 

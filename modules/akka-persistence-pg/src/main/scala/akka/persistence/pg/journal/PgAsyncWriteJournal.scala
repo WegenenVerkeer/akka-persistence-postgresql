@@ -52,9 +52,10 @@ class PgAsyncWriteJournal
       val result = writeStrategy
         .store(storeActions(entries), new Notifier(entries.map(_.entry), this))
         .map { Success.apply }
-      result.onFailure {
+      result.failed.foreach {
         case e: BatchUpdateException => log.error(e.getNextException, "problem storing events")
-        case NonFatal(e) => log.error(e, "problem storing events")
+        case NonFatal(e)             => log.error(e, "problem storing events")
+        case _                       =>
       }
       result
     }
