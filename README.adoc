@@ -25,7 +25,7 @@ Versions: The table below lists the versions and their main dependencies
 |0.5.0|2.11.x |2.4.x |3.1.x
 |0.6.0|2.12.x or 2.11.x|2.4.x|3.2.0
 |0.7.0|2.12.x or 2.11.x|2.5.x|3.2.0
-|0.8.0-SNAPSHOT|2.12.x or 2.11.x|2.5.x|3.2.1
+|0.8.0|2.12.x or 2.11.x|2.5.x|3.2.1
 |===
 
 So you just need to add the following dependency to your SBT dependencies
