@@ -2,7 +2,7 @@ package akka.persistence.pg.journal.query
 
 import akka.persistence.JournalProtocol.{ReplayMessages, ReplayedMessage}
 import akka.persistence.pg.journal.PgAsyncWriteJournal._
-import akka.persistence.query.EventEnvelope
+import akka.persistence.query.{EventEnvelope, Offset}
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -26,7 +26,7 @@ class LiveEventsByPersistenceIdPublisher(persistenceId: String,
 
     case ReplayedMessage(p) =>
       buf :+= EventEnvelope(
-        offset = p.sequenceNr,
+        offset = Offset.sequence(p.sequenceNr),
         persistenceId = persistenceId,
         sequenceNr = p.sequenceNr,
         event = p.payload)

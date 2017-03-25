@@ -2,7 +2,7 @@ import sbt._
 
 object Dependencies {
 
-  val akkaVersion    = "2.4.17"
+  val akkaVersion    = "2.5.0-RC1"
   val slickVersion   = "3.2.0"
   val gatlinVersion  = "2.2.4"
 
@@ -11,7 +11,7 @@ object Dependencies {
   val akkaPersistence         = "com.typesafe.akka"       %%  "akka-persistence"                    % akkaVersion
   val akkaSlf4j               = "com.typesafe.akka"       %%  "akka-slf4j"                          % akkaVersion
   val akkaActor               = "com.typesafe.akka"       %%  "akka-actor"                          % akkaVersion
-  val akkaPersistenceQuery    = "com.typesafe.akka"       %%  "akka-persistence-query-experimental" % akkaVersion
+  val akkaPersistenceQuery    = "com.typesafe.akka"       %%  "akka-persistence-query"              % akkaVersion
   val akkaStreams             = "com.typesafe.akka"       %%  "akka-stream"                         % akkaVersion
 
   val slick                   = "com.typesafe.slick"      %%  "slick"                      % slickVersion

@@ -10,6 +10,7 @@ import akka.stream.actor.ActorPublisherMessage.{Cancel, Request}
 
 import scala.concurrent.duration.FiniteDuration
 
+// FIXME needs a be rewritten as a GraphStage (since 2.5.0)
 abstract class BaseEventsPublisher(fromOffset: Long,
                           toOffset: Long,
                           refreshInterval: FiniteDuration,

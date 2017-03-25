@@ -1,6 +1,7 @@
 = An akka-persistence plugin for Postgresql
 
 image::https://travis-ci.org/WegenenVerkeer/akka-persistence-postgresql.svg?branch=develop[alt="Build Status" link="https://travis-ci.org/WegenenVerkeer/akka-persistence-postgresql.svg?branch=develop"]
+image::https://img.shields.io/maven-central/v/be.wegenenverkeer/akka-persistence-pg_2.12.svg[alt="Maven version" link="https://maven-badges.herokuapp.com/maven-central/be.wegenenverkeer/akka-persistence-pg_2.12"]
 
 akka-persistence-postgresql is a journal and snapshot store plugin for http://doc.akka.io/docs/akka/current/scala/persistence.html[akka-persistence] using Postgresql.
 It uses Slick to talk to a Postgresql database.
@@ -23,11 +24,12 @@ Versions: The table below lists the versions and their main dependencies
 |Version to use|Scala |Akka |Slick
 |0.5.0|2.11.x |2.4.x |3.1.x
 |0.6.0|2.12.x or 2.11.x|2.4.x|3.2.0
+|0.7.0-SNAPSHOT|2.12.x or 2.11.x|2.5.0-RC1|3.2.0
 |===
 
 So you just need to add the following dependency to your SBT dependencies
 
- libraryDependencies += "be.wegenenverkeer" %% "akka-persistence-pg" % "0.5.0"
+ libraryDependencies += "be.wegenenverkeer" %% "akka-persistence-pg" % version
 
 
 == Configuration
