@@ -11,7 +11,7 @@ import slick.ast.{FieldSymbol, TypedType}
 import slick.jdbc.{JdbcType, JdbcTypesComponent, PostgresProfile}
 import slick.lifted.ExtensionMethods
 
-import scala.collection.convert.{WrapAsJava, WrapAsScala}
+import scala.collection.JavaConverters
 import scala.reflect.ClassTag
 import scala.language.implicitConversions
 
@@ -79,8 +79,8 @@ trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresProfile =>
     implicit val simpleHStoreTypeMapper: JdbcType[Map[String, String]] =
       new GenericJdbcType[Map[String, String]](
         "hstore",
-        (v) => WrapAsScala.mapAsScalaMap(HStoreConverter.fromString(v)).toMap,
-        (v) => HStoreConverter.toString(WrapAsJava.mapAsJavaMap(v)),
+        (v) => JavaConverters.mapAsScalaMap(HStoreConverter.fromString(v)).toMap,
+        (v) => HStoreConverter.toString(JavaConverters.mapAsJavaMap(v)),
         hasLiteralForm = false
       )
 
