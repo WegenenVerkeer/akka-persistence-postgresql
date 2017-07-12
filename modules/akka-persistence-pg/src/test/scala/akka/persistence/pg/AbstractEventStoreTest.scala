@@ -10,10 +10,12 @@ import akka.persistence.pg.util.{CreateTables, RecreateSchema}
 import akka.persistence.query.PersistenceQuery
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Milliseconds, Seconds, Span}
+
+import scala.reflect.ClassTag
 
 abstract class AbstractEventStoreTest
   extends FunSuite
@@ -28,10 +30,10 @@ abstract class AbstractEventStoreTest
   with PgConfig
   with ScalaFutures {
 
-  lazy val config = ConfigFactory.load("pg-eventstore.conf")
+  lazy val config: Config = ConfigFactory.load("pg-eventstore.conf")
   implicit val system = ActorSystem("EventStoreTest", config)
 
-  override lazy val pluginConfig = PgExtension(system).pluginConfig
+  override lazy val pluginConfig: PluginConfig = PgExtension(system).pluginConfig
 
   val testProbe = TestProbe()
 
@@ -54,53 +56,53 @@ abstract class AbstractEventStoreTest
     }.futureValue
   }
 
+  override protected def afterEach(): Unit = {
+      PersistenceQuery(system)
+        .readJournalFor[PostgresReadJournal](PostgresReadJournal.Identifier)
+        .cancelAll()
+  }
+
   override protected def afterAll(): Unit = {
     system.terminate()
     system.whenTerminated.futureValue
     ()
   }
 
-  def startSource(tags: Set[EventTag], fromRowId: Long): Source[TestActor.Event, NotUsed] = {
+  def startSource[E](tags: Set[EventTag], fromRowId: Long)(implicit tag: ClassTag[E]): Source[E, NotUsed] = {
 
-    val readJournal =
       PersistenceQuery(system)
         .readJournalFor[PostgresReadJournal](PostgresReadJournal.Identifier)
-
-    readJournal.eventsByTags(tags, fromRowId).map { env =>
-      // and this will blow up if something different than a DomainEvent comes in!!
-      env.event match {
-        case evt: TestActor.Event => evt
-        case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")
-      }
-    }
+        .eventsByTags(tags, fromRowId).map { env =>
+          // and this will blow up if something different than a DomainEvent comes in!!
+          env.event match {
+            case evt: E => evt
+            case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")
+          }
+        }
   }
 
-  def startSource(fromRowId: Long): Source[TestActor.Event, NotUsed] = {
+  def startSource[E](fromRowId: Long)(implicit tag: ClassTag[E]): Source[E, NotUsed] = {
 
-    val readJournal =
       PersistenceQuery(system)
         .readJournalFor[PostgresReadJournal](PostgresReadJournal.Identifier)
-
-    readJournal.allEvents(fromRowId).map { env =>
-      env.event match {
-        case evt: TestActor.Event => evt
-        case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")
+        .allEvents(fromRowId).map { env =>
+          env.event match {
+            case evt: E => evt
+            case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")
+          }
       }
-    }
   }
 
-  def startSource(persistenceId: String, fromRowId: Long): Source[TestActor.Event, NotUsed] = {
+  def startSource[E](persistenceId: String, fromRowId: Long)(implicit tag: ClassTag[E]): Source[E, NotUsed] = {
 
-    val readJournal =
       PersistenceQuery(system)
         .readJournalFor[PostgresReadJournal](PostgresReadJournal.Identifier)
-
-    readJournal.eventsByPersistenceId(persistenceId, fromRowId, Long.MaxValue).map { env =>
-      env.event match {
-        case evt: TestActor.Event => evt
-        case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")
-      }
-    }
+        .eventsByPersistenceId(persistenceId, fromRowId, Long.MaxValue).map { env =>
+          env.event match {
+            case evt: E => evt
+            case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")
+          }
+        }
   }
 
 }

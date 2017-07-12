@@ -7,8 +7,8 @@ class TestEventTagger extends EventTagger {
 
   def tags(event: Any): Map[String, String] = {
     event match {
-      case evt: Altered => Map(TestTags.alteredTag)
-      case evt: Incremented => Map(TestTags.incrementedTag)
+      case _: Altered => Map(TestTags.alteredTag)
+      case _: Incremented => Map(TestTags.incrementedTag)
       case _ => Map.empty
     }
   }
