@@ -15,8 +15,6 @@ import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Milliseconds, Seconds, Span}
 
-import scala.language.postfixOps
-
 abstract class AbstractEventStoreTest
   extends FunSuite
   with BeforeAndAfterEach
@@ -47,10 +45,13 @@ abstract class AbstractEventStoreTest
   }
 
   override protected def beforeEach(): Unit = {
-    database.run(DBIO.seq(
-      journals.delete,
-      snapshots.delete
-    )).futureValue
+    PgExtension(system).whenDone {
+      database.run(DBIO.seq(
+        sqlu"""ALTER SEQUENCE #${pluginConfig.fullJournalTableName}_id_seq RESTART WITH 1""",
+        journals.delete,
+        snapshots.delete
+      ))
+    }.futureValue
   }
 
   override protected def afterAll(): Unit = {

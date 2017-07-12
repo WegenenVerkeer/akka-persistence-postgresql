@@ -2,8 +2,6 @@ package akka.persistence.pg.query
 
 import com.typesafe.config.ConfigFactory
 
-import scala.language.postfixOps
-
 /**
   * uses the TableLocking write strategy and will use the "id" column of the journal
   * table for queries

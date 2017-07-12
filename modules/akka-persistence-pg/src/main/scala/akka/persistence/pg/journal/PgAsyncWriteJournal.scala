@@ -344,6 +344,7 @@ class PgAsyncWriteJournal
   }
 
   private def removeSubscriber(subscriber: ActorRef): Unit = {
+//    println("removeSubscriber "+subscriber)
     log.warning("actor {} terminated!!", subscriber)
 
     val keys = persistenceIdSubscribers.collect { case (k, s) if s.contains(subscriber) => k }
