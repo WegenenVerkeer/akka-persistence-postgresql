@@ -60,7 +60,7 @@ abstract class BaseEventsPublisher(fromOffset: Long,
     // reset flag
     newEventsWhileReplaying = false
     val limit = maxBufSize - buf.size
-    log.debug(s"request replay from [{}] to [{}]", currOffset, toOffset)
+    log.debug("request replay from [{}] to [{}]", currOffset, toOffset)
     context become replaying
     requestReplayFromJournal(limit)
   }
@@ -85,7 +85,7 @@ abstract class BaseEventsPublisher(fromOffset: Long,
 
     case Cancel =>
       val origSender = sender()
-      log.debug(s"Streaming cancelled: $origSender")
+      log.info(s"Streaming cancelled: $origSender")
       context.stop(self)
 
     case NewEventAppended =>

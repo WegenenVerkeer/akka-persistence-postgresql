@@ -5,7 +5,6 @@ import java.time.format.DateTimeFormatter
 import akka.actor.Props
 import akka.persistence.pg.TestActor._
 
-import scala.language.postfixOps
 import scala.util.parsing.json.JSON
 
 class EventStoreTest extends AbstractEventStoreTest {

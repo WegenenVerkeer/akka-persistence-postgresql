@@ -4,6 +4,7 @@ import java.net.URLEncoder
 
 import akka.NotUsed
 import akka.actor.ExtendedActorSystem
+import akka.persistence.Persistence
 import akka.persistence.query.EventEnvelope
 import akka.persistence.query.scaladsl._
 import akka.stream.scaladsl.Source
@@ -12,6 +13,7 @@ import com.typesafe.config.Config
 
 import scala.concurrent.duration._
 import akka.persistence.pg.EventTag
+import akka.stream.actor.ActorPublisherMessage.Cancel
 import akka.stream.impl.ActorPublisherSource
 import akka.stream.impl.Stages.DefaultAttributes
 import akka.stream.scaladsl.Source.shape
@@ -22,12 +24,12 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
   with AllEvents
   with EventsByPersistenceIdQuery {
 
-
   private val refreshInterval = config.getDuration("refresh-interval", MILLISECONDS).millis
   private val writeJournalPluginId: String = config.getString("write-plugin")
   private val maxBufSize: Int = config.getInt("max-buffer-size")
 
   override def eventsByTags(tags: Set[EventTag], fromRowId: Long, toRowId: Long = Long.MaxValue): Source[EventEnvelope, NotUsed] = {
+    val encodedTags = URLEncoder.encode(tags.mkString("-"), ByteString.UTF_8)
     Source.fromGraph(new ActorPublisherSource(EventsByTagsPublisher.props(
       tags = tags,
       fromOffset = fromRowId,
@@ -35,9 +37,9 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
       refreshInterval = refreshInterval,
       maxBufSize = maxBufSize,
       writeJournalPluginId = writeJournalPluginId
-    ), DefaultAttributes.actorPublisherSource, shape("ActorPublisherSource")))
+    ), DefaultAttributes.actorPublisherSource, shape(s"ActorPublisherSource-eventsByTags-$encodedTags")))
     .mapMaterializedValue(_ => NotUsed)
-      .named("eventsByTags-" + URLEncoder.encode(tags.mkString("-"), ByteString.UTF_8))
+      .named(s"eventsByTags-$encodedTags")
 
   }
 
@@ -48,7 +50,7 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
         refreshInterval = refreshInterval,
         maxBufSize = maxBufSize,
         writeJournalPluginId = writeJournalPluginId
-    ), DefaultAttributes.actorPublisherSource, shape("ActorPublisherSource")))
+    ), DefaultAttributes.actorPublisherSource, shape("ActorPublisherSource-allEvents")))
     .mapMaterializedValue(_ => NotUsed)
       .named("events-")
 
@@ -63,9 +65,14 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
         refreshInterval = refreshInterval,
         maxBufSize = maxBufSize,
         writeJournalPluginId = writeJournalPluginId
-      ), DefaultAttributes.actorPublisherSource, shape("ActorPublisherSource"))).mapMaterializedValue(_ => NotUsed)
-      .named("eventsByPersistenceId-" + URLEncoder.encode(persistenceId, ByteString.UTF_8))
+      ), DefaultAttributes.actorPublisherSource, shape(s"ActorPublisherSource-eventsByPersistenceId-${URLEncoder.encode(persistenceId, ByteString.UTF_8)}"))).mapMaterializedValue(_ => NotUsed)
+      .named(s"eventsByPersistenceId-${URLEncoder.encode(persistenceId, ByteString.UTF_8)}")
   }
+
+  def cancelAll() = {
+    Persistence(system).journalFor(writeJournalPluginId) ! Cancel
+  }
+
 }
 
 object PostgresReadJournal {

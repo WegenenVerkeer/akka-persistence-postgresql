@@ -28,7 +28,7 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")
 
-    val eventSource = startSource(Set(TestTags.alteredTag), 0)
+    val eventSource = startSource[TestActor.Event](Set(TestTags.alteredTag), 0)
 
     var events = List[TestActor.Event]()
 
@@ -65,7 +65,7 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")
 
-    val eventSource = startSource(Set(TestTags.alteredTag, TestTags.incrementedTag), 0)
+    val eventSource = startSource[TestActor.Event](Set(TestTags.alteredTag, TestTags.incrementedTag), 0)
 
     var events = List[TestActor.Event]()
 
@@ -100,7 +100,7 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")
 
-    val eventSource = startSource(0)
+    val eventSource = startSource[TestActor.Event](0)
 
     var events = List[TestActor.Event]()
 
@@ -136,7 +136,7 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")
 
-    val eventSource = startSource("TestActor", 0)
+    val eventSource = startSource[TestActor.Event]("TestActor", 0)
 
     var events = List[TestActor.Event]()
 
