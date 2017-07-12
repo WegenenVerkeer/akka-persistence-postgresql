@@ -2,8 +2,6 @@ package akka.persistence.pg.snapshot
 
 import akka.persistence.pg.PgConfig
 
-import scala.language.postfixOps
-
 trait SnapshotTable {
   self: PgConfig =>
 

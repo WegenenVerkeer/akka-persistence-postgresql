@@ -6,7 +6,6 @@ import akka.persistence.{SelectedSnapshot, SnapshotMetadata, SnapshotSelectionCr
 import akka.serialization.Serialization
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.postfixOps
 
 trait PgSnapshotStore extends SnapshotTable {
   self: PgConfig =>

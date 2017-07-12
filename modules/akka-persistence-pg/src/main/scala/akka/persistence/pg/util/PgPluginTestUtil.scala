@@ -6,8 +6,6 @@ import java.util.concurrent.CountDownLatch
 import akka.actor.{ActorSystem, Props}
 import slick.jdbc.JdbcBackend
 
-import scala.language.postfixOps
-
 /**
  * test utility for testing PersistentActors with akka-persistence-pg plugin:
  * Send your actors messages in a code block wrapped in a withTransactionRollback call

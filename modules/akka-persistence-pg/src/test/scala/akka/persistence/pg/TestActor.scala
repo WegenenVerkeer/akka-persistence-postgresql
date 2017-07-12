@@ -1,7 +1,6 @@
 package akka.persistence.pg
 
 import java.time.OffsetDateTime
-import java.util.UUID
 
 import akka.actor.{ActorLogging, ActorRef}
 import akka.persistence.pg.event.Created

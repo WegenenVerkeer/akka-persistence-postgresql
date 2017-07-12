@@ -1,1 +1,1 @@
-parallelExecution in Global := false
+parallelExecution in Test := false
