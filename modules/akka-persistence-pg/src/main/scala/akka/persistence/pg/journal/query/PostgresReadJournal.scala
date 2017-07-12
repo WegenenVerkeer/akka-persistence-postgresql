@@ -9,8 +9,12 @@ import akka.persistence.query.scaladsl._
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.typesafe.config.Config
+
 import scala.concurrent.duration._
 import akka.persistence.pg.EventTag
+import akka.stream.impl.ActorPublisherSource
+import akka.stream.impl.Stages.DefaultAttributes
+import akka.stream.scaladsl.Source.shape
 
 class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
   extends ReadJournal
@@ -24,36 +28,34 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
   private val maxBufSize: Int = config.getInt("max-buffer-size")
 
   override def eventsByTags(tags: Set[EventTag], fromRowId: Long, toRowId: Long = Long.MaxValue): Source[EventEnvelope, NotUsed] = {
-    Source.actorPublisher[EventEnvelope](
-      EventsByTagsPublisher.props(
-        tags = tags,
-        fromOffset = fromRowId,
-        toOffset = toRowId,
-        refreshInterval = refreshInterval,
-        maxBufSize = maxBufSize,
-        writeJournalPluginId = writeJournalPluginId
-      )
-    ).mapMaterializedValue(_ => NotUsed)
+    Source.fromGraph(new ActorPublisherSource(EventsByTagsPublisher.props(
+      tags = tags,
+      fromOffset = fromRowId,
+      toOffset = toRowId,
+      refreshInterval = refreshInterval,
+      maxBufSize = maxBufSize,
+      writeJournalPluginId = writeJournalPluginId
+    ), DefaultAttributes.actorPublisherSource, shape("ActorPublisherSource")))
+    .mapMaterializedValue(_ => NotUsed)
       .named("eventsByTags-" + URLEncoder.encode(tags.mkString("-"), ByteString.UTF_8))
 
   }
 
   def allEvents(fromRowId: Long, toRowId: Long = Long.MaxValue): Source[EventEnvelope, NotUsed] = {
-    Source.actorPublisher[EventEnvelope](
-      EventsPublisher.props(
+    Source.fromGraph(new ActorPublisherSource(EventsPublisher.props(
         fromOffset = fromRowId,
         toOffset = toRowId,
         refreshInterval = refreshInterval,
         maxBufSize = maxBufSize,
         writeJournalPluginId = writeJournalPluginId
-      )
-    ).mapMaterializedValue(_ => NotUsed)
+    ), DefaultAttributes.actorPublisherSource, shape("ActorPublisherSource")))
+    .mapMaterializedValue(_ => NotUsed)
       .named("events-")
 
   }
 
   override def eventsByPersistenceId(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long): Source[EventEnvelope, NotUsed] = {
-    Source.actorPublisher[EventEnvelope](
+    Source.fromGraph(new ActorPublisherSource(
       EventsByPersistenceIdPublisher.props(
         persistenceId = persistenceId,
         fromOffset = fromSequenceNr,
@@ -61,8 +63,7 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
         refreshInterval = refreshInterval,
         maxBufSize = maxBufSize,
         writeJournalPluginId = writeJournalPluginId
-      )
-    ).mapMaterializedValue(_ => NotUsed)
+      ), DefaultAttributes.actorPublisherSource, shape("ActorPublisherSource"))).mapMaterializedValue(_ => NotUsed)
       .named("eventsByPersistenceId-" + URLEncoder.encode(persistenceId, ByteString.UTF_8))
   }
 }

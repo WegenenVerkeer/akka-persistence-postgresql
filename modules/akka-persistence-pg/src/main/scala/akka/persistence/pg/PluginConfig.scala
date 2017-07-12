@@ -36,9 +36,6 @@ class PluginConfig(systemConfig: Config) {
   val journalTableName = config.getString("journalTableName")
   val fullJournalTableName: String = getFullName(journalTableName)
 
-  val rowIdSequenceName: String = s"${journalTableName}_rowid_seq"
-  val fullRowIdSequenceName: String = getFullName(rowIdSequenceName)
-
   val snapshotTableName = config.getString("snapshotTableName")
   val fullSnapshotTableName: String = getFullName(snapshotTableName)
 

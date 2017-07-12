@@ -57,7 +57,7 @@ trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresProfile =>
     case finite => format(finite)
   }
 
-  val date2TzDateTimeFormatter =
+  private val date2TzDateTimeFormatter =
     new DateTimeFormatterBuilder()
       .append(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
       .optionalStart()
@@ -84,7 +84,7 @@ trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresProfile =>
         hasLiteralForm = false
       )
 
-    implicit def simpleHStoreColumnExtensionMethods(c: Rep[Map[String, String]]) = {
+    implicit def simpleHStoreColumnExtensionMethods(c: Rep[Map[String, String]]): HStoreColumnExtensionMethods[Map[String, String]] = {
       new HStoreColumnExtensionMethods[Map[String, String]](c)
     }
 

@@ -5,15 +5,16 @@ import akka.persistence.pg.TestActor._
 import akka.persistence.pg._
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
+import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
-
-import scala.language.postfixOps
 
 /**
   * uses the default RowIdUpdating write strategy and will use the "rowid" column of the journal
   * table for queries
  */
 class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
+
+  override lazy val config = ConfigFactory.load("pg-eventstore-rowid.conf")
 
   implicit val materializer = ActorMaterializer()
 

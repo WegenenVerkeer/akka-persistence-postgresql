@@ -8,7 +8,6 @@ import akka.persistence.pg.event._
 import akka.persistence.pg.{JsonString, PgConfig, PgExtension}
 import akka.serialization.Serialization
 
-import scala.concurrent.Future
 import scala.util.Try
 
 /**

@@ -52,9 +52,10 @@ class PgAsyncWriteJournal
       val result = writeStrategy
         .store(storeActions(entries), new Notifier(entries.map(_.entry), this))
         .map { Success.apply }
-      result.onFailure {
+      result.failed.foreach {
         case e: BatchUpdateException => log.error(e.getNextException, "problem storing events")
-        case NonFatal(e) => log.error(e, "problem storing events")
+        case NonFatal(e)             => log.error(e, "problem storing events")
+        case _                       =>
       }
       result
     }
@@ -343,6 +344,7 @@ class PgAsyncWriteJournal
   }
 
   private def removeSubscriber(subscriber: ActorRef): Unit = {
+//    println("removeSubscriber "+subscriber)
     log.warning("actor {} terminated!!", subscriber)
 
     val keys = persistenceIdSubscribers.collect { case (k, s) if s.contains(subscriber) => k }

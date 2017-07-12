@@ -10,7 +10,6 @@ import akka.pattern.ask
 import akka.util.Timeout
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.postfixOps
 
 trait WriteStrategy {
 
