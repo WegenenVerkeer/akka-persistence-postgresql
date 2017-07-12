@@ -39,7 +39,6 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
   val system =  ActorSystem("TestCluster", config)
   override lazy val pluginConfig = PgExtension(system).pluginConfig
 
-  import PerfActor._
   import driver.api._
 
   import scala.concurrent.ExecutionContext.Implicits.global

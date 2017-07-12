@@ -10,8 +10,6 @@ import org.scalatest.{BeforeAndAfterAll, Matchers}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.{Seconds, Span}
 
-import scala.language.postfixOps
-
 case class Command(message: String)
 case class Event(message: String)
 case object GetMessage
@@ -30,8 +28,6 @@ class ExamplePersistentActorTest extends PersistentActorTest
   override val pluginConfig = PluginConfig(config)
 
   override implicit val patienceConfig = PatienceConfig(timeout = scaled(Span(2, Seconds)))
-
-  import driver.api._
 
   /**
    * recreate schema and tables before running the tests

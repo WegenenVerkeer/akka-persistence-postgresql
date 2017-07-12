@@ -14,7 +14,6 @@ import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Milliseconds, Seconds, Span}
 
-import scala.language.postfixOps
 import scala.util.Random
 
 class PersistAllTest extends FunSuite

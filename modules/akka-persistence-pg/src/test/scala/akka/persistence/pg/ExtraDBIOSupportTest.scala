@@ -15,7 +15,6 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Milliseconds, Seconds, Span}
 
 import scala.collection.JavaConverters._
-import scala.language.postfixOps
 import scala.util.Random
 
 class ExtraDBIOSupportTest extends FunSuite

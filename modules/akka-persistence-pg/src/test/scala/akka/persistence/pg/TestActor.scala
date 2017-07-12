@@ -2,9 +2,9 @@ package akka.persistence.pg
 
 import java.time.OffsetDateTime
 
-import akka.actor.{ActorLogging, ActorRef}
+import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.persistence.pg.event.Created
-import akka.persistence.{SaveSnapshotSuccess, SaveSnapshotFailure, SnapshotOffer, PersistentActor}
+import akka.persistence.{PersistentActor, SaveSnapshotFailure, SaveSnapshotSuccess, SnapshotOffer}
 
 
 class TestActor(testProbe: ActorRef, id: Option[String] = None) extends PersistentActor with ActorLogging {
@@ -47,6 +47,8 @@ class TestActor(testProbe: ActorRef, id: Option[String] = None) extends Persiste
 
 
 object TestActor {
+
+  def props(testProbe: ActorRef, persistenceId: Option[String] = None) = Props(new TestActor(testProbe, persistenceId))
 
   case object Snap
 

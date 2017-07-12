@@ -10,6 +10,7 @@ import akka.persistence.pg.journal.PgAsyncWriteJournal._
 import akka.persistence.pg.{EventTag, PgConfig, PgExtension}
 import akka.persistence.{AtomicWrite, PersistentRepr}
 import akka.serialization.{Serialization, SerializationExtension}
+import akka.stream.actor.ActorPublisherMessage.Cancel
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.stream.scaladsl.{Keep, Sink, Source}
 
@@ -128,6 +129,8 @@ class PgAsyncWriteJournal
 
   override def receivePluginInternal: Receive = {
 
+    case Cancel => cancelSubscribers
+
     // requested to send events containing given tags between from and to rowId
     case ReplayTaggedMessages(fromRowId, toRowId, max, tags, replyTo) =>
       handleReplayTaggedMessages(fromRowId, toRowId, max, tags, replyTo)
@@ -180,7 +183,6 @@ class PgAsyncWriteJournal
   }
 
   private def handleReplayMessages(fromRowId: Long, toRowId: Long, max: Long, replyTo: ActorRef): Unit = {
-
 
     val correctedFromRowId = math.max(0L, fromRowId - 1)
 
@@ -315,6 +317,12 @@ class PgAsyncWriteJournal
     notifyEventsAdded()
   }
 
+  def cancelSubscribers() = {
+    persistenceIdSubscribers.foreach { _._2.foreach(_ ! Cancel) }
+    tagSubscribers.foreach { _._2.foreach(_ ! Cancel) }
+    allEventsSubscribers.foreach { _ ! Cancel }
+  }
+
   private val persistenceIdSubscribers = new mutable.HashMap[String, mutable.Set[ActorRef]] with mutable.MultiMap[String, ActorRef]
   private val tagSubscribers = new mutable.HashMap[EventTag, mutable.Set[ActorRef]] with mutable.MultiMap[EventTag, ActorRef]
   private var allEventsSubscribers = Set.empty[ActorRef]
@@ -344,7 +352,6 @@ class PgAsyncWriteJournal
   }
 
   private def removeSubscriber(subscriber: ActorRef): Unit = {
-//    println("removeSubscriber "+subscriber)
     log.warning("actor {} terminated!!", subscriber)
 
     val keys = persistenceIdSubscribers.collect { case (k, s) if s.contains(subscriber) => k }
