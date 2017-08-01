@@ -3,7 +3,7 @@ import sbt._
 object Dependencies {
 
   val akkaVersion    = "2.5.3"
-  val slickVersion   = "3.2.0"
+  val slickVersion   = "3.2.1"
   val gatlinVersion  = "2.2.4"
 
   val scalaJava8Compat      = "org.scala-lang.modules"     %%    "scala-java8-compat"             % "0.8.0"
@@ -29,7 +29,7 @@ object Dependencies {
   val gatling                 = "io.gatling"              %   "gatling-test-framework"     % "2.2.4"
 
   val hikariCp                = "com.zaxxer"              %   "HikariCP"                   % "2.6.3"
-  val postgres                = "org.postgresql"          %   "postgresql"                 % "42.1.1"
+  val postgres                = "org.postgresql"          %   "postgresql"                 % "42.1.3"
 
   val mainTestDependencies = Seq (
     scalaTest, akkaSlf4j, tyrex
