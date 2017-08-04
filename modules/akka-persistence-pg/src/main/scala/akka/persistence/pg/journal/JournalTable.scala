@@ -58,6 +58,6 @@ trait JournalTable {
 
   }
 
-  val journals = TableQuery[JournalTable]
+  val journals: TableQuery[JournalTable] = TableQuery[JournalTable]
 
 }

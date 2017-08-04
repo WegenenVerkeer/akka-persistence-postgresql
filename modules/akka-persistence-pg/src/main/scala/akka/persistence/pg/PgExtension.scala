@@ -24,7 +24,6 @@ class PgExtension(system: ExtendedActorSystem) extends Extension {
 
   val persistence = Persistence(system)
 
-  private val DefaultPluginDispatcherId = "akka.persistence.dispatchers.default-plugin-dispatcher"
   val pluginConfig = PluginConfig(system)
 
   system.registerOnTermination {

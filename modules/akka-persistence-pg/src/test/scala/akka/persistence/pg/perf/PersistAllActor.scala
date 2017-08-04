@@ -6,8 +6,6 @@ import akka.actor.{ActorLogging, Props}
 import akka.persistence.PersistentActor
 import akka.persistence.pg.perf.Messages.{Alter, Altered}
 
-import scala.language.postfixOps
-
 class PersistAllActor(id: Int) extends PersistentActor with ActorLogging {
 
   override val persistenceId: String = s"PersistAllActor_$id"

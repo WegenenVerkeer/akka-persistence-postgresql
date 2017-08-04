@@ -4,7 +4,6 @@ import java.sql.Savepoint
 import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
-import akka.persistence.pg.PluginConfig
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import com.typesafe.config.Config

@@ -103,7 +103,6 @@ class RowIdUpdater(pluginConfig: PluginConfig) extends Actor
 
   def assignRowIds(): Future[Int] = {
     var updated = 0
-    val start = System.nanoTime()
     pluginConfig.database.run(
       sql"""SELECT id FROM #${pluginConfig.fullJournalTableName} WHERE rowid IS NULL ORDER BY id limit #$max""".as[Long]
         .flatMap { ids =>

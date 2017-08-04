@@ -39,7 +39,7 @@ trait EventStore {
 
   }
 
-  val events = TableQuery[EventsTable]
+  val events: TableQuery[EventsTable] = TableQuery[EventsTable]
 
 
   /**

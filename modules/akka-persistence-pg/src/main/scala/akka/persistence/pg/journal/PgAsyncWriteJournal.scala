@@ -7,15 +7,16 @@ import akka.pattern._
 import akka.persistence.JournalProtocol.{RecoverySuccess, ReplayMessagesFailure}
 import akka.persistence.journal.AsyncWriteJournal
 import akka.persistence.pg.journal.PgAsyncWriteJournal._
-import akka.persistence.pg.{EventTag, PgConfig, PgExtension}
+import akka.persistence.pg.{EventTag, PgConfig, PgExtension, PluginConfig}
 import akka.persistence.{AtomicWrite, PersistentRepr}
 import akka.serialization.{Serialization, SerializationExtension}
 import akka.stream.actor.ActorPublisherMessage.Cancel
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.stream.scaladsl.{Keep, Sink, Source}
+import slick.jdbc.{ResultSetConcurrency, ResultSetType}
 
 import scala.collection.{immutable, mutable}
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
@@ -25,13 +26,13 @@ class PgAsyncWriteJournal
   with PgConfig
   with JournalStore {
 
-  implicit val executionContext = context.system.dispatcher
+  implicit val executionContext: ExecutionContextExecutor = context.system.dispatcher
 
   override val serialization: Serialization = SerializationExtension(context.system)
   override val pgExtension: PgExtension = PgExtension(context.system)
-  override lazy val pluginConfig = pgExtension.pluginConfig
+  override lazy val pluginConfig: PluginConfig = pgExtension.pluginConfig
 
-  lazy val writeStrategy = pluginConfig.writeStrategy(this.context)
+  lazy val writeStrategy: WriteStrategy = pluginConfig.writeStrategy(this.context)
 
   import driver.api._
 
@@ -102,6 +103,8 @@ class PgAsyncWriteJournal
         .sortBy(_.sequenceNr)
         .take(max)
         .result
+        .withStatementParameters(rsType = ResultSetType.ForwardOnly, rsConcurrency = ResultSetConcurrency.ReadOnly, fetchSize = 1000)
+        .transactionally
     }
 
     Source.fromPublisher(publisher)
@@ -129,7 +132,7 @@ class PgAsyncWriteJournal
 
   override def receivePluginInternal: Receive = {
 
-    case Cancel => cancelSubscribers
+    case Cancel => cancelSubscribers()
 
     // requested to send events containing given tags between from and to rowId
     case ReplayTaggedMessages(fromRowId, toRowId, max, tags, replyTo) =>
@@ -292,11 +295,7 @@ class PgAsyncWriteJournal
   }
 
   private def idForQuery(entry: JournalEntry): Long = {
-    val id = if (pluginConfig.idForQuery == "rowid") {
-      entry.rowid
-    } else {
-      entry.id
-    }
+    val id = if (pluginConfig.idForQuery == "rowid") entry.rowid else entry.id
     id.getOrElse(sys.error("something went wrong, probably a misconfiguration"))
   }
 
