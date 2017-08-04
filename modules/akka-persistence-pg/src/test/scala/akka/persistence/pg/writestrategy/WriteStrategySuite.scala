@@ -8,7 +8,7 @@ import akka.pattern.{ask, pipe}
 import akka.persistence.pg.event._
 import akka.persistence.pg.journal.JournalTable
 import akka.persistence.pg.perf.Messages.Alter
-import akka.persistence.pg.perf.{PerfActor, RandomDelayPerfActor}
+import akka.persistence.pg.perf.RandomDelayPerfActor
 import akka.persistence.pg.snapshot.SnapshotTable
 import akka.persistence.pg.util.{CreateTables, RecreateSchema}
 import akka.persistence.pg.{PgConfig, PgExtension, PluginConfig, WaitForEvents}
@@ -37,7 +37,7 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
   with ScalaFutures {
 
   val system =  ActorSystem("TestCluster", config)
-  override lazy val pluginConfig = PgExtension(system).pluginConfig
+  override lazy val pluginConfig: PluginConfig = PgExtension(system).pluginConfig
 
   import driver.api._
 

@@ -9,8 +9,6 @@ import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.{Seconds, Span}
 import org.scalatest.{BeforeAndAfterAll, Matchers}
 
-import scala.language.postfixOps
-
 class ReadModelUpdateActorTest extends PersistentActorTest
     with ScalaFutures
     with Eventually
