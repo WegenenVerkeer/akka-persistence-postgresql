@@ -1,6 +1,7 @@
 package akka.persistence.pg.snapshot
 
-import akka.persistence.pg.PgConfig
+import akka.persistence.pg.{PgConfig, PgExtension}
+import akka.persistence.pg.event.JsonEncoder
 import akka.persistence.serialization.Snapshot
 import akka.persistence.{SelectedSnapshot, SnapshotMetadata, SnapshotSelectionCriteria}
 import akka.serialization.Serialization
@@ -10,7 +11,9 @@ import scala.concurrent.{ExecutionContext, Future}
 trait PgSnapshotStore extends SnapshotTable {
   self: PgConfig =>
 
+  def pgExtension: PgExtension
   def serialization: Serialization
+  def snapshotEncoder: JsonEncoder = pluginConfig.snapshotEncoder
 
   import driver.api._
 
@@ -34,13 +37,22 @@ trait PgSnapshotStore extends SnapshotTable {
         .take(1)
         .result.headOption
     } map {
-      _ map { r =>
-        SelectedSnapshot(SnapshotMetadata(r._1, r._2, r._3), serialization.deserialize(r._4, classOf[Snapshot]).get.data)
+      _ map { entry: SnapshotEntry =>
+
+        val snapshotData: Any = (entry.payload, entry.json, entry.manifest) match {
+          case (Some(payload), _, _)              => serialization.deserialize(payload, classOf[Snapshot]).get.data
+          case (_, Some(event), Some(manifest))   => snapshotEncoder.fromJson((event, pgExtension.getClassFor[Any](manifest)))
+          case _                                  => sys.error( s"""both payload and event are null for snapshot table entry
+            with persistenceid='${entry.persistenceId}' and sequencenr='${entry.sequenceNr} and timestamp='${entry.timestamp}'
+            This should NEVER happen!""")
+        }
+
+        SelectedSnapshot(SnapshotMetadata(entry.persistenceId, entry.sequenceNr, entry.timestamp), snapshotData)
       }
     }
   }
 
-  def selectSnapshotsQuery(persistenceId: String, criteria: SnapshotSelectionCriteria): Query[SnapshotTable, (String, Long, Long, Array[Byte]), Seq] = {
+  def selectSnapshotsQuery(persistenceId: String, criteria: SnapshotSelectionCriteria): Query[SnapshotTable, SnapshotEntry, Seq] = {
     snapshots
       .filter(_.persistenceId === persistenceId)
       .filter(_.sequenceNr <= criteria.maxSequenceNr)

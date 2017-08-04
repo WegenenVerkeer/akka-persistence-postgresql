@@ -9,8 +9,6 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Milliseconds, Second, Span}
 
-import scala.language.postfixOps
-
 class PgAsyncJournalSpec extends JournalSpec(ConfigFactory.load("pg-application.conf"))
   with JournalTable
   with RecreateSchema
