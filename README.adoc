@@ -88,7 +88,7 @@ CREATE UNIQUE INDEX journal_pidseq_idx ON journal (persistenceid, sequencenr);
 CREATE UNIQUE INDEX journal_rowid_idx ON journal (rowid);
 
 CREATE TABLE snapshot (
-   "persistenceid" VARCHAR(254) NOT NULL,....
+   "persistenceid" VARCHAR(254) NOT NULL,
    "sequencenr" INT NOT NULL,
    "timestamp" bigint NOT NULL,
    "snapshot" BYTEA,
