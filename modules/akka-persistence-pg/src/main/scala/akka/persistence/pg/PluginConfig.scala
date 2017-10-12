@@ -17,33 +17,32 @@ object PluginConfig {
 
   def apply(config: Config) = new PluginConfig(config)
 
-  def asOption(s: String): Option[String] = {
-    if (s.isEmpty) None else Some(s)
-  }
+  def asOption(s: String): Option[String] = if (s.isEmpty) None else Some(s)
+
+  def newInstance[T](clazz: String) = Thread.currentThread().getContextClassLoader.loadClass(clazz).asInstanceOf[Class[_ <: T]].newInstance()
+
 }
 
 class PluginConfig(systemConfig: Config) {
   private val config = systemConfig.getConfig("pg-persistence")
 
   val schema: Option[String] = PluginConfig.asOption(config.getString("schemaName"))
-  val schemaName = schema.fold("")(n => '"' + n + '"')
+  val schemaName: String = schema.fold("")(n => '"' + n + '"')
 
-  def getFullName(partialName: String) = schema match {
-    case None => partialName
-    case Some(s) => '"' + s + '"' + '.' + partialName
-  }
+  def getFullName(partialName: String): String = schema.fold(partialName)('"' + _ + '"' + '.' + partialName)
 
-  val journalTableName = config.getString("journalTableName")
+  val journalTableName: String = config.getString("journalTableName")
   val fullJournalTableName: String = getFullName(journalTableName)
 
-  val snapshotTableName = config.getString("snapshotTableName")
+  val snapshotTableName: String = config.getString("snapshotTableName")
   val fullSnapshotTableName: String = getFullName(snapshotTableName)
 
-  def shutdownDataSource() = {
-    database.close()
-  }
+  val snapshotEncoder: JsonEncoder = PluginConfig.asOption(config.getString("snapshotEncoder"))
+    .fold(NoneJsonEncoder: JsonEncoder)(PluginConfig.newInstance[JsonEncoder])
 
-  val jsonType = config.getString("pgjson")
+  def shutdownDataSource(): Unit = database.close()
+
+  val jsonType: String = config.getString("pgjson")
 
   val pgPostgresProfile = new PgPostgresProfileImpl(jsonType match {
         case "jsonb"   => "jsonb"
@@ -96,7 +95,7 @@ class PluginConfig(systemConfig: Config) {
     db
   }
 
-  lazy val eventStoreConfig = EventStoreConfig(config.getConfig("eventstore"),
+  lazy val eventStoreConfig: EventStoreConfig = EventStoreConfig(config.getConfig("eventstore"),
     schema,
     journalTableName)
 
@@ -113,46 +112,29 @@ class PluginConfig(systemConfig: Config) {
     writeStrategyClazz.getConstructor(classOf[PluginConfig], classOf[ActorSystem]).newInstance(this, context.system)
   }
 
-  lazy val idForQuery = {
-    val clazz = config.getString("writestrategy")
-    if (clazz == "akka.persistence.pg.journal.RowIdUpdatingStrategy") "rowid"
+  lazy val idForQuery: String =
+    if (config.getString("writestrategy") == "akka.persistence.pg.journal.RowIdUpdatingStrategy") "rowid"
     else "id"
-  }
+
 }
 
 case class EventStoreConfig(cfg: Config,
                             schema: Option[String],
                             journalTableName: String) {
-
   val idColumnName: String = cfg.getString("idColumnName")
   val useView: Boolean = cfg.getBoolean("useView")
 
-  val schemaName: Option[String] = if (useView) {
-    PluginConfig.asOption(cfg.getString("schemaName"))
-  } else {
-    schema
-  }
+  val schemaName: Option[String] = if (useView) PluginConfig.asOption(cfg.getString("schemaName")) else schema
 
-  val tableName: String = if (useView) {
-    cfg.getString("tableName")
-  } else {
-    journalTableName
-  }
+  val tableName: String = if (useView) cfg.getString("tableName") else journalTableName
 
-  val eventEncoder: JsonEncoder = {
-    PluginConfig.asOption(cfg.getString("encoder")) match {
-      case None => NoneJsonEncoder
-      case Some(clazz) => Thread.currentThread().getContextClassLoader.loadClass(clazz).asInstanceOf[Class[_ <: JsonEncoder]].newInstance()
-    }
-  }
+  val eventEncoder: JsonEncoder = PluginConfig.asOption(cfg.getString("encoder"))
+    .fold(NoneJsonEncoder: JsonEncoder)(PluginConfig.newInstance[JsonEncoder])
 
-  val eventTagger: EventTagger = {
-    PluginConfig.asOption(cfg.getString("tagger")) match {
+  val eventTagger: EventTagger = PluginConfig.asOption(cfg.getString("tagger")) match {
       case None => NotTagged
       case Some("default") => DefaultTagger
-      case Some(clazz) => Thread.currentThread().getContextClassLoader.loadClass(clazz).asInstanceOf[Class[_ <: EventTagger]].newInstance()
+      case Some(clazz) => PluginConfig.newInstance[EventTagger](clazz)
     }
-  }
-
 
 }
