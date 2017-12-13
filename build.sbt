@@ -37,7 +37,7 @@ lazy val akkaPersistencePgModule = {
   )
     .configs(config("it") extend Test)
     .settings(Defaults.itSettings: _*)
-    .settings(Seq(crossScalaVersions := Seq("2.11.11", "2.12.3"),
+    .settings(Seq(crossScalaVersions := Seq("2.11.11", "2.12.4"),
       scalaVersion := crossScalaVersions.value.last)
     )
     .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies)
@@ -57,7 +57,7 @@ lazy val benchmarkModule = {
   )
     .dependsOn(akkaPersistencePgModule % "it->test;test->test;compile->compile")
     .enablePlugins(GatlingPlugin)
-    .settings(Seq(scalaVersion := "2.12.3"))
+    .settings(Seq(scalaVersion := "2.12.4"))
 
 
 }
@@ -66,5 +66,5 @@ val main = Project(
   id = "akka-persistence-postgresql",
   base = file("."),
   settings = Defaults.coreDefaultSettings ++ commonSettings ++
-    Seq(publishLocal := {}, publish := {}, packagedArtifacts := Map.empty, crossScalaVersions := Seq("2.11.11", "2.12.3"))
+    Seq(publishLocal := {}, publish := {}, packagedArtifacts := Map.empty, crossScalaVersions := Seq("2.11.11", "2.12.4"))
 ).aggregate(akkaPersistencePgModule, benchmarkModule)
