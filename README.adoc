@@ -102,7 +102,7 @@ CREATE TABLE snapshot (
    "manifest" VARCHAR(512),
    "json" JSON,
    CONSTRAINT "cc_snapshot_payload_jsoin" check (snapshot IS NOT NULL OR (json IS NOT NULL AND manifest IS NOT NULL)),
-   PRIMARY KEY (persistenceid, sequencenr))
+   PRIMARY KEY (persistenceid, sequencenr)
 );
 ....
 
