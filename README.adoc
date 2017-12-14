@@ -28,7 +28,7 @@ Versions: The table below lists the versions and their main dependencies
 |0.6.0|2.12.x or 2.11.x|2.4.x|3.2.0
 |0.7.0|2.12.x or 2.11.x|2.5.x|3.2.0
 |0.8.0|2.12.x or 2.11.x|2.5.x|3.2.1
-|0.9.0-SNAPSHOT|2.12.x or 2.11.x|2.5.x|3.2.1
+|0.9.0|2.12.x or 2.11.x|2.5.x|3.2.1
 |===
 
 So you just need to add the following dependency to your SBT dependencies
@@ -101,7 +101,7 @@ CREATE TABLE snapshot (
    "snapshot" BYTEA,
    "manifest" VARCHAR(512),
    "json" JSON,
-   CONSTRAINT "cc_snapshot_payload_jsoin" check (snapshot IS NOT NULL OR (json IS NOT NULL AND manifest IS NOT NULL)),
+   CONSTRAINT "cc_snapshot_payload_json" check (snapshot IS NOT NULL OR (json IS NOT NULL AND manifest IS NOT NULL)),
    PRIMARY KEY (persistenceid, sequencenr)
 );
 ....
