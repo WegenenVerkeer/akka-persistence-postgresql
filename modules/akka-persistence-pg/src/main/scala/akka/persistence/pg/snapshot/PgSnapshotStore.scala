@@ -61,7 +61,7 @@ trait PgSnapshotStore extends SnapshotTable {
     Try(snapshot) match {
       case Success(data) => Some(data)
       case Failure(t)    => if (pluginConfig.ignoreSnapshotDecodingFailure) {
-        log.info("problem deserializing snapshot with persistenceId '{}' from store using Akka serialization: {}", persistenceId, t.getMessage)
+        log.warning("problem deserializing snapshot with persistenceId '{}' from store using Akka serialization: {}", persistenceId, t.getMessage)
         None
       } else {
         throw t
