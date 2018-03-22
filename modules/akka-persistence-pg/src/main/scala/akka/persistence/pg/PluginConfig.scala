@@ -19,7 +19,7 @@ object PluginConfig {
 
   def asOption(s: String): Option[String] = if (s.isEmpty) None else Some(s)
 
-  def newInstance[T](clazz: String) = Thread.currentThread().getContextClassLoader.loadClass(clazz).asInstanceOf[Class[_ <: T]].newInstance()
+  def newInstance[T](clazz: String): T = Thread.currentThread().getContextClassLoader.loadClass(clazz).asInstanceOf[Class[_ <: T]].newInstance()
 
 }
 
@@ -115,6 +115,10 @@ class PluginConfig(systemConfig: Config) {
   lazy val idForQuery: String =
     if (config.getString("writestrategy") == "akka.persistence.pg.journal.RowIdUpdatingStrategy") "rowid"
     else "id"
+
+  lazy val ignoreSnapshotDecodingFailure: Boolean =
+    config.getBoolean("ignoreSnapshotDecodingFailure")
+
 
 }
 
