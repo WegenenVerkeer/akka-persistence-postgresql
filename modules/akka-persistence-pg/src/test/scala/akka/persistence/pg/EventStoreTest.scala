@@ -4,12 +4,19 @@ import java.time.format.DateTimeFormatter
 
 import akka.actor.Props
 import akka.persistence.pg.TestActor._
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Sink, Source}
+import org.scalatest.concurrent.Eventually
 
+import scala.collection.mutable.ListBuffer
+import scala.util.Random
 import scala.util.parsing.json.JSON
 
-class EventStoreTest extends AbstractEventStoreTest {
+class EventStoreTest extends AbstractEventStoreTest with Eventually {
 
   import driver.api._
+
+  implicit val materializer = ActorMaterializer()
 
   test("generate events") {
     val test = system.actorOf(Props(new TestActor(testProbe.ref)))
@@ -111,6 +118,34 @@ class EventStoreTest extends AbstractEventStoreTest {
     testProbe watch test2
     testProbe.expectTerminated(test2)
     ()
+  }
+
+  test("all events") {
+    val test = system.actorOf(Props(new TestActor(testProbe.ref)))
+
+    1 to 10 foreach { i =>
+      val s: String = Random.nextString(5)
+      testProbe.send(test, Alter(s))
+      testProbe.expectMsg("j")
+      testProbe.send(test, GetState)
+      testProbe.expectMsg(TheState(id = s))
+    }
+
+    database.run(events.size.result).futureValue shouldBe 10
+    database.run(journals.size.result).futureValue shouldBe 10
+
+    val storedEvents = ListBuffer[TestActor.Event]()
+    val eventStore = pluginConfig.eventStore.get
+
+    Source
+      .fromPublisher(database.stream(eventStore.allEvents()))
+      .to(Sink.foreach[akka.persistence.pg.event.Event] { e =>
+        storedEvents.append(eventStore.toDomainEvent[TestActor.Event](e))
+      }).run()
+
+
+    eventually(storedEvents.size shouldBe 10)
+
   }
 
 }

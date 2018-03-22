@@ -81,7 +81,7 @@ class ExamplePersistentActorTest extends PersistentActorTest
 
     //send message again, don't expect an answer because actor is down
     testProbe.send(actor, GetMessage)
-    testProbe.expectNoMsg()
+    testProbe.expectNoMessage()
 
     val recovered = system.actorOf(Props(new ExamplePA(id)))
     testProbe.send(recovered, GetMessage)
@@ -102,7 +102,7 @@ class ExamplePersistentActorTest extends PersistentActorTest
     testProbe.expectMsg[String]("oof")
 
     testProbe.send(actor, TakeSnapshot)
-    testProbe.expectNoMsg
+    testProbe.expectNoMessage()
 
     eventually {
       db.run(countSnapshots(id)).futureValue shouldEqual 1

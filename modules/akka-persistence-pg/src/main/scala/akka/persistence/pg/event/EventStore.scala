@@ -3,6 +3,8 @@ package akka.persistence.pg.event
 import java.time.OffsetDateTime
 
 import akka.persistence.pg.{EventStoreConfig, JsonString, PgConfig}
+import slick.dbio.Effect.{Read, Transactional}
+import slick.jdbc.{ResultSetConcurrency, ResultSetType}
 
 case class Event(id: Long,
                  persistenceId: String,
@@ -66,6 +68,18 @@ trait EventStore {
       .filter(_.tags @> tags.bind)
       .sortBy(_.id)
       .take(max)
+  }
+
+  def allEvents(): DBIOAction[Seq[Event], Streaming[Event], Read with Transactional] = {
+    findEvents(0)
+      .result
+      .withStatementParameters(rsType = ResultSetType.ForwardOnly, rsConcurrency = ResultSetConcurrency.ReadOnly, fetchSize = 1000)
+      .transactionally
+  }
+
+  def toDomainEvent[T](e: Event): T = {
+    val clazz = Class.forName(e.className)
+    eventStoreConfig.eventEncoder.fromJson((e.event, clazz)).asInstanceOf[T]
   }
 
 
