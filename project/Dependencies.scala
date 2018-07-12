@@ -2,7 +2,7 @@ import sbt._
 
 object Dependencies {
 
-  val akkaVersion    = "2.5.11"
+  val akkaVersion    = "2.5.13"
   val slickVersion   = "3.2.2"
   val gatlinVersion  = "2.2.4"
 
