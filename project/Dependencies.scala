@@ -18,7 +18,7 @@ object Dependencies {
   val slickHikariCp           = "com.typesafe.slick"      %%  "slick-hikaricp"             % slickVersion
 
   // Test dependencies
-  val scalaTest               = "org.scalatest"           %%  "scalatest"                  % "3.0.4"        % "test,it"
+  val scalaTest               = "org.scalatest"           %%  "scalatest"                  % "3.0.5"        % "test,it"
   val akkaTest                = "com.typesafe.akka"       %%  "akka-testkit"               % akkaVersion    % "test,it"
   val akkaPersistenceTestkit  = "com.typesafe.akka"       %%  "akka-persistence-tck"       % akkaVersion    % "test,it"
   val slf4jSimple             = "org.slf4j"               %   "slf4j-simple"               % "1.7.25"       % "test,it"
@@ -28,8 +28,8 @@ object Dependencies {
   val gatlinHighcharts        = "io.gatling.highcharts"   %   "gatling-charts-highcharts"  % "2.2.4"
   val gatling                 = "io.gatling"              %   "gatling-test-framework"     % "2.2.4"
 
-  val hikariCp                = "com.zaxxer"              %   "HikariCP"                   % "2.7.4"
-  val postgres                = "org.postgresql"          %   "postgresql"                 % "42.1.4"
+  val hikariCp                = "com.zaxxer"              %   "HikariCP"                   % "2.7.8"
+  val postgres                = "org.postgresql"          %   "postgresql"                 % "42.2.2"
 
   val mainTestDependencies = Seq (
     scalaTest, akkaSlf4j, tyrex
