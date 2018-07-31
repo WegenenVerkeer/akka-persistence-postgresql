@@ -3,7 +3,7 @@ import sbt._
 object Dependencies {
 
   val akkaVersion    = "2.5.14"
-  val slickVersion   = "3.2.1"
+  val slickVersion   = "3.2.2"
   val gatlinVersion  = "2.2.4"
 
   val scalaJava8Compat      = "org.scala-lang.modules"     %%    "scala-java8-compat"             % "0.8.0"
