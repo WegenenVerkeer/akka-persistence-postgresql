@@ -69,5 +69,6 @@ val main = Project(
   base = file(".")
 )
   .settings(Defaults.coreDefaultSettings ++ commonSettings ++
-  Seq(publishLocal := {}, publish := {}, packagedArtifacts := Map.empty, crossScalaVersions := Seq("2.11.12", "2.12.6")))
-    .aggregate(akkaPersistencePgModule, benchmarkModule)
+    Seq(publishLocal := {}, publish := {}, packagedArtifacts := Map.empty, crossScalaVersions := Seq.empty)
+  )
+  .aggregate(akkaPersistencePgModule, benchmarkModule)
