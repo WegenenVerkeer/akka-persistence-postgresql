@@ -1,7 +1,9 @@
 language: scala
 scala:
-- 2.11.11
-script: sbt clean +test
+- 2.11.12
+- 2.12.6
+script:
+- sbt "++ $TRAVIS_SCALA_VERSION test"
 sudo: false
 jdk:
 - oraclejdk8
@@ -24,7 +26,7 @@ notifications:
     - peter.mortier@gmail.com
     - karel@geovise.com
 after_success:
-- '[[ $TRAVIS_BRANCH == "develop" ]] && { sbt +publish; };'
+- '[[ $TRAVIS_BRANCH == "develop" ]] && { sbt "++ $TRAVIS_SCALA_VERSION publish"; };'
 env:
   global:
   - SONATYPE_USERNAME=kmaesen
