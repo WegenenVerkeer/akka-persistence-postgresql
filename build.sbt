@@ -30,14 +30,16 @@ lazy val akkaPersistencePgModule = {
   val mainDeps = Seq(scalaJava8Compat, slick, slickHikariCp, hikariCp, postgres,
     akkaPersistence, akkaPersistenceQuery, akkaActor, akkaStreams, akkaTest, akkaPersistenceTestkit, slf4jSimple)
 
+  val It = config("it") extend Test
+
   Project(
     id = "akka-persistence-pg",
-    base = file("modules/akka-persistence-pg"),
-    settings = Defaults.coreDefaultSettings ++ commonSettings ++ publishSettings
+    base = file("modules/akka-persistence-pg")
   )
-    .configs(config("it") extend Test)
+    .configs(It)
+    .settings(Defaults.coreDefaultSettings ++ commonSettings ++ publishSettings)
     .settings(Defaults.itSettings: _*)
-    .settings(Seq(crossScalaVersions := Seq("2.11.11", "2.12.5"),
+    .settings(Seq(crossScalaVersions := Seq("2.11.12", "2.12.6"),
       scalaVersion := crossScalaVersions.value.last)
     )
     .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies)
@@ -48,23 +50,24 @@ lazy val benchmarkModule = {
 
   val mainDeps = Seq(scalaJava8Compat, gatling % "it", gatlinHighcharts % "it")
 
-  import io.gatling.sbt.GatlingPlugin
+  import _root_.io.gatling.sbt.GatlingPlugin
 
   Project(
     id = "benchmark",
-    base = file("modules/benchmark"),
-    settings = Defaults.coreDefaultSettings ++ commonSettings ++ Seq(publishLocal := {}, publish := {}, packagedArtifacts := Map.empty)
+    base = file("modules/benchmark")
   )
     .dependsOn(akkaPersistencePgModule % "it->test;test->test;compile->compile")
     .enablePlugins(GatlingPlugin)
-    .settings(Seq(scalaVersion := "2.12.5"))
+    .settings(Defaults.coreDefaultSettings ++ commonSettings ++ Seq(publishLocal := {}, publish := {}, packagedArtifacts := Map.empty))
+    .settings(Seq(scalaVersion := "2.12.6"))
 
 
 }
 
 val main = Project(
   id = "akka-persistence-postgresql",
-  base = file("."),
-  settings = Defaults.coreDefaultSettings ++ commonSettings ++
-    Seq(publishLocal := {}, publish := {}, packagedArtifacts := Map.empty, crossScalaVersions := Seq("2.11.11", "2.12.5"))
-).aggregate(akkaPersistencePgModule, benchmarkModule)
+  base = file(".")
+)
+  .settings(Defaults.coreDefaultSettings ++ commonSettings ++
+  Seq(publishLocal := {}, publish := {}, packagedArtifacts := Map.empty, crossScalaVersions := Seq("2.11.12", "2.12.6")))
+    .aggregate(akkaPersistencePgModule, benchmarkModule)
