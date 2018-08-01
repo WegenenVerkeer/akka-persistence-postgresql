@@ -39,9 +39,7 @@ lazy val akkaPersistencePgModule = {
     .configs(It)
     .settings(Defaults.coreDefaultSettings ++ commonSettings ++ publishSettings)
     .settings(Defaults.itSettings: _*)
-    .settings(Seq(crossScalaVersions := Seq("2.11.12", "2.12.6"),
-      scalaVersion := crossScalaVersions.value.last)
-    )
+    .settings(crossScalaVersions := (crossScalaVersions in ThisBuild).value)
     .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies)
 
 }
@@ -59,7 +57,8 @@ lazy val benchmarkModule = {
     .dependsOn(akkaPersistencePgModule % "it->test;test->test;compile->compile")
     .enablePlugins(GatlingPlugin)
     .settings(Defaults.coreDefaultSettings ++ commonSettings ++ Seq(publishLocal := {}, publish := {}, packagedArtifacts := Map.empty))
-    .settings(Seq(scalaVersion := "2.12.6"))
+    .settings(scalaVersion := (crossScalaVersions in ThisBuild).value.find(_ startsWith "2.12").get)
+    .settings(scalaVersion := crossScalaVersions.value.last)
 
 
 }
