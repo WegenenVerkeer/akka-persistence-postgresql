@@ -2,7 +2,7 @@ import sbt._
 
 object Dependencies {
 
-  val akkaVersion    = "2.5.14"
+  val akkaVersion    = "2.5.17"
   val slickVersion   = "3.2.3"
   val gatlinVersion  = "2.2.4"
 
@@ -30,7 +30,7 @@ object Dependencies {
 
   // TODO upgrade to 3.x once slick supports it: https://github.com/slick/slick/pull/1932
   val hikariCp                = "com.zaxxer"              %   "HikariCP"                   % "2.7.9"
-  val postgres                = "org.postgresql"          %   "postgresql"                 % "42.2.4"
+  val postgres                = "org.postgresql"          %   "postgresql"                 % "42.2.5"
 
   val mainTestDependencies = Seq (
     scalaTest, akkaSlf4j, tyrex
