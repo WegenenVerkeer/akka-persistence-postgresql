@@ -2,11 +2,11 @@ import sbt._
 
 object Dependencies {
 
-  val akkaVersion    = "2.5.13"
-  val slickVersion   = "3.2.2"
+  val akkaVersion    = "2.5.17"
+  val slickVersion   = "3.2.3"
   val gatlinVersion  = "2.2.4"
 
-  val scalaJava8Compat      = "org.scala-lang.modules"     %%    "scala-java8-compat"             % "0.8.0"
+  val scalaJava8Compat      = "org.scala-lang.modules"     %%    "scala-java8-compat"             % "0.9.0"
 
   val akkaPersistence         = "com.typesafe.akka"       %%  "akka-persistence"                    % akkaVersion
   val akkaSlf4j               = "com.typesafe.akka"       %%  "akka-slf4j"                          % akkaVersion
@@ -28,8 +28,9 @@ object Dependencies {
   val gatlinHighcharts        = "io.gatling.highcharts"   %   "gatling-charts-highcharts"  % "2.2.4"
   val gatling                 = "io.gatling"              %   "gatling-test-framework"     % "2.2.4"
 
-  val hikariCp                = "com.zaxxer"              %   "HikariCP"                   % "2.7.8"
-  val postgres                = "org.postgresql"          %   "postgresql"                 % "42.2.2"
+  // TODO upgrade to 3.x once slick supports it: https://github.com/slick/slick/pull/1932
+  val hikariCp                = "com.zaxxer"              %   "HikariCP"                   % "2.7.9"
+  val postgres                = "org.postgresql"          %   "postgresql"                 % "42.2.5"
 
   val mainTestDependencies = Seq (
     scalaTest, akkaSlf4j, tyrex

@@ -36,6 +36,8 @@ class PgAsyncJournalSpec extends JournalSpec(ConfigFactory.load("pg-application.
   }
 
   override protected def supportsRejectingNonSerializableObjects: CapabilityFlag = false
+
+  protected override def supportsSerialization: CapabilityFlag = false
 }
 
 

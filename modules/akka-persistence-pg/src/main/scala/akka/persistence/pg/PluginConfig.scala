@@ -54,17 +54,18 @@ class PluginConfig(systemConfig: Config) {
 
   lazy val dbConfig: Config = config.getConfig("db")
 
+  lazy val numThreads: Int = dbConfig.getInt("numThreads")
+  lazy val maxConnections: Int = if (dbConfig.hasPath("maxConnections")) dbConfig.getInt("maxConnections") else numThreads
+
+
   def createDatabase: JdbcBackend.DatabaseDef = {
     def asyncExecutor(name: String): AsyncExecutor = {
-      AsyncExecutor(s"$name", dbConfig.getInt("numThreads"), dbConfig.getInt("queueSize"))
+      AsyncExecutor(s"$name", numThreads, numThreads, dbConfig.getInt("queueSize"), maxConnections)
     }
 
     val db = PluginConfig.asOption(dbConfig.getString("jndiName")) match {
       case Some(jndiName) =>
-        JdbcBackend.Database.forName(jndiName,
-          Some(if (dbConfig.hasPath("maxConnections")) dbConfig.getInt("maxConnections") else dbConfig.getInt("numThreads")),
-          asyncExecutor(jndiName)
-        )
+        JdbcBackend.Database.forName(jndiName, Some(maxConnections), asyncExecutor(jndiName))
 
       case None           =>
         dbConfig.getString("connectionPool") match {
