@@ -37,7 +37,7 @@ abstract class AbstractEventStoreTest
 
   val testProbe = TestProbe()
 
-  override implicit val patienceConfig = PatienceConfig(timeout = Span(5, Seconds), interval = Span(100, Milliseconds))
+  override implicit val patienceConfig = PatienceConfig(timeout = Span(10, Seconds), interval = Span(100, Milliseconds))
 
   import driver.api._
 
