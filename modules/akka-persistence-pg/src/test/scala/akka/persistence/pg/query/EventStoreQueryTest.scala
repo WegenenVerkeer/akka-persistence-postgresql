@@ -128,6 +128,8 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
   test("query events by persistenceId") {
 
+    val eventSource = startSource[TestActor.Event]("TestActor", 0)
+
     val test = system.actorOf(Props(new TestActor(testProbe.ref, Some("TestActor"))))
     testProbe.send(test, Alter("foo"))
     testProbe.expectMsg("j")
@@ -135,8 +137,6 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     testProbe.expectMsg("j")
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")
-
-    val eventSource = startSource[TestActor.Event]("TestActor", 0)
 
     var events = List[TestActor.Event]()
 
@@ -164,6 +164,8 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
   test("query current tagged events (tagged with 'Altered')") {
 
+    val eventSource = startCurrentSource[TestActor.Event](Set(TestTags.alteredTag), 0)
+
     val test = system.actorOf(Props(new TestActor(testProbe.ref)))
     testProbe.send(test, Alter("foo"))
     testProbe.expectMsg("j")
@@ -171,8 +173,6 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     testProbe.expectMsg("j")
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")
-
-    val eventSource = startCurrentSource[TestActor.Event](Set(TestTags.alteredTag), 0)
 
     var events = List[TestActor.Event]()
 
@@ -201,6 +201,8 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
   test("query current tagged events (tagged with 'Altered' or 'Incremented')") {
 
+    val eventSource = startCurrentSource[TestActor.Event](Set(TestTags.alteredTag, TestTags.incrementedTag), 0)
+
     val test = system.actorOf(Props(new TestActor(testProbe.ref)))
     testProbe.send(test, Alter("foo"))
     testProbe.expectMsg("j")
@@ -208,8 +210,6 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     testProbe.expectMsg("j")
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")
-
-    val eventSource = startCurrentSource[TestActor.Event](Set(TestTags.alteredTag, TestTags.incrementedTag), 0)
 
     var events = List[TestActor.Event]()
 
@@ -236,6 +236,8 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
   test("query current all events") {
 
+    val eventSource = startCurrentSource[TestActor.Event](0)
+
     val test = system.actorOf(Props(new TestActor(testProbe.ref)))
     testProbe.send(test, Alter("foo"))
     testProbe.expectMsg("j")
@@ -243,8 +245,6 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     testProbe.expectMsg("j")
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")
-
-    val eventSource = startCurrentSource[TestActor.Event](0)
 
     var events = List[TestActor.Event]()
 
@@ -272,6 +272,8 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
   test("query current events by persistenceId") {
 
+    val eventSource = startCurrentSource[TestActor.Event]("TestActor", 0)
+
     val test = system.actorOf(Props(new TestActor(testProbe.ref, Some("TestActor"))))
     testProbe.send(test, Alter("foo"))
     testProbe.expectMsg("j")
@@ -279,8 +281,6 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     testProbe.expectMsg("j")
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")
-
-    val eventSource = startCurrentSource[TestActor.Event]("TestActor", 0)
 
     var events = List[TestActor.Event]()
 
