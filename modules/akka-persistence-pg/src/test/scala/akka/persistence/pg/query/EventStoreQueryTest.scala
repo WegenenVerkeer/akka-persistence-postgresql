@@ -128,6 +128,8 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
   test("query events by persistenceId") {
 
+    val eventSource = startSource[TestActor.Event]("TestActor", 0)
+
     val test = system.actorOf(Props(new TestActor(testProbe.ref, Some("TestActor"))))
     testProbe.send(test, Alter("foo"))
     testProbe.expectMsg("j")
@@ -135,8 +137,6 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     testProbe.expectMsg("j")
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")
-
-    val eventSource = startSource[TestActor.Event]("TestActor", 0)
 
     var events = List[TestActor.Event]()
 
@@ -159,6 +159,150 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")
     checkSizeReceivedEvents(5)
+
+  }
+
+  test("query current tagged events (tagged with 'Altered')") {
+
+    val eventSource = startCurrentSource[TestActor.Event](Set(TestTags.alteredTag), 0)
+
+    val test = system.actorOf(Props(new TestActor(testProbe.ref)))
+    testProbe.send(test, Alter("foo"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Alter("bar"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Increment(1))
+    testProbe.expectMsg("j")
+
+    var events = List[TestActor.Event]()
+
+    def checkSizeReceivedEvents(size: Int) = {
+      eventually {
+        events should have size size
+      }
+      val onlyAlteredEvents = events.collect { case evt: Altered => evt }
+      onlyAlteredEvents should have size size
+    }
+
+    // a Sink that will append each event to the Events List
+    val sink = Sink.foreach[TestActor.Event] { e =>
+      events = events :+ e
+    }
+
+    eventSource.to(sink).run()
+
+    checkSizeReceivedEvents(2)
+    testProbe.send(test, Alter("bar"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Increment(1))
+    testProbe.expectMsg("j")
+    checkSizeReceivedEvents(2)
+  }
+
+  test("query current tagged events (tagged with 'Altered' or 'Incremented')") {
+
+    val eventSource = startCurrentSource[TestActor.Event](Set(TestTags.alteredTag, TestTags.incrementedTag), 0)
+
+    val test = system.actorOf(Props(new TestActor(testProbe.ref)))
+    testProbe.send(test, Alter("foo"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Alter("bar"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Increment(1))
+    testProbe.expectMsg("j")
+
+    var events = List[TestActor.Event]()
+
+    def checkSizeReceivedEvents(size: Int) = {
+      eventually {
+        events should have size size
+      }
+    }
+
+    // a Sink that will append each event to the Events List
+    val sink = Sink.foreach[TestActor.Event] { e =>
+      events = events :+ e
+    }
+
+    eventSource.to(sink).run()
+
+    checkSizeReceivedEvents(3)
+    testProbe.send(test, Alter("bar"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Increment(1))
+    testProbe.expectMsg("j")
+    checkSizeReceivedEvents(3)
+  }
+
+  test("query current all events") {
+
+    val eventSource = startCurrentSource[TestActor.Event](0)
+
+    val test = system.actorOf(Props(new TestActor(testProbe.ref)))
+    testProbe.send(test, Alter("foo"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Alter("bar"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Increment(1))
+    testProbe.expectMsg("j")
+
+    var events = List[TestActor.Event]()
+
+    def checkSizeReceivedEvents(size: Int) = {
+      eventually {
+        events should have size size
+      }
+    }
+
+    // a Sink that will append each event to the Events List
+    val sink = Sink.foreach[TestActor.Event] { e =>
+      events = events :+ e
+    }
+
+    eventSource.to(sink).run()
+
+    checkSizeReceivedEvents(3)
+    testProbe.send(test, Alter("bar"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Increment(1))
+    testProbe.expectMsg("j")
+    checkSizeReceivedEvents(3)
+
+  }
+
+  test("query current events by persistenceId") {
+
+    val eventSource = startCurrentSource[TestActor.Event]("TestActor", 0)
+
+    val test = system.actorOf(Props(new TestActor(testProbe.ref, Some("TestActor"))))
+    testProbe.send(test, Alter("foo"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Alter("bar"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Increment(1))
+    testProbe.expectMsg("j")
+
+    var events = List[TestActor.Event]()
+
+    def checkSizeReceivedEvents(size: Int) = {
+      eventually {
+        events should have size size
+      }
+    }
+
+    // a Sink that will append each event to the Events List
+    val sink = Sink.foreach[TestActor.Event] { e =>
+      events = events :+ e
+    }
+
+    eventSource.to(sink).run()
+
+    checkSizeReceivedEvents(3)
+    testProbe.send(test, Alter("bar"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Increment(1))
+    testProbe.expectMsg("j")
+    checkSizeReceivedEvents(3)
 
   }
 

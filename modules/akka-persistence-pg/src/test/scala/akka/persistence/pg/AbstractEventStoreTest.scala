@@ -37,7 +37,7 @@ abstract class AbstractEventStoreTest
 
   val testProbe = TestProbe()
 
-  override implicit val patienceConfig = PatienceConfig(timeout = Span(5, Seconds), interval = Span(100, Milliseconds))
+  override implicit val patienceConfig = PatienceConfig(timeout = Span(10, Seconds), interval = Span(100, Milliseconds))
 
   import driver.api._
 
@@ -103,6 +103,40 @@ abstract class AbstractEventStoreTest
             case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")
           }
         }
+  }
+
+  def startCurrentSource[E](tags: Set[EventTag], fromRowId: Long)(implicit tag: ClassTag[E]): Source[E, NotUsed] = {
+    PersistenceQuery(system)
+      .readJournalFor[PostgresReadJournal](PostgresReadJournal.Identifier)
+      .currentEventsByTags(tags, fromRowId, Long.MaxValue).map { env =>
+      // and this will blow up if something different than a DomainEvent comes in!!
+      env.event match {
+        case evt: E => evt
+        case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")
+      }
+    }
+  }
+
+  def startCurrentSource[E](fromRowId: Long)(implicit tag: ClassTag[E]): Source[E, NotUsed] = {
+    PersistenceQuery(system)
+      .readJournalFor[PostgresReadJournal](PostgresReadJournal.Identifier)
+      .currentAllEvents(fromRowId).map { env =>
+      env.event match {
+        case evt: E => evt
+        case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")
+      }
+    }
+  }
+
+  def startCurrentSource[E](persistenceId: String, fromRowId: Long)(implicit tag: ClassTag[E]): Source[E, NotUsed] = {
+    PersistenceQuery(system)
+      .readJournalFor[PostgresReadJournal](PostgresReadJournal.Identifier)
+      .currentEventsByPersistenceId(persistenceId, fromRowId, Long.MaxValue).map { env =>
+      env.event match {
+        case evt: E => evt
+        case unexpected => sys.error(s"Oeps!! That's was totally unexpected $unexpected")
+      }
+    }
   }
 
 }
