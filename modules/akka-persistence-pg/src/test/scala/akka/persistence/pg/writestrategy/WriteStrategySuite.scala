@@ -78,7 +78,7 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
     result
   }
 
-  override implicit val patienceConfig = PatienceConfig(timeout = Span(1, Second), interval = Span(100, Milliseconds))
+  override implicit val patienceConfig = PatienceConfig(timeout = Span(5, Second), interval = Span(100, Milliseconds))
 
   override def beforeAll() {
     database.run(
