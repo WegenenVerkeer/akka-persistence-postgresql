@@ -16,7 +16,7 @@ import akka.util.Timeout
 import com.typesafe.config.Config
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.time.{Milliseconds, Second, Span}
+import org.scalatest.time.{Milliseconds, Seconds, Span}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -78,7 +78,7 @@ abstract class WriteStrategySuite(config: Config) extends FunSuite
     result
   }
 
-  override implicit val patienceConfig = PatienceConfig(timeout = Span(1, Second), interval = Span(100, Milliseconds))
+  override implicit val patienceConfig = PatienceConfig(timeout = Span(5, Seconds), interval = Span(100, Milliseconds))
 
   override def beforeAll() {
     database.run(

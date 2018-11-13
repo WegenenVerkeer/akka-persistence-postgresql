@@ -8,6 +8,8 @@ import akka.stream.scaladsl.Sink
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
 
+import scala.concurrent.Future
+
 /**
   * uses the default RowIdUpdating write strategy and will use the "rowid" column of the journal
   * table for queries
@@ -174,6 +176,9 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")
 
+    // wait until rowids are updated
+    PgExtension(system).whenDone(Future.successful(())).futureValue
+
     var events = List[TestActor.Event]()
 
     def checkSizeReceivedEvents(size: Int) = {
@@ -211,6 +216,9 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")
 
+    // wait until rowids are updated
+    PgExtension(system).whenDone(Future.successful(())).futureValue
+
     var events = List[TestActor.Event]()
 
     def checkSizeReceivedEvents(size: Int) = {
@@ -245,6 +253,9 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     testProbe.expectMsg("j")
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")
+
+    // wait until rowids are updated
+    PgExtension(system).whenDone(Future.successful(())).futureValue
 
     var events = List[TestActor.Event]()
 
@@ -281,6 +292,9 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     testProbe.expectMsg("j")
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")
+
+    // wait until rowids are updated
+    PgExtension(system).whenDone(Future.successful(())).futureValue
 
     var events = List[TestActor.Event]()
 

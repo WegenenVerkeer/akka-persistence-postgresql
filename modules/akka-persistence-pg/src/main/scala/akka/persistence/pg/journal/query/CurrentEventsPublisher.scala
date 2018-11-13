@@ -25,10 +25,13 @@ class CurrentEventsPublisher(fromOffset: Long,
 
   extends LiveEventsPublisher(fromOffset, toOffset, refreshInterval, maxBufSize, writeJournalPluginId) {
 
+
+  override def subscribe(): Unit = ()
+
   override def replaying: Receive = {
     val receive: Receive = {
       case RecoverySuccess(_) =>
-        deliverBuf()
+        deliverBuf(Long.MaxValue)
         onCompleteThenStop()
     }
 

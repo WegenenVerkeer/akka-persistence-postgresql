@@ -27,10 +27,12 @@ class CurrentEventsByTagsPublisher(tags: Set[EventTag],
                                    writeJournalPluginId: String)
   extends LiveEventsByTagsPublisher(tags, fromOffset, toOffset, refreshInterval, maxBufSize, writeJournalPluginId) {
 
+  override def subscribe(): Unit = ()
+
   override def replaying: Receive = {
     val receive: Receive = {
       case RecoverySuccess(_) =>
-        deliverBuf()
+        deliverBuf(Long.MaxValue)
         onCompleteThenStop()
     }
 
