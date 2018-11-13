@@ -1,7 +1,6 @@
 package akka.persistence.pg.journal.query
 
 import akka.actor.Props
-import akka.persistence.JournalProtocol.RecoverySuccess
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -24,19 +23,12 @@ class CurrentEventsByPersistenceIdPublisher(persistenceId: String,
                                             refreshInterval: FiniteDuration,
                                             maxBufSize: Int,
                                             writeJournalPluginId: String)
-  extends LiveEventsByPersistenceIdPublisher(persistenceId, fromOffset, toOffset, refreshInterval, maxBufSize, writeJournalPluginId) {
+  extends LiveEventsByPersistenceIdPublisher(persistenceId, fromOffset, toOffset, refreshInterval, maxBufSize, writeJournalPluginId)
+    with CurrentEventsQueries {
 
   override def subscribe(): Unit = ()
 
-  override def replaying: Receive = {
-    val receive: Receive = {
-      case RecoverySuccess(_) =>
-        deliverBuf(Long.MaxValue)
-        onCompleteThenStop()
-    }
-
-    receive orElse super.replaying
-  }
+  override def replaying: Receive = currentEventsBehavior orElse super.replaying
 
 }
 
