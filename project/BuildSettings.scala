@@ -44,10 +44,6 @@ object BuildSettings {
           <distribution>repo</distribution>
         </license>
       </licenses>
-      <scm>
-        <url>git@github.com:WegenenVerkeer/akka-persistence-postgresql.git</url>
-        <connection>scm:git:git@github.com:WegenenVerkeer/akka-persistence-postgresql.git</connection>
-      </scm>
       <developers>
         <developer>
           <id>AWV</id>
