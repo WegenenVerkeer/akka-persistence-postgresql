@@ -33,7 +33,6 @@ class LiveEventsByTagsPublisher(tags: Set[EventTag],
         event = persistentRepr.payload
       )
       currOffset = offset + 1
-      println("delivering buffer "+buf)
       deliverBuf()
 
   }

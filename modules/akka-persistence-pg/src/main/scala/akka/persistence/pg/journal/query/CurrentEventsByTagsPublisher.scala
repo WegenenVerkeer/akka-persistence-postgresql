@@ -32,7 +32,6 @@ class CurrentEventsByTagsPublisher(tags: Set[EventTag],
   override def replaying: Receive = {
     val receive: Receive = {
       case RecoverySuccess(_) =>
-        println("RecoverySucces "+buf)
         deliverBuf(Long.MaxValue)
         onCompleteThenStop()
     }
