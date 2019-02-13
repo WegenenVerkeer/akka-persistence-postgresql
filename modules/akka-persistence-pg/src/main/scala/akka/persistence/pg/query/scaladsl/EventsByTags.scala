@@ -1,10 +1,10 @@
-package akka.persistence.pg.journal.query
+package akka.persistence.pg.query.scaladsl
 
 import akka.NotUsed
+import akka.persistence.pg.EventTag
 import akka.persistence.query.EventEnvelope
 import akka.persistence.query.scaladsl.ReadJournal
 import akka.stream.scaladsl.Source
-import akka.persistence.pg.EventTag
 
 trait EventsByTags extends ReadJournal {
 
