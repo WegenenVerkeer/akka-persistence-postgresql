@@ -5,7 +5,7 @@ import java.util.UUID
 
 import akka.persistence.PersistentRepr
 import akka.persistence.pg.event._
-import akka.persistence.pg.{JsonString, PgConfig, PgExtension}
+import akka.persistence.pg.{EventTag, JsonString, PgConfig, PgExtension}
 import akka.serialization.Serialization
 
 import scala.util.Try
@@ -109,6 +109,19 @@ trait JournalStore extends JournalTable {
       case (None, None) => sys.error( s"""both payload and event are null for journal table entry
             with id=${entry.id}, (persistenceid='${entry.persistenceId}' and sequencenr='${entry.sequenceNr}')
             This should NEVER happen!""")
+    }
+  }
+
+  /**
+    * build a 'or' filter for tags
+    * will select Events containing at least one of the EventTags
+    */
+  protected def tagsFilter(tags: Set[EventTag]): JournalTable => Rep[Boolean] = {
+    table: JournalTable => {
+      tags
+        .map { case (tagKey, tagValue) => table.tags @> Map(tagKey -> tagValue.value).bind }
+        .reduceLeftOption(_ || _)
+        .getOrElse(false: Rep[Boolean])
     }
   }
 

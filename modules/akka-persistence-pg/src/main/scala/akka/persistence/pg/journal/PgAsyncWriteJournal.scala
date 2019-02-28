@@ -213,19 +213,6 @@ class PgAsyncWriteJournal
     ()
   }
 
-  /**
-   * build a 'or' filter for tags
-   * will select Events containing at least one of the EventTags
-   */
-  private def tagsFilter(tags: Set[EventTag]) = {
-    (table: JournalTable) => {
-      tags
-        .map { case (tagKey, tagValue) => table.tags @> Map(tagKey -> tagValue.value).bind }
-        .reduceLeftOption(_ || _)
-        .getOrElse(false: Rep[Boolean])
-    }
-  }
-
   def asyncReadHighestRowIdWithTags(tags: Set[EventTag], fromRowId: Long): Future[Long] = {
     val query =
       journals
