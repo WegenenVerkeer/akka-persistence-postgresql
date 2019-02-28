@@ -1,9 +1,9 @@
-package akka.persistence.pg.journal.query
+package akka.persistence.pg.query.javadsl
 
 import akka.NotUsed
 import akka.persistence.query.EventEnvelope
-import akka.persistence.query.scaladsl.ReadJournal
-import akka.stream.scaladsl.Source
+import akka.persistence.query.javadsl.ReadJournal
+import akka.stream.javadsl.Source
 
 trait AllEvents extends ReadJournal {
 

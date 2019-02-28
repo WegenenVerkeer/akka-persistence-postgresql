@@ -4,7 +4,7 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.persistence.pg.event._
 import akka.persistence.pg.journal.JournalTable
-import akka.persistence.pg.journal.query.PostgresReadJournal
+import akka.persistence.pg.query.scaladsl.PostgresReadJournal
 import akka.persistence.pg.snapshot.SnapshotTable
 import akka.persistence.pg.util.{CreateTables, RecreateSchema}
 import akka.persistence.query.PersistenceQuery

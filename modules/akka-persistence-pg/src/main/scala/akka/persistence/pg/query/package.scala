@@ -1,7 +1,7 @@
-package akka.persistence.pg.journal
+package akka.persistence.pg
 
 import akka.actor.Props
-import akka.persistence.pg._
+import akka.persistence.pg.query.scaladsl.{LiveEventsByPersistenceIdPublisher, LiveEventsByTagsPublisher, LiveEventsPublisher}
 
 import scala.concurrent.duration.FiniteDuration
 

@@ -1,4 +1,4 @@
-package akka.persistence.pg.journal.query
+package akka.persistence.pg.query.scaladsl
 
 import akka.persistence.JournalProtocol.{ReplayMessages, ReplayedMessage}
 import akka.persistence.pg.journal.PgAsyncWriteJournal._

@@ -1,22 +1,23 @@
-package akka.persistence.pg.journal.query
+package akka.persistence.pg.query.scaladsl
 
 import java.net.URLEncoder
 
 import akka.NotUsed
 import akka.actor.ExtendedActorSystem
 import akka.persistence.Persistence
+import akka.persistence.pg.EventTag
+import akka.persistence.pg.query._
 import akka.persistence.query.EventEnvelope
 import akka.persistence.query.scaladsl._
+import akka.stream.actor.ActorPublisherMessage.Cancel
+import akka.stream.impl.ActorPublisherSource
+import akka.stream.impl.Stages.DefaultAttributes
 import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.Source.shape
 import akka.util.ByteString
 import com.typesafe.config.Config
 
 import scala.concurrent.duration._
-import akka.persistence.pg.EventTag
-import akka.stream.actor.ActorPublisherMessage.Cancel
-import akka.stream.impl.ActorPublisherSource
-import akka.stream.impl.Stages.DefaultAttributes
-import akka.stream.scaladsl.Source.shape
 
 class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
   extends ReadJournal

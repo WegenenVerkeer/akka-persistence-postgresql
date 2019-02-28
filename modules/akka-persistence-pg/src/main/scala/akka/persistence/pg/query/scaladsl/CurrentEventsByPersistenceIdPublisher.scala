@@ -1,4 +1,4 @@
-package akka.persistence.pg.journal.query
+package akka.persistence.pg.query.scaladsl
 
 import akka.actor.Props
 import akka.persistence.JournalProtocol.RecoverySuccess

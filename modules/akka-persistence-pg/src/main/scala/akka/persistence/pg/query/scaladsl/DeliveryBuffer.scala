@@ -1,8 +1,7 @@
-package akka.persistence.pg.journal.query
+package akka.persistence.pg.query.scaladsl
 
 import akka.actor.ActorLogging
 import akka.stream.actor.ActorPublisher
-
 
 /**
  * INTERNAL API
