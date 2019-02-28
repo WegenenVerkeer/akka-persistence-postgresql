@@ -18,10 +18,10 @@ object Dependencies {
   val slickHikariCp           = "com.typesafe.slick"      %%  "slick-hikaricp"             % slickVersion
 
   // Test dependencies
-  val scalaTest               = "org.scalatest"           %%  "scalatest"                  % "3.0.5"        % "test,it"
+  val scalaTest               = "org.scalatest"           %%  "scalatest"                  % "3.0.6"        % "test,it"
   val akkaTest                = "com.typesafe.akka"       %%  "akka-testkit"               % akkaVersion    % "test,it"
   val akkaPersistenceTestkit  = "com.typesafe.akka"       %%  "akka-persistence-tck"       % akkaVersion    % "test,it"
-  val slf4jSimple             = "org.slf4j"               %   "slf4j-simple"               % "1.7.25"       % "test,it"
+  val slf4jSimple             = "org.slf4j"               %   "slf4j-simple"               % "1.7.26"       % "test,it"
   val tyrex                   = "tyrex"                   %   "tyrex"                      % "1.0.1"        % "test,it"
 
   // gatling benchmark module
