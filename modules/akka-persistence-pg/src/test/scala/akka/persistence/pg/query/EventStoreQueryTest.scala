@@ -13,7 +13,7 @@ import scala.concurrent.Future
 /**
   * uses the default RowIdUpdating write strategy and will use the "rowid" column of the journal
   * table for queries
- */
+  */
 class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
   override lazy val config = ConfigFactory.load("pg-eventstore-rowid.conf")
@@ -169,12 +169,12 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     val eventSource = startCurrentSource[TestActor.Event](Set(TestTags.alteredTag), 0)
 
     val test = system.actorOf(Props(new TestActor(testProbe.ref)))
-    testProbe.send(test, Alter("foo"))
-    testProbe.expectMsg("j")
-    testProbe.send(test, Alter("bar"))
-    testProbe.expectMsg("j")
-    testProbe.send(test, Increment(1))
-    testProbe.expectMsg("j")
+
+    1 to 500 foreach {index =>
+      if(index % 50 == 0) testProbe.send(test, Increment(1))
+      else testProbe.send(test, Alter("foo-" + index))
+      testProbe.expectMsg("j")
+    }
 
     // wait until rowids are updated
     PgExtension(system).whenDone(Future.successful(())).futureValue
@@ -196,12 +196,12 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
     eventSource.to(sink).run()
 
-    checkSizeReceivedEvents(2)
+    checkSizeReceivedEvents(490)
     testProbe.send(test, Alter("bar"))
     testProbe.expectMsg("j")
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")
-    checkSizeReceivedEvents(2)
+    checkSizeReceivedEvents(490)
   }
 
   test("query current tagged events (tagged with 'Altered' or 'Incremented')") {
@@ -209,12 +209,12 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     val eventSource = startCurrentSource[TestActor.Event](Set(TestTags.alteredTag, TestTags.incrementedTag), 0)
 
     val test = system.actorOf(Props(new TestActor(testProbe.ref)))
-    testProbe.send(test, Alter("foo"))
-    testProbe.expectMsg("j")
-    testProbe.send(test, Alter("bar"))
-    testProbe.expectMsg("j")
-    testProbe.send(test, Increment(1))
-    testProbe.expectMsg("j")
+
+    1 to 500 foreach { index =>
+      if(index % 2 == 0) testProbe.send(test, Increment(1))
+      else testProbe.send(test, Alter("foo-" + index))
+      testProbe.expectMsg("j")
+    }
 
     // wait until rowids are updated
     PgExtension(system).whenDone(Future.successful(())).futureValue
@@ -234,12 +234,12 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
     eventSource.to(sink).run()
 
-    checkSizeReceivedEvents(3)
+    checkSizeReceivedEvents(500)
     testProbe.send(test, Alter("bar"))
     testProbe.expectMsg("j")
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")
-    checkSizeReceivedEvents(3)
+    checkSizeReceivedEvents(500)
   }
 
   test("query current all events") {
@@ -247,12 +247,11 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     val eventSource = startCurrentSource[TestActor.Event](0)
 
     val test = system.actorOf(Props(new TestActor(testProbe.ref)))
-    testProbe.send(test, Alter("foo"))
-    testProbe.expectMsg("j")
-    testProbe.send(test, Alter("bar"))
-    testProbe.expectMsg("j")
-    testProbe.send(test, Increment(1))
-    testProbe.expectMsg("j")
+
+    1 to 500 foreach { index =>
+      testProbe.send(test, Alter(s"foo-$index"))
+      testProbe.expectMsg("j")
+    }
 
     // wait until rowids are updated
     PgExtension(system).whenDone(Future.successful(())).futureValue
@@ -272,12 +271,12 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
     eventSource.to(sink).run()
 
-    checkSizeReceivedEvents(3)
+    checkSizeReceivedEvents(500)
     testProbe.send(test, Alter("bar"))
     testProbe.expectMsg("j")
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")
-    checkSizeReceivedEvents(3)
+    checkSizeReceivedEvents(500)
 
   }
 
@@ -286,12 +285,11 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     val eventSource = startCurrentSource[TestActor.Event]("TestActor", 0)
 
     val test = system.actorOf(Props(new TestActor(testProbe.ref, Some("TestActor"))))
-    testProbe.send(test, Alter("foo"))
-    testProbe.expectMsg("j")
-    testProbe.send(test, Alter("bar"))
-    testProbe.expectMsg("j")
-    testProbe.send(test, Increment(1))
-    testProbe.expectMsg("j")
+
+    1 to 500 foreach {index =>
+      testProbe.send(test, Alter("foo-" + index))
+      testProbe.expectMsg("j")
+    }
 
     // wait until rowids are updated
     PgExtension(system).whenDone(Future.successful(())).futureValue
@@ -311,12 +309,12 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
     eventSource.to(sink).run()
 
-    checkSizeReceivedEvents(3)
+    checkSizeReceivedEvents(500)
     testProbe.send(test, Alter("bar"))
     testProbe.expectMsg("j")
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")
-    checkSizeReceivedEvents(3)
+    checkSizeReceivedEvents(500)
 
   }
 
