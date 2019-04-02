@@ -27,7 +27,7 @@ scalacOptions in ThisBuild := {
 
 lazy val akkaPersistencePgModule = {
 
-  val mainDeps = Seq(scalaJava8Compat, slick, slickHikariCp, hikariCp, postgres,
+  val mainDeps = Seq(scalaJava8Compat, slick, slickHikariCp, postgres,
     akkaPersistence, akkaPersistenceQuery, akkaActor, akkaStreams, akkaTest, akkaPersistenceTestkit, slf4jSimple)
 
   val It = config("it") extend Test

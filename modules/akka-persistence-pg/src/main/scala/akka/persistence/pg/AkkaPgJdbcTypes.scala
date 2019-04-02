@@ -11,9 +11,9 @@ import slick.ast.{FieldSymbol, TypedType}
 import slick.jdbc.{JdbcType, JdbcTypesComponent, PostgresProfile}
 import slick.lifted.ExtensionMethods
 
-import scala.collection.convert.{WrapAsJava, WrapAsScala}
-import scala.reflect.ClassTag
+import scala.collection.JavaConverters._
 import scala.language.implicitConversions
+import scala.reflect.ClassTag
 
 trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresProfile =>
 
@@ -22,11 +22,11 @@ trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresProfile =>
   import driver.api._
 
   private[this] class GenericJdbcType[T](val sqlTypeName: String,
-                           fnFromString: (String => T),
-                           fnToString: (T => String) = (r: T) => r.toString,
-                           val sqlType: Int = java.sql.Types.OTHER,
-                           zero: T = null.asInstanceOf[T],
-                           override val hasLiteralForm: Boolean = false)(
+                                         fnFromString: String => T,
+                                         fnToString: T => String = (r: T) => r.toString,
+                                         val sqlType: Int = java.sql.Types.OTHER,
+                                         zero: T = null.asInstanceOf[T],
+                                         override val hasLiteralForm: Boolean = false)(
                             implicit override val classTag: ClassTag[T]) extends DriverJdbcType[T] {
 
     override def sqlTypeName(sym: Option[FieldSymbol]): String = sqlTypeName
@@ -40,7 +40,7 @@ trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresProfile =>
 
     override def updateValue(v: T, r: ResultSet, idx: Int): Unit = r.updateObject(idx, toStr(v), java.sql.Types.OTHER)
 
-    override def valueToSQLLiteral(v: T) = if(v == null) "NULL" else s"'${fnToString(v)}'"
+    override def valueToSQLLiteral(v: T): String = if(v == null) "NULL" else s"'${fnToString(v)}'"
 
     private def toStr(v: T) = if(v == null) null else fnToString(v)
   }
@@ -79,8 +79,8 @@ trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresProfile =>
     implicit val simpleHStoreTypeMapper: JdbcType[Map[String, String]] =
       new GenericJdbcType[Map[String, String]](
         "hstore",
-        (v) => WrapAsScala.mapAsScalaMap(HStoreConverter.fromString(v)).toMap,
-        (v) => HStoreConverter.toString(WrapAsJava.mapAsJavaMap(v)),
+        v => HStoreConverter.fromString(v).asScala.toMap,
+        v => HStoreConverter.toString(v.asJava),
         hasLiteralForm = false
       )
 
@@ -91,8 +91,8 @@ trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresProfile =>
     implicit val jsonStringTypeMapper: JdbcType[JsonString] =
       new GenericJdbcType[JsonString](
         pgjson,
-        (v) => JsonString(v),
-        (v) => v.value,
+        v => JsonString(v),
+        v => v.value,
         hasLiteralForm = false
       )
 
@@ -107,7 +107,7 @@ trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresProfile =>
 
     protected implicit def b1Type: TypedType[Map[String, String]] = implicitly[TypedType[Map[String, String]]]
 
-    def @>[P2, R](c2: Rep[P2])(implicit om: o#arg[Map[String, String], P2]#to[Boolean, R]) = {
+    def @>[P2, R](c2: Rep[P2])(implicit om: o#arg[Map[String, String], P2]#to[Boolean, R]): Rep[R] = {
       om.column(Contains, n, c2.toNode)
     }
   }
