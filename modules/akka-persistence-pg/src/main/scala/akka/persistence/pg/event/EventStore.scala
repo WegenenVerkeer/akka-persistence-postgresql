@@ -32,10 +32,10 @@ trait EventStore {
     def persistenceId       = column[String]("persistenceid")
     def sequenceNr          = column[Long]("sequencenr")
     def uuid                = column[String]("uuid")
-    def created             = column[OffsetDateTime]("created")
-    def tags                = column[Map[String, String]]("tags")
+    def created      = column[OffsetDateTime]("created")(date2TzTimestampTypeMapper) // use explicit type because slick 3.3.x introduced its own which would use varchar for the db column
+    def tags       = column[Map[String, String]]("tags")
     def className           = column[String]("manifest")
-    def event               = column[JsonString]("event")
+    def event            = column[JsonString]("event")
 
     def * = (id, persistenceId, sequenceNr, uuid, created, tags, className, event) <> (Event.tupled, Event.unapply)
 
