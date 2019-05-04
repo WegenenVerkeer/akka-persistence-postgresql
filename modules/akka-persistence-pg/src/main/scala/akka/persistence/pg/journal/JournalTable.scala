@@ -43,7 +43,7 @@ trait JournalTable {
     def manifest            = column[String]("manifest")
     def uuid                = column[String]("uuid")
     def writerUuid          = column[String]("writeruuid")
-    def created             = column[OffsetDateTime]("created", O.Default(OffsetDateTime.now()))
+    def created             = column[OffsetDateTime]("created", O.Default(OffsetDateTime.now()))(date2TzTimestampTypeMapper)
     def tags                = column[Map[String, String]]("tags", O.Default(Map.empty))
     def event               = column[Option[JsonString]]("event")
 
