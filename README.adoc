@@ -274,4 +274,25 @@ but since it changes the transaction boundary, it is not always the best recomme
 This is the naive strategy and it suffers from the missing event syndrome.
 It should only be used in benchmarks to compare other strategies against.
 
-== Transactional event sourcing
+== Running the tests
+
+Start a Postgresql docker container on port `5432` using:
+
+....
+cd ./docker
+docker-compose up
+....
+
+Now you run the tests from the command line:
+
+....
+sbt "project akka-persistence-pg" test
+....
+
+or from a sbt session:
+
+....
+project akka-persistence-pg
+test
+....
+
