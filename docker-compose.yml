@@ -1,5 +1,0 @@
-db:
-  build: docker/app-postgres
-  hostname: db
-  ports:
-   - "5432:5432"
