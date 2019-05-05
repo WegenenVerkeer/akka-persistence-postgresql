@@ -3,17 +3,13 @@ package akka.persistence.pg
 import java.util.UUID
 
 import akka.actor.Props
+import akka.persistence.pg.ExamplePersistentActorTest.{Command, ExamplePA, GetMessage, TakeSnapshot}
 import akka.persistence.pg.util.{CreateTables, PersistentActorTest, RecreateSchema}
 import akka.persistence.{PersistentActor, SnapshotOffer}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.{BeforeAndAfterAll, Matchers}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.{Seconds, Span}
-
-case class Command(message: String)
-case class Event(message: String)
-case object GetMessage
-case object TakeSnapshot
 
 class ExamplePersistentActorTest extends PersistentActorTest
     with ScalaFutures
@@ -24,8 +20,8 @@ class ExamplePersistentActorTest extends PersistentActorTest
     with CreateTables
     with PgConfig {
 
-  override val config: Config = ConfigFactory.load("example-actor-test.conf")
-  override val pluginConfig = PluginConfig(config)
+  override def config: Config = ConfigFactory.load("example-actor-test.conf")
+  override def pluginConfig = PluginConfig(config)
 
   override implicit val patienceConfig = PatienceConfig(timeout = scaled(Span(2, Seconds)))
 
@@ -119,7 +115,16 @@ class ExamplePersistentActorTest extends PersistentActorTest
     testProbe.expectMsg[String]("foo")
   }
 
-  private class ExamplePA(override val persistenceId: String) extends PersistentActor {
+}
+
+object ExamplePersistentActorTest {
+
+  case class Command(message: String)
+  case class Event(message: String)
+  case object GetMessage
+  case object TakeSnapshot
+
+  class ExamplePA(override val persistenceId: String) extends PersistentActor {
 
     var currentMessage: Option[String] = None
 
@@ -140,3 +145,4 @@ class ExamplePersistentActorTest extends PersistentActorTest
   }
 
 }
+

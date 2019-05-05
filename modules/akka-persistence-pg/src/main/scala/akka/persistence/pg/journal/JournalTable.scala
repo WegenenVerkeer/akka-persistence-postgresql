@@ -4,18 +4,25 @@ import java.time.OffsetDateTime
 
 import akka.persistence.pg.{JsonString, PgConfig}
 
+import scala.util.Try
+
 case class JournalEntry(id: Option[Long],
                         rowid: Option[Long],
                         persistenceId: String,
                         sequenceNr: Long,
                         deleted: Boolean,
                         payload: Option[Array[Byte]],
-                        manifest: String,
+                        serializerId_manifest: String,
                         uuid: String,
                         writerUuid: String,
                         created: OffsetDateTime,
                         tags: Map[String, String],
-                        json: Option[JsonString])
+                        json: Option[JsonString]) {
+
+  lazy val serializerId: Option[Int] = Try(serializerId_manifest.substring(0, serializerId_manifest.indexOf(':')).toInt).toOption
+  lazy val manifest = serializerId_manifest.substring(serializerId_manifest.indexOf(':')+1)
+
+}
 
 
 
