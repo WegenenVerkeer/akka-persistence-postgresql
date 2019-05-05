@@ -6,7 +6,7 @@ import java.util.UUID
 import akka.persistence.PersistentRepr
 import akka.persistence.pg.event._
 import akka.persistence.pg.{EventTag, JsonString, PgConfig, PgExtension}
-import akka.serialization.Serialization
+import akka.serialization.{Serialization, Serializers}
 
 import scala.util.Try
 
@@ -79,7 +79,16 @@ trait JournalStore extends JournalTable {
           message.sequenceNr,
           deleted = false,
           payloadAsBytes,
-          event.getClass.getName,
+          if (payloadAsJson.nonEmpty) {
+            event.getClass.getName
+          } else {
+            event match {
+              case ref: AnyRef =>
+                val s = serialization.findSerializerFor(ref)
+                s"${s.identifier}:${Serializers.manifestFor(s, ref)}"
+              case _ => event.getClass.getName
+            }
+          },
           getUuid(event),
           message.writerUuid,
           getCreated(event),
@@ -95,17 +104,18 @@ trait JournalStore extends JournalTable {
         payload = a,
         sequenceNr = entry.sequenceNr,
         persistenceId = entry.persistenceId,
-        manifest = "",
+        manifest = entry.manifest,
         deleted = entry.deleted,
         sender = null, //sender ActorRef
         writerUuid = entry.writerUuid
       )
 
-    val clazz = pgExtension.getClassFor[Any](entry.manifest)
-
     (entry.payload, entry.json) match {
-      case (Some(payload), _) => toRepr(serialization.deserialize(payload, clazz).get)
-      case (_, Some(event)) => toRepr(eventEncoder.fromJson((event, clazz)))
+      case (Some(payload), _) => toRepr(entry.serializerId match {
+        case None => serialization.deserialize(payload, pgExtension.getClassFor[AnyRef](entry.manifest)).get
+        case Some(id) => serialization.deserialize(payload, id, entry.manifest).get
+      })
+      case (_, Some(event)) => toRepr(eventEncoder.fromJson((event, pgExtension.getClassFor[Any](entry.manifest))))
       case (None, None) => sys.error( s"""both payload and event are null for journal table entry
             with id=${entry.id}, (persistenceid='${entry.persistenceId}' and sequencenr='${entry.sequenceNr}')
             This should NEVER happen!""")
