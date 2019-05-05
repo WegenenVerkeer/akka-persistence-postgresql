@@ -1,7 +1,7 @@
 # Release Procedure
 
-Artefacts are published to [Sonatype OSS](https://oss.sonatype.org/), which 
-sync's with Maven Central repositories.
+Artefacts are published to [Sonatype OSS](https://oss.sonatype.org/), 
+which sync's with Maven Central repositories.
 
 The following procedure is executed manually:
 
