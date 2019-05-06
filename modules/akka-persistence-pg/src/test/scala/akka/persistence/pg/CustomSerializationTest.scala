@@ -26,7 +26,7 @@ class CustomSerializationTest extends PersistentActorTest
     override def config: Config = ConfigFactory.load("example-actor-serialization-test.conf")
     override def pluginConfig = PluginConfig(config)
 
-    override implicit val patienceConfig = PatienceConfig(timeout = scaled(Span(20, Seconds)))
+    override implicit val patienceConfig = PatienceConfig(timeout = scaled(Span(2, Seconds)))
 
     import driver.api._
 

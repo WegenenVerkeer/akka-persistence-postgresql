@@ -25,8 +25,8 @@ notifications:
     recipients:
     - peter.mortier@gmail.com
     - karel@geovise.com
-after_success:
-- '[[ $TRAVIS_BRANCH == "develop" ]] && { sbt "++ $TRAVIS_SCALA_VERSION publish"; };'
+#after_success:
+#- '[[ $TRAVIS_BRANCH == "develop" ]] && { sbt "++ $TRAVIS_SCALA_VERSION publish"; };'
 env:
   global:
   - SONATYPE_USERNAME=kmaesen

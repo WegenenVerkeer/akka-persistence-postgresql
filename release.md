@@ -7,8 +7,8 @@ The following procedure is executed manually:
 
 ~~~
 $ sbt +test # tests the code
-$ git tag -vX.Y.Z -m "release version X.Y.Z"  
-$ sbt +publishSigned  #publishes the signed artefacts to staging
+$ git tag vX.Y.Z -m "release version X.Y.Z"  
+$ sbt +publishSigned  #publishes the signed artefacts to Sonatype staging
 $ sbt sonatypeRelease
 $ git push --tags origin develop
 ~~~

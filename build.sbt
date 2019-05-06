@@ -57,7 +57,8 @@ lazy val benchmarkModule = {
     .dependsOn(akkaPersistencePgModule % "it->test;test->test;compile->compile")
     .enablePlugins(GatlingPlugin)
     .configs(GatlingIt)
-    .settings(Defaults.coreDefaultSettings ++ commonSettings ++ Seq(publishLocal := {}, publish := {}, packagedArtifacts := Map.empty))
+    .settings(Defaults.coreDefaultSettings ++ commonSettings ++ Seq(skip in publish := true))
+
     .settings(crossScalaVersions := (crossScalaVersions in ThisBuild).value.filter(_ startsWith "2.12"))
     .settings(scalaVersion := crossScalaVersions.value.last)
 
