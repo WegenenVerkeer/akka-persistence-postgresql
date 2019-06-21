@@ -14,16 +14,25 @@ scalacOptions in ThisBuild := {
     "-feature",             // warning and location for usages of features that should be imported explicitly
     "-unchecked",           // additional warnings where generated code depends on assumptions
     "-Xlint",               // recommended additional warnings
-    "-Ywarn-adapted-args",  // Warn if an argument list is modified to match the receiver
     "-Ywarn-value-discard", // Warn when non-Unit expression results are unused
-    "-Ywarn-inaccessible",
     //  "-Ywarn-dead-code",
     //  "-Xfatal-warnings",
     "-language:reflectiveCalls",
     "-Ydelambdafy:method"
   )
-  if (scalaVersion.value.startsWith("2.11")) commonOptions ++ Seq("-Ybackend:GenBCode")
-  else commonOptions
+
+  scalaVersion.value match {
+    case v: String if v startsWith "2.13" => Seq()
+    case v: String if v startsWith "2.12" => Seq(
+      "-Ywarn-adapted-args", // Warn if an argument list is modified to match the receiver,
+      "-Ywarn-inaccessible"
+    )
+    case v: String if v startsWith "2.11" => Seq(
+      "-Ywarn-adapted-args", // Warn if an argument list is modified to match the receiver
+      "-Ywarn-inaccessible",
+      "-Ybackend:GenBCode"
+      )
+  }
 }
 
 lazy val akkaPersistencePgModule = {
@@ -68,7 +77,7 @@ lazy val benchmarkModule = {
     .enablePlugins(GatlingPlugin)
     .configs(GatlingIt)
     .settings(Defaults.coreDefaultSettings ++ commonSettings ++ Seq(skip in publish := true))
-    .settings(crossScalaVersions := (crossScalaVersions in ThisBuild).value.filter(_ startsWith "2.12"))
+    .settings(crossScalaVersions := (crossScalaVersions in ThisBuild).value.filter(_ startsWith "2.13"))
     .settings(scalaVersion := crossScalaVersions.value.last)
 
 }
