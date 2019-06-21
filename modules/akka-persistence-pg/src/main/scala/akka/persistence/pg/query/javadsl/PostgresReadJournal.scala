@@ -11,37 +11,44 @@ import akka.stream.javadsl.Source
 
 import scala.collection.JavaConverters._
 
-class PostgresReadJournal(journal: ScalaPostgresReadJournal) extends ReadJournal
-  with EventsByTags
-  with AllEvents
-  with EventsByPersistenceIdQuery
-  with CurrentEventsByTags
-  with CurrentAllEvents
-  with CurrentEventsByPersistenceIdQuery {
+class PostgresReadJournal(journal: ScalaPostgresReadJournal)
+    extends ReadJournal
+    with EventsByTags
+    with AllEvents
+    with EventsByPersistenceIdQuery
+    with CurrentEventsByTags
+    with CurrentAllEvents
+    with CurrentEventsByPersistenceIdQuery {
 
-  override def eventsByTags(tags: JSet[EventTag], fromRowId: Long, toRowId: Long): Source[EventEnvelope, NotUsed] = {
+  override def eventsByTags(tags: JSet[EventTag], fromRowId: Long, toRowId: Long): Source[EventEnvelope, NotUsed] =
     journal.eventsByTags(tags.asScala.toSet, fromRowId, toRowId).asJava
-  }
 
-  override def allEvents(fromRowId: Long, toRowId: Long): Source[EventEnvelope, NotUsed] = {
+  override def allEvents(fromRowId: Long, toRowId: Long): Source[EventEnvelope, NotUsed] =
     journal.allEvents(fromRowId, toRowId).asJava
-  }
 
-  override def eventsByPersistenceId(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long): Source[EventEnvelope, NotUsed] = {
+  override def eventsByPersistenceId(
+      persistenceId: String,
+      fromSequenceNr: Long,
+      toSequenceNr: Long
+  ): Source[EventEnvelope, NotUsed] =
     journal.eventsByPersistenceId(persistenceId, fromSequenceNr, toSequenceNr).asJava
-  }
 
-  override def currentEventsByTags(tags: JSet[EventTag], fromRowId: Long, toRowId: Long): Source[EventEnvelope, NotUsed] = {
+  override def currentEventsByTags(
+      tags: JSet[EventTag],
+      fromRowId: Long,
+      toRowId: Long
+  ): Source[EventEnvelope, NotUsed] =
     journal.currentEventsByTags(tags.asScala.toSet, fromRowId, toRowId).asJava
-  }
 
-  override def currentAllEvents(fromRowId: Long, toRowId: Long): Source[EventEnvelope, NotUsed] = {
+  override def currentAllEvents(fromRowId: Long, toRowId: Long): Source[EventEnvelope, NotUsed] =
     journal.currentAllEvents(fromRowId, toRowId).asJava
-  }
 
-  override def currentEventsByPersistenceId(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long): Source[EventEnvelope, NotUsed] = {
+  override def currentEventsByPersistenceId(
+      persistenceId: String,
+      fromSequenceNr: Long,
+      toSequenceNr: Long
+  ): Source[EventEnvelope, NotUsed] =
     journal.currentEventsByPersistenceId(persistenceId, fromSequenceNr, toSequenceNr).asJava
-  }
 }
 
 object PostgresReadJournal {

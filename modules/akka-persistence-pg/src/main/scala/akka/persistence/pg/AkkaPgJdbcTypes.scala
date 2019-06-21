@@ -21,13 +21,15 @@ trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresProfile =>
 
   import driver.api._
 
-  private[this] class GenericJdbcType[T](val sqlTypeName: String,
-                                         fnFromString: String => T,
-                                         fnToString: T => String = (r: T) => r.toString,
-                                         val sqlType: Int = java.sql.Types.OTHER,
-                                         zero: T = null.asInstanceOf[T],
-                                         override val hasLiteralForm: Boolean = false)(
-                            implicit override val classTag: ClassTag[T]) extends DriverJdbcType[T] {
+  private[this] class GenericJdbcType[T](
+      val sqlTypeName: String,
+      fnFromString: String => T,
+      fnToString: T => String = (r: T) => r.toString,
+      val sqlType: Int = java.sql.Types.OTHER,
+      zero: T = null.asInstanceOf[T],
+      override val hasLiteralForm: Boolean = false
+  )(implicit override val classTag: ClassTag[T])
+      extends DriverJdbcType[T] {
 
     override def sqlTypeName(sym: Option[FieldSymbol]): String = sqlTypeName
 
@@ -40,20 +42,20 @@ trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresProfile =>
 
     override def updateValue(v: T, r: ResultSet, idx: Int): Unit = r.updateObject(idx, toStr(v), java.sql.Types.OTHER)
 
-    override def valueToSQLLiteral(v: T): String = if(v == null) "NULL" else s"'${fnToString(v)}'"
+    override def valueToSQLLiteral(v: T): String = if (v == null) "NULL" else s"'${fnToString(v)}'"
 
-    private def toStr(v: T) = if(v == null) null else fnToString(v)
+    private def toStr(v: T) = if (v == null) null else fnToString(v)
   }
 
   protected def fromInfinitable[T](max: T, min: T, parse: String => T): String => T = {
-    case "infinity" => max
+    case "infinity"  => max
     case "-infinity" => min
-    case finite => parse(finite)
+    case finite      => parse(finite)
   }
 
   protected def toInfinitable[T](max: T, min: T, format: T => String): T => String = {
-    case `max` =>  "infinity"
-    case `min` =>  "-infinity"
+    case `max`  => "infinity"
+    case `min`  => "-infinity"
     case finite => format(finite)
   }
 
@@ -61,9 +63,9 @@ trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresProfile =>
     new DateTimeFormatterBuilder()
       .append(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
       .optionalStart()
-      .appendFraction(ChronoField.NANO_OF_SECOND,0,6,true)
+      .appendFraction(ChronoField.NANO_OF_SECOND, 0, 6, true)
       .optionalEnd()
-      .appendOffset("+HH:mm","+00")
+      .appendOffset("+HH:mm", "+00")
       .toFormatter()
 
   protected val fromOffsetDateTimeOrInfinity: String => OffsetDateTime =
@@ -73,8 +75,12 @@ trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresProfile =>
 
   trait AkkaPgImplicits {
 
-    implicit val date2TzTimestampTypeMapper: JdbcType[OffsetDateTime] = new GenericJdbcType[OffsetDateTime]("timestamptz",
-      fromOffsetDateTimeOrInfinity, toOffsetDateTimeOrInfinity, hasLiteralForm = false)
+    implicit val date2TzTimestampTypeMapper: JdbcType[OffsetDateTime] = new GenericJdbcType[OffsetDateTime](
+      "timestamptz",
+      fromOffsetDateTimeOrInfinity,
+      toOffsetDateTimeOrInfinity,
+      hasLiteralForm = false
+    )
 
     implicit val simpleHStoreTypeMapper: JdbcType[Map[String, String]] =
       new GenericJdbcType[Map[String, String]](
@@ -84,9 +90,10 @@ trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresProfile =>
         hasLiteralForm = false
       )
 
-    implicit def simpleHStoreColumnExtensionMethods(c: Rep[Map[String, String]]): HStoreColumnExtensionMethods[Map[String, String]] = {
+    implicit def simpleHStoreColumnExtensionMethods(
+        c: Rep[Map[String, String]]
+    ): HStoreColumnExtensionMethods[Map[String, String]] =
       new HStoreColumnExtensionMethods[Map[String, String]](c)
-    }
 
     implicit val jsonStringTypeMapper: JdbcType[JsonString] =
       new GenericJdbcType[JsonString](
@@ -99,19 +106,15 @@ trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresProfile =>
   }
 
   /** Extension methods for hstore Columns */
-  class HStoreColumnExtensionMethods[P1](val c: Rep[P1])(
-    implicit tm: JdbcType[Map[String, String]])
-    extends ExtensionMethods[Map[String, String], P1] {
+  class HStoreColumnExtensionMethods[P1](val c: Rep[P1])(implicit tm: JdbcType[Map[String, String]])
+      extends ExtensionMethods[Map[String, String], P1] {
 
     val Contains = new SqlOperator("@>")
 
     protected implicit def b1Type: TypedType[Map[String, String]] = implicitly[TypedType[Map[String, String]]]
 
-    def @>[P2, R](c2: Rep[P2])(implicit om: o#arg[Map[String, String], P2]#to[Boolean, R]): Rep[R] = {
+    def @>[P2, R](c2: Rep[P2])(implicit om: o#arg[Map[String, String], P2]#to[Boolean, R]): Rep[R] =
       om.column(Contains, n, c2.toNode)
-    }
   }
-
-
 
 }

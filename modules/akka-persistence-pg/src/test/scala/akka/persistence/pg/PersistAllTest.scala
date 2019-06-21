@@ -16,49 +16,53 @@ import org.scalatest.time.{Milliseconds, Seconds, Span}
 
 import scala.util.Random
 
-class PersistAllTest extends FunSuite
-  with BeforeAndAfterEach
-  with Matchers
-  with BeforeAndAfterAll
-  with CreateTables
-  with RecreateSchema
-  with PgConfig
-  with WaitForEvents
-  with ScalaFutures {
+class PersistAllTest
+    extends FunSuite
+    with BeforeAndAfterEach
+    with Matchers
+    with BeforeAndAfterAll
+    with CreateTables
+    with RecreateSchema
+    with PgConfig
+    with WaitForEvents
+    with ScalaFutures {
 
   override implicit val patienceConfig = PatienceConfig(timeout = Span(3, Seconds), interval = Span(100, Milliseconds))
 
-  val config = ConfigFactory.load("pg-persistall.conf")
-  val system =  ActorSystem("TestCluster", config)
+  val config                     = ConfigFactory.load("pg-persistall.conf")
+  val system                     = ActorSystem("TestCluster", config)
   override lazy val pluginConfig = PgExtension(system).pluginConfig
 
   import driver.api._
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  implicit val timeOut = Timeout(1, TimeUnit.MINUTES)
-  val numActors = 2
+  implicit val timeOut      = Timeout(1, TimeUnit.MINUTES)
+  val numActors             = 2
   var actors: Seq[ActorRef] = _
-  val expected = 10
+  val expected              = 10
 
   test("writing events should respect order") {
     writeEvents()
-    database.run(countEvents).futureValue shouldBe expected*10
+    database.run(countEvents).futureValue shouldBe expected * 10
 
-    actors.zipWithIndex.foreach { case (actor, i) =>
-      val persistenceId = s"PersistAllActor_${i+1}"
-      val r: Vector[(Long, Long)] = database.run(
-        sql"""select id, rowid from #${pluginConfig.fullJournalTableName}
+    actors.zipWithIndex.foreach {
+      case (actor, i) =>
+        val persistenceId = s"PersistAllActor_${i + 1}"
+        val r: Vector[(Long, Long)] = database
+          .run(
+            sql"""select id, rowid from #${pluginConfig.fullJournalTableName}
              where persistenceid = $persistenceId order by id asc""".as[(Long, Long)]
-      ).futureValue
+          )
+          .futureValue
 
-      //check if ids are sorted => of course they are
-      val ids = r map { case (id, rowid) => id }
-      ids shouldEqual ids.sorted
+        //check if ids are sorted => of course they are
+        val ids = r map { case (id, rowid) => id }
+        ids shouldEqual ids.sorted
 
-      //check if rowids are sorted
-      val rowIds = r map { case (id, rowid) => rowid }
-      rowIds shouldEqual rowIds.sorted
+        //check if rowids are sorted
+        val rowIds = r map { case (id, rowid) => rowid }
+        rowIds shouldEqual rowIds.sorted
     }
 
   }
@@ -66,11 +70,11 @@ class PersistAllTest extends FunSuite
   def writeEvents() = {
     val received: AtomicInteger = new AtomicInteger(0)
 
-    def sendMessage(i: Int) = {
-      actors(i) ? Alter(Random.alphanumeric.take(16).mkString) map { case s: String =>
-        received.incrementAndGet()
+    def sendMessage(i: Int) =
+      actors(i) ? Alter(Random.alphanumeric.take(16).mkString) map {
+        case s: String =>
+          received.incrementAndGet()
       }
-    }
 
     1 to expected foreach { i =>
       sendMessage(Random.nextInt(actors.size))
@@ -94,7 +98,4 @@ class PersistAllTest extends FunSuite
     ()
   }
 
-
 }
-
-

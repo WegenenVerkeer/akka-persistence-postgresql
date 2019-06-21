@@ -1,5 +1,6 @@
 import sbt.Keys._
 import sbt._
+import org.scalafmt.sbt.ScalafmtPlugin.autoImport._
 
 object BuildSettings {
 
@@ -11,24 +12,21 @@ object BuildSettings {
       Resolver.typesafeRepo("releases")
     ),
     updateOptions := updateOptions.value.withCachedResolution(true),
-    organization := "be.wegenenverkeer"
+    organization := "be.wegenenverkeer",
+    scalafmtOnCompile := true
   )
 
   val publishingCredentials = (for {
     username <- Option(System.getenv().get("SONATYPE_USERNAME"))
     password <- Option(System.getenv().get("SONATYPE_PASSWORD"))
   } yield
-    Seq(Credentials(
-      "Sonatype Nexus Repository Manager",
-      "oss.sonatype.org",
-      username,
-      password)
-    )).getOrElse(Seq())
-
+    Seq(Credentials("Sonatype Nexus Repository Manager", "oss.sonatype.org", username, password))).getOrElse(Seq())
 
   val publishSettings = Seq(
     publishMavenStyle := true,
-    pomIncludeRepository := { _ => false},
+    pomIncludeRepository := { _ =>
+      false
+    },
     publishTo := {
       val nexus = "https://oss.sonatype.org/"
       if (isSnapshot.value)

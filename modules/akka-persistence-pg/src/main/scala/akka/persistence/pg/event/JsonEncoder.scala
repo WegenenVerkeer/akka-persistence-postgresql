@@ -22,6 +22,7 @@ object NoneJsonEncoder extends JsonEncoder {
 
   override def toJson: PartialFunction[Any, JsonString] = PartialFunction.empty[Any, JsonString]
 
-  override def fromJson: PartialFunction[(JsonString, Class[_]), AnyRef] = PartialFunction.empty[(JsonString, Class[_]), AnyRef]
+  override def fromJson: PartialFunction[(JsonString, Class[_]), AnyRef] =
+    PartialFunction.empty[(JsonString, Class[_]), AnyRef]
 
 }

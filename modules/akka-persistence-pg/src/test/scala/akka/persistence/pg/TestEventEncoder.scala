@@ -3,7 +3,7 @@ package akka.persistence.pg
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
-import akka.persistence.pg.TestActor.{Incremented, Altered}
+import akka.persistence.pg.TestActor.{Altered, Incremented}
 import akka.persistence.pg.event.JsonEncoder
 import scala.util.parsing.json._
 

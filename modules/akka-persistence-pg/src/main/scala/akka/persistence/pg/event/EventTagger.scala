@@ -3,9 +3,9 @@ package akka.persistence.pg.event
 trait EventTagger {
 
   /**
-   * @param event the event/message (argument of persist call)
-   * @return the tags and to persist.
-   */
+    * @param event the event/message (argument of persist call)
+    * @return the tags and to persist.
+    */
   def tags(event: Any): Map[String, String]
 
 }

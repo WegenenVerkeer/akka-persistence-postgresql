@@ -8,7 +8,7 @@ case object DummyCommand
 class DummyPersistentActor extends PersistentActor with ActorLogging {
 
   override def receiveRecover: Receive = {
-    case a: Any => log.debug("DummyPersistentActor receiveRecover received "+a)
+    case a: Any => log.debug("DummyPersistentActor receiveRecover received " + a)
   }
 
   override def receiveCommand: Receive = {

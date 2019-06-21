@@ -1,6 +1,6 @@
 package akka.persistence.pg.perf
 
-import akka.actor.{Props, ActorLogging}
+import akka.actor.{ActorLogging, Props}
 import akka.persistence.PersistentActor
 import akka.persistence.pg.perf.Messages.{Alter, Altered}
 
@@ -14,7 +14,9 @@ class PersistAsyncActor(override val persistenceId: String) extends PersistentAc
       val events = 1 to 10 map { i =>
         Altered(s"${txt}_$i", created)
       }
-      persistAllAsync(events) { _ => sender ! txt }
+      persistAllAsync(events) { _ =>
+        sender ! txt
+      }
   }
 
 }
@@ -22,6 +24,3 @@ class PersistAsyncActor(override val persistenceId: String) extends PersistentAc
 object PersistAsyncActor {
   def props(persistenceId: String) = Props(new PersistAsyncActor(persistenceId))
 }
-
-
-

@@ -17,21 +17,18 @@ import scala.util.Random
 /**
   * uses the RowIdUpdating write strategy and will use the "rowid" column of the journal
   * table for queries
- */
-class EventStoreQueryNotificationTest extends AbstractEventStoreTest
-  with PgConfig
-  with Eventually
-  with ScalaFutures {
+  */
+class EventStoreQueryNotificationTest extends AbstractEventStoreTest with PgConfig with Eventually with ScalaFutures {
 
   override lazy val config: Config = ConfigFactory.load("pg-eventstore-rowid.conf")
 
   override implicit val patienceConfig = PatienceConfig(timeout = Span(20, Seconds), interval = Span(100, Milliseconds))
 
   implicit val materializer = ActorMaterializer()
-  implicit val timeOut = Timeout(1, TimeUnit.MINUTES)
+  implicit val timeOut      = Timeout(1, TimeUnit.MINUTES)
 
-  val expected = 2000
-  val numActors = 100
+  val expected                      = 2000
+  val numActors                     = 100
   var actors: Map[String, ActorRef] = Map.empty
 
   test("query tagged events tagged with 'Altered'") {
@@ -40,7 +37,7 @@ class EventStoreQueryNotificationTest extends AbstractEventStoreTest
       events = events :+ e
     }
 
-    val graph: RunnableGraph[NotUsed] =  startSource[E](Set(TestTags.alteredTag), 0).to(sink)
+    val graph: RunnableGraph[NotUsed] = startSource[E](Set(TestTags.alteredTag), 0).to(sink)
 
     1 to expected foreach { i =>
       actors.values.toSeq(Random.nextInt(actors.size)) ! alterCommand(i)
@@ -86,9 +83,9 @@ class EventStoreQueryNotificationTest extends AbstractEventStoreTest
       events = events :+ e
     }
 
-    var expectedForPersistenceId = 0
-    val index = Random.nextInt(actors.size)
-    val persistenceId = actors.keys.toSeq(index)
+    var expectedForPersistenceId      = 0
+    val index                         = Random.nextInt(actors.size)
+    val persistenceId                 = actors.keys.toSeq(index)
     val graph: RunnableGraph[NotUsed] = startSource[E](persistenceId, 0).to(sink)
 
     1 to expected foreach { i =>
@@ -122,14 +119,12 @@ class EventStoreQueryNotificationTest extends AbstractEventStoreTest
 
   def createActor(pid: String): ActorRef = system.actorOf(TestActor.props(testProbe.ref, Some(pid)))
 
-  def checkConsecutive(events: List[E]): Unit = {
+  def checkConsecutive(events: List[E]): Unit =
     events
       .collect { case TestActor.Altered(id, _) => id.toInt }
       .sorted
       .sliding(2)
-      .find(l => if (l.size == 1) false else l.head+1 != l(1))
+      .find(l => if (l.size == 1) false else l.head + 1 != l(1))
       .foreach(println)
-  }
-
 
 }

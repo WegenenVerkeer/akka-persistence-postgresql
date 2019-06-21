@@ -19,3 +19,7 @@ project/plugins/project/
 .worksheet
 .idea
 
+
+# scala metals specific
+.metals
+.bloop

@@ -11,13 +11,15 @@ import akka.stream.actor.ActorPublisherMessage.{Cancel, Request}
 import scala.concurrent.duration.FiniteDuration
 
 // FIXME needs a be rewritten as a GraphStage (since 2.5.0)
-abstract class BaseEventsPublisher(fromOffset: Long,
-                          toOffset: Long,
-                          refreshInterval: FiniteDuration,
-                          maxBufSize: Int,
-                          writeJournalPluginId: String)
-
-  extends ActorPublisher[EventEnvelope] with DeliveryBuffer[EventEnvelope] with ActorLogging {
+abstract class BaseEventsPublisher(
+    fromOffset: Long,
+    toOffset: Long,
+    refreshInterval: FiniteDuration,
+    maxBufSize: Int,
+    writeJournalPluginId: String
+) extends ActorPublisher[EventEnvelope]
+    with DeliveryBuffer[EventEnvelope]
+    with ActorLogging {
 
   private[akka] object Continue
 
@@ -40,7 +42,7 @@ abstract class BaseEventsPublisher(fromOffset: Long,
     case request: Request =>
       log.debug(s"Received first request: $request")
       receiveInitialRequest()
-    case Continue         =>
+    case Continue =>
     // skip, wait for first Request
     case Cancel =>
       val origSender = sender()
@@ -78,7 +80,8 @@ abstract class BaseEventsPublisher(fromOffset: Long,
       deliverBuf()
       onErrorThenStop(cause)
 
-    case request: Request => log.debug(s"Received request: $request")
+    case request: Request =>
+      log.debug(s"Received request: $request")
       deliverBuf()
 
     case Continue => // skip during replay
@@ -94,11 +97,10 @@ abstract class BaseEventsPublisher(fromOffset: Long,
       newEventsWhileReplaying = true
   }
 
-
   def idle: Receive = {
     case Continue | NewEventAppended => if (timeForReplay) replay()
-    case _: Request                        => receiveIdleRequest()
-    case Cancel                            => context.stop(self)
+    case _: Request                  => receiveIdleRequest()
+    case Cancel                      => context.stop(self)
   }
 
   def timeForReplay: Boolean =
@@ -123,9 +125,6 @@ abstract class BaseEventsPublisher(fromOffset: Long,
     }
   }
 
-  override def unhandled(message: Any): Unit = {
+  override def unhandled(message: Any): Unit =
     log.warning(s"Got unexpected message: $message")
-  }
 }
-
-

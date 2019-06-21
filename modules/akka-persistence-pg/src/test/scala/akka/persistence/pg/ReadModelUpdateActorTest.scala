@@ -9,7 +9,8 @@ import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.{Seconds, Span}
 import org.scalatest.{BeforeAndAfterAll, Matchers}
 
-class ReadModelUpdateActorTest extends PersistentActorTest
+class ReadModelUpdateActorTest
+    extends PersistentActorTest
     with ScalaFutures
     with Eventually
     with RecreateSchema
@@ -19,23 +20,27 @@ class ReadModelUpdateActorTest extends PersistentActorTest
     with PgConfig {
 
   override val config: Config = ConfigFactory.load("example-actor-test.conf")
-  override val pluginConfig = PluginConfig(config)
+  override val pluginConfig   = PluginConfig(config)
 
   override implicit val patienceConfig = PatienceConfig(timeout = scaled(Span(2, Seconds)))
 
   import driver.api._
 
   /**
-   * recreate schema and tables before running the tests
-   */
+    * recreate schema and tables before running the tests
+    */
   override def beforeAll() {
-    database.run(
-      recreateSchema.andThen(createTables).andThen(sqlu"""create table #$readModelTable (
+    database
+      .run(
+        recreateSchema
+          .andThen(createTables)
+          .andThen(sqlu"""create table #$readModelTable (
                                                           "id" BIGSERIAL NOT NULL PRIMARY KEY,
                                                           "cnt" INTEGER,
                                                           "txt" VARCHAR(255) DEFAULT NULL)""")
-        .andThen(sqlu"""CREATE unique INDEX readmodel_txt_idx ON #$readModelTable (txt)""")
-    ).futureValue
+          .andThen(sqlu"""CREATE unique INDEX readmodel_txt_idx ON #$readModelTable (txt)""")
+      )
+      .futureValue
     1 to 2 map { i =>
       database.run(sqlu"""insert into #$readModelTable values ($i, 0, null)""").futureValue
     }
@@ -44,7 +49,7 @@ class ReadModelUpdateActorTest extends PersistentActorTest
 
   override protected def afterAll(): Unit = database.close()
 
-  val readModelTable = pluginConfig.getFullName("READMODEL")
+  val readModelTable        = pluginConfig.getFullName("READMODEL")
   val countReadModelEntries = sql"""select count(*) from #$readModelTable where txt is not NULL""".as[Long]
 
   test("check sending unique text messages should work") { db =>
@@ -90,6 +95,5 @@ class ReadModelUpdateActorTest extends PersistentActorTest
     db.run(countReadModelEntries).futureValue.head shouldBe 1
 
   }
-
 
 }

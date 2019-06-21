@@ -11,7 +11,6 @@ import scala.concurrent.duration._
 import scala.concurrent.Future
 import scala.language.postfixOps
 
-
 object PgExtension extends ExtensionId[PgExtension] with ExtensionIdProvider {
 
   override def createExtension(system: ExtendedActorSystem): PgExtension = new PgExtension(system)
@@ -36,8 +35,9 @@ class PgExtension(system: ExtendedActorSystem) extends Extension {
 
     implicit val timeout = Timeout(5 seconds)
 
-    def isBusy: Future[Boolean] = {
-      system.actorSelection("/user/AkkaPgRowIdUpdater")
+    def isBusy: Future[Boolean] =
+      system
+        .actorSelection("/user/AkkaPgRowIdUpdater")
         .resolveOne()
         .flatMap { rowIdUpdater =>
           rowIdUpdater ? IsBusy
@@ -46,10 +46,9 @@ class PgExtension(system: ExtendedActorSystem) extends Extension {
         .recover {
           case e: ActorNotFound => false
         }
-    }
 
     def go(): Future[T] = isBusy.flatMap {
-      case true => Thread.sleep(100); go()
+      case true  => Thread.sleep(100); go()
       case false => t
     }
 
@@ -59,8 +58,7 @@ class PgExtension(system: ExtendedActorSystem) extends Extension {
 
   def terminateWhenReady(): Future[Terminated] = whenDone(system.terminate())
 
-  def getClassFor[T: ClassTag](s: String): Class[_ <: T] = {
+  def getClassFor[T: ClassTag](s: String): Class[_ <: T] =
     system.dynamicAccess.getClassFor[T](s).getOrElse(sys.error(s"could not find class with name $s"))
-  }
 
 }

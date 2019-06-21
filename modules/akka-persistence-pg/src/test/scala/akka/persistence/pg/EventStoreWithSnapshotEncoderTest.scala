@@ -11,7 +11,6 @@ class EventStoreWithSnapshotEncoderTest extends AbstractEventStoreTest {
 
   override lazy val config: Config = ConfigFactory.load("pg-eventstore-snapshotencoder.conf")
 
-
   test("generate snapshots as json") {
     val test = system.actorOf(Props(new TestActor(testProbe.ref)))
 
@@ -34,7 +33,7 @@ class EventStoreWithSnapshotEncoderTest extends AbstractEventStoreTest {
                                             | "count": 0
                                             |}""".stripMargin
 
-    database.run(journals.size.result).futureValue shouldBe 1  //1 journal message after the snapshot
+    database.run(journals.size.result).futureValue shouldBe 1 //1 journal message after the snapshot
 
     testProbe.send(test, Alter("foobar"))
     testProbe.expectMsg("j")
@@ -85,15 +84,16 @@ class EventStoreWithSnapshotEncoderTest extends AbstractEventStoreTest {
                                             |}""".stripMargin
 
     // break serialized snapshot
-    database.run(
-      snapshots.filter(_.persistenceId === snapshotEntry.persistenceId)
+    database
+      .run(
+        snapshots
+          .filter(_.persistenceId === snapshotEntry.persistenceId)
           .update(snapshotEntry.copy(json = Some(JsonString("""{
                                                    | "id2": "bazz",
                                                    | "count": 0
-                                                   |}""".stripMargin
-
-          ))))
-      ).futureValue
+                                                   |}""".stripMargin))))
+      )
+      .futureValue
 
     // kill the actor
     system.stop(test)
@@ -112,6 +112,3 @@ class EventStoreWithSnapshotEncoderTest extends AbstractEventStoreTest {
   }
 
 }
-
-
-

@@ -16,17 +16,14 @@ class PerfEventEncoder extends JsonEncoder {
                                                   |}""".stripMargin)
   }
 
-  private def parseJsonString(jsonString: JsonString) = {
+  private def parseJsonString(jsonString: JsonString) =
     JSON.parseFull(jsonString.value).get.asInstanceOf[Map[String, Any]]
-  }
 
-  private def altered(jsValue: Map[String, Any]): Altered = {
+  private def altered(jsValue: Map[String, Any]): Altered =
     Altered(jsValue("txt").asInstanceOf[String], jsValue("created").asInstanceOf[Long])
-  }
-
 
   override def fromJson = {
-    case(json, _) => altered(parseJsonString(json))
+    case (json, _) => altered(parseJsonString(json))
   }
 
 }

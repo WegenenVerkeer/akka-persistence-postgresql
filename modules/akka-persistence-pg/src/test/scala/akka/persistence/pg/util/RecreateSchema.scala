@@ -7,7 +7,7 @@ trait RecreateSchema {
 
   import driver.api._
 
-  lazy val dropSchema = sqlu"""drop schema if exists #${pluginConfig.schemaName} cascade"""
+  lazy val dropSchema   = sqlu"""drop schema if exists #${pluginConfig.schemaName} cascade"""
   lazy val createSchema = sqlu"""create schema #${pluginConfig.schemaName}"""
 
   lazy val recreateSchema = dropSchema.andThen(createSchema)

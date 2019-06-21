@@ -11,7 +11,8 @@ import org.scalatest.{BeforeAndAfterAll, Matchers}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.{Seconds, Span}
 
-class ExamplePersistentActorTest extends PersistentActorTest
+class ExamplePersistentActorTest
+    extends PersistentActorTest
     with ScalaFutures
     with Eventually
     with RecreateSchema
@@ -21,13 +22,13 @@ class ExamplePersistentActorTest extends PersistentActorTest
     with PgConfig {
 
   override def config: Config = ConfigFactory.load("example-actor-test.conf")
-  override def pluginConfig = PluginConfig(config)
+  override def pluginConfig   = PluginConfig(config)
 
   override implicit val patienceConfig = PatienceConfig(timeout = scaled(Span(2, Seconds)))
 
   /**
-   * recreate schema and tables before running the tests
-   */
+    * recreate schema and tables before running the tests
+    */
   override def beforeAll() {
     database.run(recreateSchema.andThen(createTables)).futureValue
     ()
@@ -129,20 +130,20 @@ object ExamplePersistentActorTest {
     var currentMessage: Option[String] = None
 
     override def receiveRecover: Receive = {
-      case Event(message) => currentMessage = Option(message)
+      case Event(message)                    => currentMessage = Option(message)
       case SnapshotOffer(metadata, snapshot) => currentMessage = snapshot.asInstanceOf[Option[String]]
     }
 
     override def receiveCommand: Receive = {
-      case Command(message) => persist(Event(message)) { e =>
-        currentMessage = Some(message)
-        sender ! message.reverse
-      }
-      case GetMessage => sender ! currentMessage.getOrElse(sys.error("message is not yet set"))
+      case Command(message) =>
+        persist(Event(message)) { e =>
+          currentMessage = Some(message)
+          sender ! message.reverse
+        }
+      case GetMessage   => sender ! currentMessage.getOrElse(sys.error("message is not yet set"))
       case TakeSnapshot => saveSnapshot(currentMessage)
     }
 
   }
 
 }
-

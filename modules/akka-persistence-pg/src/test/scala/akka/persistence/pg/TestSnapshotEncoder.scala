@@ -18,7 +18,7 @@ class TestSnapshotEncoder extends JsonEncoder {
     JSON.parseFull(jsonString.value).get.asInstanceOf[Map[String, Any]]
 
   override def fromJson = {
-    case (json, c) if c == classOf[TheState]     =>
+    case (json, c) if c == classOf[TheState] =>
       val jsValue = parseJsonString(json)
       TheState(jsValue("id").asInstanceOf[String], jsValue("count").asInstanceOf[Double].toInt)
   }

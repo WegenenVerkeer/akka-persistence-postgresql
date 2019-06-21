@@ -32,19 +32,23 @@ trait CreateTables {
                             CONSTRAINT "cc_snapshot_payload_jsoin" check (snapshot IS NOT NULL OR (json IS NOT NULL AND manifest IS NOT NULL)),
                             PRIMARY KEY (persistenceid, sequencenr))"""
 
-  lazy val createUniqueIndex = sqlu"""CREATE UNIQUE INDEX journal_pidseq_idx ON #${pluginConfig.fullJournalTableName} (persistenceid, sequencenr)"""
-  lazy val createEventIndex = sqlu"""CREATE INDEX journal_event_idx ON #${pluginConfig.fullJournalTableName} USING gin (event)"""
-  lazy val createRowIdIndex = sqlu"""CREATE UNIQUE INDEX journal_rowid_idx ON #${pluginConfig.fullJournalTableName} (rowid)"""
+  lazy val createUniqueIndex =
+    sqlu"""CREATE UNIQUE INDEX journal_pidseq_idx ON #${pluginConfig.fullJournalTableName} (persistenceid, sequencenr)"""
+  lazy val createEventIndex =
+    sqlu"""CREATE INDEX journal_event_idx ON #${pluginConfig.fullJournalTableName} USING gin (event)"""
+  lazy val createRowIdIndex =
+    sqlu"""CREATE UNIQUE INDEX journal_rowid_idx ON #${pluginConfig.fullJournalTableName} (rowid)"""
 
   lazy val createTables = createJournal
-      .andThen(createUniqueIndex)
-      .andThen(createRowIdIndex)
-      .andThen(createSnapshot)
+    .andThen(createUniqueIndex)
+    .andThen(createRowIdIndex)
+    .andThen(createSnapshot)
 
-  def countEvents                = sql"""select count(*) from #${pluginConfig.fullJournalTableName}""".as[Long].head
-  def countEvents(id: String)    = sql"""select count(*) from #${pluginConfig.fullJournalTableName} where persistenceid = $id""".as[Long].head
-  def countSnapshots(id: String) = sql"""select count(*) from #${pluginConfig.fullSnapshotTableName} where persistenceid = $id""".as[Long].head
-  def countSnapshots             = sql"""select count(*) from #${pluginConfig.fullSnapshotTableName}""".as[Long].head
-
+  def countEvents = sql"""select count(*) from #${pluginConfig.fullJournalTableName}""".as[Long].head
+  def countEvents(id: String) =
+    sql"""select count(*) from #${pluginConfig.fullJournalTableName} where persistenceid = $id""".as[Long].head
+  def countSnapshots(id: String) =
+    sql"""select count(*) from #${pluginConfig.fullSnapshotTableName} where persistenceid = $id""".as[Long].head
+  def countSnapshots = sql"""select count(*) from #${pluginConfig.fullSnapshotTableName}""".as[Long].head
 
 }

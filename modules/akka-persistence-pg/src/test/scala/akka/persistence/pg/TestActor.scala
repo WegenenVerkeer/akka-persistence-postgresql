@@ -6,7 +6,6 @@ import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.persistence.pg.event.Created
 import akka.persistence.{PersistentActor, SaveSnapshotFailure, SaveSnapshotSuccess, SnapshotOffer}
 
-
 class TestActor(testProbe: ActorRef, id: Option[String] = None) extends PersistentActor with ActorLogging {
 
   import akka.persistence.pg.TestActor._
@@ -28,23 +27,24 @@ class TestActor(testProbe: ActorRef, id: Option[String] = None) extends Persiste
   }
 
   override def receiveCommand: Receive = {
-    case a: Alter => persist(Altered(a.id, OffsetDateTime.now())) {
-      case Altered(m, _) =>
-        state = state.copy(id = m)
-        testProbe ! "j"
-    }
-    case i: Increment => persist(Incremented(i.count, OffsetDateTime.now())) {
-      case Incremented(c, _) =>
-        state = state.copy(count = state.count + c)
-        testProbe ! "j"
-    }
-    case Snap => saveSnapshot(state)
+    case a: Alter =>
+      persist(Altered(a.id, OffsetDateTime.now())) {
+        case Altered(m, _) =>
+          state = state.copy(id = m)
+          testProbe ! "j"
+      }
+    case i: Increment =>
+      persist(Incremented(i.count, OffsetDateTime.now())) {
+        case Incremented(c, _) =>
+          state = state.copy(count = state.count + c)
+          testProbe ! "j"
+      }
+    case Snap                     => saveSnapshot(state)
     case msg: SaveSnapshotFailure => testProbe ! "f"
     case msg: SaveSnapshotSuccess => testProbe ! "s"
-    case GetState => sender ! state
+    case GetState                 => sender ! state
   }
 }
-
 
 object TestActor {
 

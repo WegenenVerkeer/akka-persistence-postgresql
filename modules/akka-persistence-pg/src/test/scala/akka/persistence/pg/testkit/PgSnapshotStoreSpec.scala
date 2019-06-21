@@ -8,11 +8,12 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Milliseconds, Second, Span}
 
-class PgSnapshotStoreSpec extends SnapshotStoreSpec(ConfigFactory.load("pg-application.conf"))
-  with SnapshotTable
-  with RecreateSchema
-  with ScalaFutures
-  with PgConfig {
+class PgSnapshotStoreSpec
+    extends SnapshotStoreSpec(ConfigFactory.load("pg-application.conf"))
+    with SnapshotTable
+    with RecreateSchema
+    with ScalaFutures
+    with PgConfig {
 
   override implicit val patienceConfig = PatienceConfig(timeout = Span(1, Second), interval = Span(100, Milliseconds))
 
@@ -32,5 +33,3 @@ class PgSnapshotStoreSpec extends SnapshotStoreSpec(ConfigFactory.load("pg-appli
   }
 
 }
-
-

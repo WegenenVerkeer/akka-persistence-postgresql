@@ -6,7 +6,7 @@ trait WaitForEvents {
 
   def waitUntilEventsWritten(expected: Int, written: AtomicInteger) = {
     var noProgressCount = 0
-    var numEvents = written.get()
+    var numEvents       = written.get()
     while (numEvents != expected && noProgressCount < 50) {
       Thread.sleep(100L)
       val numExtra = written.get() - numEvents

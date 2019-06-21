@@ -71,11 +71,10 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
     var events = List[TestActor.Event]()
 
-    def checkSizeReceivedEvents(size: Int) = {
+    def checkSizeReceivedEvents(size: Int) =
       eventually {
         events should have size size
       }
-    }
 
     // a Sink that will append each event to the Events List
     val sink = Sink.foreach[TestActor.Event] { e =>
@@ -106,11 +105,10 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
     var events = List[TestActor.Event]()
 
-    def checkSizeReceivedEvents(size: Int) = {
+    def checkSizeReceivedEvents(size: Int) =
       eventually {
         events should have size size
       }
-    }
 
     // a Sink that will append each event to the Events List
     val sink = Sink.foreach[TestActor.Event] { e =>
@@ -142,11 +140,10 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
     var events = List[TestActor.Event]()
 
-    def checkSizeReceivedEvents(size: Int) = {
+    def checkSizeReceivedEvents(size: Int) =
       eventually {
         events should have size size
       }
-    }
 
     // a Sink that will append each event to the Events List
     val sink = Sink.foreach[TestActor.Event] { e =>
@@ -170,8 +167,8 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
     val test = system.actorOf(Props(new TestActor(testProbe.ref)))
 
-    1 to 500 foreach {index =>
-      if(index % 50 == 0) testProbe.send(test, Increment(1))
+    1 to 500 foreach { index =>
+      if (index % 50 == 0) testProbe.send(test, Increment(1))
       else testProbe.send(test, Alter("foo-" + index))
       testProbe.expectMsg("j")
     }
@@ -211,7 +208,7 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     val test = system.actorOf(Props(new TestActor(testProbe.ref)))
 
     1 to 500 foreach { index =>
-      if(index % 2 == 0) testProbe.send(test, Increment(1))
+      if (index % 2 == 0) testProbe.send(test, Increment(1))
       else testProbe.send(test, Alter("foo-" + index))
       testProbe.expectMsg("j")
     }
@@ -221,11 +218,10 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
     var events = List[TestActor.Event]()
 
-    def checkSizeReceivedEvents(size: Int) = {
+    def checkSizeReceivedEvents(size: Int) =
       eventually {
         events should have size size
       }
-    }
 
     // a Sink that will append each event to the Events List
     val sink = Sink.foreach[TestActor.Event] { e =>
@@ -258,11 +254,10 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
     var events = List[TestActor.Event]()
 
-    def checkSizeReceivedEvents(size: Int) = {
+    def checkSizeReceivedEvents(size: Int) =
       eventually {
         events should have size size
       }
-    }
 
     // a Sink that will append each event to the Events List
     val sink = Sink.foreach[TestActor.Event] { e =>
@@ -286,7 +281,7 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
     val test = system.actorOf(Props(new TestActor(testProbe.ref, Some("TestActor"))))
 
-    1 to 500 foreach {index =>
+    1 to 500 foreach { index =>
       testProbe.send(test, Alter("foo-" + index))
       testProbe.expectMsg("j")
     }
@@ -296,11 +291,10 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
     var events = List[TestActor.Event]()
 
-    def checkSizeReceivedEvents(size: Int) = {
+    def checkSizeReceivedEvents(size: Int) =
       eventually {
         events should have size size
       }
-    }
 
     // a Sink that will append each event to the Events List
     val sink = Sink.foreach[TestActor.Event] { e =>

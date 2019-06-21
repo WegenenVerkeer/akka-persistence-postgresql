@@ -15,26 +15,26 @@ import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Milliseconds, Seconds, Span}
 
-class PersistUsingJndiTest extends FunSuite
-  with Matchers
-  with BeforeAndAfterAll
-  with JournalTable
-  with CreateTables
-  with RecreateSchema
-  with PgConfig
-  with WaitForEvents
-  with ScalaFutures
-{
+class PersistUsingJndiTest
+    extends FunSuite
+    with Matchers
+    with BeforeAndAfterAll
+    with JournalTable
+    with CreateTables
+    with RecreateSchema
+    with PgConfig
+    with WaitForEvents
+    with ScalaFutures {
 
   override implicit val patienceConfig = PatienceConfig(timeout = Span(3, Seconds), interval = Span(100, Milliseconds))
 
-  val config: Config = ConfigFactory.load("pg-persist-jndi.conf")
-  implicit val system =  ActorSystem("TestCluster", config)
+  val config: Config                           = ConfigFactory.load("pg-persist-jndi.conf")
+  implicit val system                          = ActorSystem("TestCluster", config)
   override lazy val pluginConfig: PluginConfig = PgExtension(system).pluginConfig
 
   import driver.api._
 
-  val testProbe = TestProbe()
+  val testProbe        = TestProbe()
   implicit val timeOut = Timeout(1, TimeUnit.MINUTES)
 
   test("generate events") {
@@ -75,7 +75,4 @@ class PersistUsingJndiTest extends FunSuite
     ()
   }
 
-
 }
-
-

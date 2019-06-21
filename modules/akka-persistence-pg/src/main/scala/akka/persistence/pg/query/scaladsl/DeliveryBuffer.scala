@@ -4,8 +4,8 @@ import akka.actor.ActorLogging
 import akka.stream.actor.ActorPublisher
 
 /**
- * INTERNAL API
- */
+  * INTERNAL API
+  */
 private[akka] trait DeliveryBuffer[T] {
   _: ActorPublisher[T] with ActorLogging =>
 

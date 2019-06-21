@@ -18,16 +18,16 @@ class PersistAllActor(id: Int) extends PersistentActor with ActorLogging {
       val events = 1 to 10 map { i =>
         Altered(s"${txt}_$i", created)
       }
-      persistAll(events) { _ => sender ! txt }
+      persistAll(events) { _ =>
+        sender ! txt
+      }
   }
 
 }
 
 object PersistAllActor {
   private val id = new AtomicInteger(0)
-  def reset() = id.set(0)
-
+  def reset()    = id.set(0)
 
   def props = Props(new PersistAllActor(id.incrementAndGet()))
 }
-

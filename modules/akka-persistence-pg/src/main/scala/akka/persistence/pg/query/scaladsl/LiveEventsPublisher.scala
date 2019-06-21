@@ -5,21 +5,19 @@ import akka.persistence.query.{EventEnvelope, Offset}
 
 import scala.concurrent.duration.FiniteDuration
 
-class LiveEventsPublisher(fromOffset: Long,
-                          toOffset: Long,
-                          refreshInterval: FiniteDuration,
-                          maxBufSize: Int,
-                          writeJournalPluginId: String)
+class LiveEventsPublisher(
+    fromOffset: Long,
+    toOffset: Long,
+    refreshInterval: FiniteDuration,
+    maxBufSize: Int,
+    writeJournalPluginId: String
+) extends BaseEventsPublisher(fromOffset, toOffset, refreshInterval, maxBufSize, writeJournalPluginId) {
 
-  extends BaseEventsPublisher(fromOffset, toOffset, refreshInterval, maxBufSize, writeJournalPluginId) {
-
-  override def subscribe(): Unit = {
+  override def subscribe(): Unit =
     journal ! SubscribeAllEvents
-  }
 
-  override def requestReplayFromJournal(limit: Int): Unit = {
+  override def requestReplayFromJournal(limit: Int): Unit =
     journal ! ReplayMessages(currOffset, toOffset, limit, self)
-  }
 
   override def replaying: Receive = super.replaying orElse {
 
@@ -37,4 +35,3 @@ class LiveEventsPublisher(fromOffset: Long,
   }
 
 }
-

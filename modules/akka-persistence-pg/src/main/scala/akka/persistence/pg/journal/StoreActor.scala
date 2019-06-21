@@ -18,9 +18,7 @@ private object StoreActor {
   case object StoreSuccess
 }
 
-private class StoreActor(pluginConfig: PluginConfig)
-  extends Actor
-  with ActorLogging {
+private class StoreActor(pluginConfig: PluginConfig) extends Actor with ActorLogging {
 
   case class Done(senders: List[ActorRef], result: Try[Unit])
   case object Run
@@ -28,7 +26,7 @@ private class StoreActor(pluginConfig: PluginConfig)
   import context.dispatcher
   import pluginConfig.pgPostgresProfile.api._
 
-  private var senders: List[ActorRef] = List.empty[ActorRef]
+  private var senders: List[ActorRef]                                  = List.empty[ActorRef]
   private var actions: Seq[pluginConfig.pgPostgresProfile.api.DBIO[_]] = Seq.empty[DBIO[_]]
 
   override def receive: Receive = idle
@@ -41,8 +39,11 @@ private class StoreActor(pluginConfig: PluginConfig)
     case Run =>
       if (senders.nonEmpty) {
         val _senders = senders
-        pluginConfig.database.run(DBIO.seq(this.actions: _*).transactionally)
-          .map { _ => Done(_senders, Success(())) }
+        pluginConfig.database
+          .run(DBIO.seq(this.actions: _*).transactionally)
+          .map { _ =>
+            Done(_senders, Success(()))
+          }
           .recover { case NonFatal(t) => Done(_senders, Failure(t)) }
           .pipeTo(self)
         this.actions = Seq.empty
@@ -55,7 +56,7 @@ private class StoreActor(pluginConfig: PluginConfig)
     case Done(ss, r) =>
       r match {
         case Success(_) => ss foreach { _ ! StoreSuccess }
-        case Failure(t)  => ss foreach { _ ! Status.Failure(t) }
+        case Failure(t) => ss foreach { _ ! Status.Failure(t) }
       }
       context become idle
       self ! Run

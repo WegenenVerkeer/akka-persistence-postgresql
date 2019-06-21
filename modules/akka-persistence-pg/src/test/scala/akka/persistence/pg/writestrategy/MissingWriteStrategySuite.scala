@@ -9,7 +9,7 @@ abstract class MissingWriteStrategySuite(config: Config) extends WriteStrategySu
   override val expected = 2500
 
   test("polling stored events should miss events") {
-    val ids = writeEvents()
+    val ids                = writeEvents()
     val missing: Seq[Long] = missingIds(ids)
     println(missing)
     missing.isEmpty shouldBe false
@@ -19,11 +19,3 @@ abstract class MissingWriteStrategySuite(config: Config) extends WriteStrategySu
   }
 
 }
-
-
-
-
-
-
-
-
