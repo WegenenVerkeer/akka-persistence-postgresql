@@ -26,7 +26,7 @@ object Dependencies {
 
   // gatling benchmark module
   val gatlinHighcharts = "io.gatling.highcharts" % "gatling-charts-highcharts" % gatlingVersion
-  val gatling          = "io.gatling"            % "gatlin
+  val gatling          = "io.gatling"            % "gatlin"                    % gatlingVersion
 
   val postgres = "org.postgresql" % "postgresql" % "42.2.6"
 
