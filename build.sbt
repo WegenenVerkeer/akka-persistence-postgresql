@@ -23,14 +23,16 @@ scalacOptions in ThisBuild := {
 
   scalaVersion.value match {
     case v: String if v startsWith "2.13" => Seq()
-    case v: String if v startsWith "2.12" => Seq(
-      "-Ywarn-adapted-args", // Warn if an argument list is modified to match the receiver,
-      "-Ywarn-inaccessible"
-    )
-    case v: String if v startsWith "2.11" => Seq(
-      "-Ywarn-adapted-args", // Warn if an argument list is modified to match the receiver
-      "-Ywarn-inaccessible",
-      "-Ybackend:GenBCode"
+    case v: String if v startsWith "2.12" =>
+      Seq(
+        "-Ywarn-adapted-args", // Warn if an argument list is modified to match the receiver,
+        "-Ywarn-inaccessible"
+      )
+    case v: String if v startsWith "2.11" =>
+      Seq(
+        "-Ywarn-adapted-args", // Warn if an argument list is modified to match the receiver
+        "-Ywarn-inaccessible",
+        "-Ybackend:GenBCode"
       )
   }
 }
