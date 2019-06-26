@@ -275,14 +275,17 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
   }
 
-  test("query current events by persistenceId") {
+  test("query current events by persistenceId with from and to sequence number") {
 
-    val eventSource = startCurrentSource[TestActor.Event]("TestActor", 0)
+    val eventSource = startCurrentSource[TestActor.Event]("TestActor", 0, 280)
 
-    val test = system.actorOf(Props(new TestActor(testProbe.ref, Some("TestActor"))))
+    val testOne = system.actorOf(Props(new TestActor(testProbe.ref, Some("TestActor"))))
+    val testTwo = system.actorOf(Props(new TestActor(testProbe.ref, Some("TestActor2"))))
 
     1 to 500 foreach { index =>
-      testProbe.send(test, Alter("foo-" + index))
+      testProbe.send(testOne, Alter("foo-" + index))
+      testProbe.expectMsg("j")
+      testProbe.send(testTwo, Alter("bar-" + index))
       testProbe.expectMsg("j")
     }
 
@@ -303,12 +306,12 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
     eventSource.to(sink).run()
 
-    checkSizeReceivedEvents(500)
-    testProbe.send(test, Alter("bar"))
+    checkSizeReceivedEvents(280)
+    testProbe.send(testOne, Alter("bar"))
     testProbe.expectMsg("j")
-    testProbe.send(test, Increment(1))
+    testProbe.send(testOne, Increment(1))
     testProbe.expectMsg("j")
-    checkSizeReceivedEvents(500)
+    checkSizeReceivedEvents(280)
 
   }
 

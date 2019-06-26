@@ -41,7 +41,7 @@ abstract class AbstractEventStoreTest
 
   import driver.api._
 
-  override def beforeAll() {
+  override def beforeAll(): Unit = {
     database.run(recreateSchema.andThen(createTables)).futureValue
     ()
   }
@@ -125,10 +125,12 @@ abstract class AbstractEventStoreTest
         }
       }
 
-  def startCurrentSource[E](persistenceId: String, fromRowId: Long)(implicit tag: ClassTag[E]): Source[E, NotUsed] =
+  def startCurrentSource[E](persistenceId: String, fromSeqNr: Long, toSeqNr: Long = Long.MaxValue)(
+      implicit tag: ClassTag[E]
+  ): Source[E, NotUsed] =
     PersistenceQuery(system)
       .readJournalFor[PostgresReadJournal](PostgresReadJournal.Identifier)
-      .currentEventsByPersistenceId(persistenceId, fromRowId, Long.MaxValue)
+      .currentEventsByPersistenceId(persistenceId, fromSeqNr, toSeqNr)
       .map { env =>
         env.event match {
           case evt: E     => evt
