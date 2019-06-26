@@ -17,9 +17,9 @@ trait ReadJournalStore extends JournalStore { self: PgConfig =>
   ): Source[PersistentRepr, NotUsed] = {
     val query = journals
       .filter(_.persistenceId === persistenceId)
-      .filter(_.idForQuery >= fromSequenceNr)
-      .filter(_.idForQuery <= toSequenceNr)
-      .sortBy(_.idForQuery)
+      .filter(_.sequenceNr >= fromSequenceNr)
+      .filter(_.sequenceNr <= toSequenceNr)
+      .sortBy(_.sequenceNr)
       .result
       .withStatementParameters(
         rsType = ResultSetType.ForwardOnly,
