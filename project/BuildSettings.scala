@@ -19,8 +19,8 @@ object BuildSettings {
   val publishingCredentials = (for {
     username <- Option(System.getenv().get("SONATYPE_USERNAME"))
     password <- Option(System.getenv().get("SONATYPE_PASSWORD"))
-  } yield
-    Seq(Credentials("Sonatype Nexus Repository Manager", "oss.sonatype.org", username, password))).getOrElse(Seq())
+  } yield Seq(Credentials("Sonatype Nexus Repository Manager", "oss.sonatype.org", username, password)))
+    .getOrElse(Seq())
 
   val publishSettings = Seq(
     publishMavenStyle := true,

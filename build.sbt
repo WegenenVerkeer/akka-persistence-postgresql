@@ -21,7 +21,7 @@ scalacOptions in ThisBuild := {
     "-Ydelambdafy:method"
   )
 
-  scalaVersion.value match {
+  val scalaVersionSpecificOptions = scalaVersion.value match {
     case v: String if v startsWith "2.13" => Seq()
     case v: String if v startsWith "2.12" =>
       Seq(
@@ -35,6 +35,8 @@ scalacOptions in ThisBuild := {
         "-Ybackend:GenBCode"
       )
   }
+
+  commonOptions ++ scalaVersionSpecificOptions
 }
 
 lazy val akkaPersistencePgModule = {
