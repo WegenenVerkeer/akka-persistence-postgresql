@@ -30,7 +30,8 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
     with EventsByPersistenceIdQuery
     with CurrentEventsByTags
     with CurrentAllEvents
-    with CurrentEventsByPersistenceIdQuery {
+    with CurrentEventsByPersistenceIdQuery
+    with CurrentPersistenceIdsQuery {
 
   private val refreshInterval              = config.getDuration("refresh-interval", MILLISECONDS).millis
   private val writeJournalPluginId: String = config.getString("write-plugin")

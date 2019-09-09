@@ -6,8 +6,9 @@ import akka.NotUsed
 import akka.persistence.pg.EventTag
 import akka.persistence.pg.query.scaladsl.{PostgresReadJournal => ScalaPostgresReadJournal}
 import akka.persistence.query.EventEnvelope
-import akka.persistence.query.javadsl.{CurrentEventsByPersistenceIdQuery, EventsByPersistenceIdQuery, ReadJournal}
+import akka.persistence.query.javadsl.{CurrentEventsByPersistenceIdQuery, EventsByPersistenceIdQuery, ReadJournal, CurrentPersistenceIdsQuery}
 import akka.stream.javadsl.Source
+import akka.stream.scaladsl
 
 import scala.collection.JavaConverters._
 
@@ -18,7 +19,8 @@ class PostgresReadJournal(journal: ScalaPostgresReadJournal)
     with EventsByPersistenceIdQuery
     with CurrentEventsByTags
     with CurrentAllEvents
-    with CurrentEventsByPersistenceIdQuery {
+    with CurrentEventsByPersistenceIdQuery
+    with CurrentPersistenceIdsQuery {
 
   override def eventsByTags(tags: JSet[EventTag], fromRowId: Long, toRowId: Long): Source[EventEnvelope, NotUsed] =
     journal.eventsByTags(tags.asScala.toSet, fromRowId, toRowId).asJava
@@ -49,6 +51,10 @@ class PostgresReadJournal(journal: ScalaPostgresReadJournal)
       toSequenceNr: Long
   ): Source[EventEnvelope, NotUsed] =
     journal.currentEventsByPersistenceId(persistenceId, fromSequenceNr, toSequenceNr).asJava
+
+  override def currentPersistenceIds(): Source[String, NotUsed] =
+    journal.currentPersistenceIds().asJava
+
 }
 
 object PostgresReadJournal {

@@ -315,4 +315,41 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
   }
 
+  test("query current persistenceIds") {
+
+    val eventSource = startCurrentSource()
+
+    val test = system.actorOf(Props(new TestActor(testProbe.ref)))
+
+    1 to 500 foreach { index =>
+      testProbe.send(test, Alter(s"foo-$index"))
+      testProbe.expectMsg("j")
+    }
+
+    // wait until rowids are updated
+    PgExtension(system).whenDone(Future.successful(())).futureValue
+
+    var persistenceIds = List[String]()
+
+    def checkSizeReceivedEvents(size: Int) =
+      eventually {
+        persistenceIds should have size size
+      }
+
+    // a Sink that will append each event to the Events List
+    val sink = Sink.foreach[String] { e =>
+      persistenceIds = persistenceIds :+ e
+    }
+
+    eventSource.to(sink).run()
+
+    checkSizeReceivedEvents(1)
+    testProbe.send(test, Alter("bar"))
+    testProbe.expectMsg("j")
+    testProbe.send(test, Increment(1))
+    testProbe.expectMsg("j")
+    checkSizeReceivedEvents(1)
+
+  }
+
 }
