@@ -6,7 +6,12 @@ import akka.NotUsed
 import akka.persistence.pg.EventTag
 import akka.persistence.pg.query.scaladsl.{PostgresReadJournal => ScalaPostgresReadJournal}
 import akka.persistence.query.EventEnvelope
-import akka.persistence.query.javadsl.{CurrentEventsByPersistenceIdQuery, EventsByPersistenceIdQuery, ReadJournal, CurrentPersistenceIdsQuery}
+import akka.persistence.query.javadsl.{
+  CurrentEventsByPersistenceIdQuery,
+  CurrentPersistenceIdsQuery,
+  EventsByPersistenceIdQuery,
+  ReadJournal
+}
 import akka.stream.javadsl.Source
 import akka.stream.scaladsl
 
