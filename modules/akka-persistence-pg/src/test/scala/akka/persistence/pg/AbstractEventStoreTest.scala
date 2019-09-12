@@ -138,4 +138,9 @@ abstract class AbstractEventStoreTest
         }
       }
 
+  def startCurrentSource(): Source[String, NotUsed] =
+    PersistenceQuery(system)
+      .readJournalFor[PostgresReadJournal](PostgresReadJournal.Identifier)
+      .currentPersistenceIds()
+
 }

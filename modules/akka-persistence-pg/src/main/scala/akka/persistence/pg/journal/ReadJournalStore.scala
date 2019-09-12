@@ -10,6 +10,22 @@ trait ReadJournalStore extends JournalStore { self: PgConfig =>
 
   import driver.api._
 
+  def currentPersistenceIds(): Source[String, NotUsed] = {
+    val query = journals
+      .map(_.persistenceId)
+      .distinct
+      .result
+      .withStatementParameters(
+        rsType = ResultSetType.ForwardOnly,
+        rsConcurrency = ResultSetConcurrency.ReadOnly,
+        fetchSize = 1000
+      )
+      .transactionally
+
+    val publisher = database.stream(query)
+    Source.fromPublisher(publisher)
+  }
+
   def currentEvents(
       persistenceId: String,
       fromSequenceNr: Long,
