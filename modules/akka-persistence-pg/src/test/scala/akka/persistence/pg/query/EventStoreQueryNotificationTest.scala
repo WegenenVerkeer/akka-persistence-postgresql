@@ -47,7 +47,7 @@ class EventStoreQueryNotificationTest extends AbstractEventStoreTest with PgConf
 
     println(s"query tagged events, expecting $expected events")
     eventually {
-      println(events.size)
+//      println(events.size)
       if (events.size >= expected - 5) checkConsecutive(events)
       events.size shouldBe expected
     }
@@ -70,7 +70,7 @@ class EventStoreQueryNotificationTest extends AbstractEventStoreTest with PgConf
 
     println(s"query all events, expecting $expected events")
     eventually {
-      println(events.size)
+//      println(events.size)
       if (events.size >= expected - 5) checkConsecutive(events)
       events.size shouldBe expected
     }
@@ -98,7 +98,7 @@ class EventStoreQueryNotificationTest extends AbstractEventStoreTest with PgConf
 
     println(s"query persistenceId events, expecting $expectedForPersistenceId events")
     eventually {
-      println(events.size)
+//      println(events.size)
       events should have size expectedForPersistenceId
     }
     database.run(countEvents(persistenceId)).futureValue shouldEqual expectedForPersistenceId

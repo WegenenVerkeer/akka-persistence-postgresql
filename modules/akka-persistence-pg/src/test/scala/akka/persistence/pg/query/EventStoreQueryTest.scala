@@ -50,7 +50,7 @@ class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
     eventSource.to(sink).run()
 
     checkSizeReceivedEvents(2)
-    testProbe.send(test, Alter("bar"))
+    testProbe.send(test, Alter("baz"))
     testProbe.expectMsg("j")
     testProbe.send(test, Increment(1))
     testProbe.expectMsg("j")

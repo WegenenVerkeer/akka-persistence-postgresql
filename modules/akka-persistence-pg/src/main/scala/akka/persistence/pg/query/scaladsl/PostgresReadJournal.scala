@@ -4,18 +4,15 @@ import java.net.URLEncoder
 
 import akka.NotUsed
 import akka.actor.ExtendedActorSystem
+import akka.persistence.pg.journal.PgAsyncWriteJournal.CancelSubscribers
 import akka.persistence.pg.journal.ReadJournalStore
 import akka.persistence.pg.{EventTag, PgConfig, PgExtension, PluginConfig}
-import akka.persistence.pg.query._
+import akka.persistence.pg.streams.EventsPublisherGraphStage
 import akka.persistence.query.scaladsl._
 import akka.persistence.query.{EventEnvelope, Offset}
 import akka.persistence.{Persistence, PersistentRepr}
 import akka.serialization.{Serialization, SerializationExtension}
-import akka.stream.actor.ActorPublisherMessage.Cancel
-import akka.stream.impl.ActorPublisherSource
-import akka.stream.impl.Stages.DefaultAttributes
 import akka.stream.scaladsl.Source
-import akka.stream.scaladsl.Source.shape
 import akka.util.ByteString
 import com.typesafe.config.Config
 
@@ -49,42 +46,24 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
   ): Source[EventEnvelope, NotUsed] = {
     val encodedTags = URLEncoder.encode(tags.mkString("-"), ByteString.UTF_8)
     Source
-      .fromGraph(
-        new ActorPublisherSource(
-          EventsByTagsPublisher.props(
-            tags = tags,
-            fromOffset = fromRowId,
-            toOffset = toRowId,
-            refreshInterval = refreshInterval,
-            maxBufSize = maxBufSize,
-            writeJournalPluginId = writeJournalPluginId
-          ),
-          DefaultAttributes.actorPublisherSource,
-          shape(s"ActorPublisherSource-eventsByTags-$encodedTags")
+      .setup { (mat, _) =>
+        Source.fromGraph(
+          EventsPublisherGraphStage.byTags(fromRowId, toRowId, maxBufSize, writeJournalPluginId, tags)(mat)
         )
-      )
-      .mapMaterializedValue(_ => NotUsed)
+      }
       .named(s"eventsByTags-$encodedTags")
-
+      .mapMaterializedValue(_ => NotUsed)
   }
 
   override def allEvents(fromRowId: Long, toRowId: Long = Long.MaxValue): Source[EventEnvelope, NotUsed] =
     Source
-      .fromGraph(
-        new ActorPublisherSource(
-          EventsPublisher.props(
-            fromOffset = fromRowId,
-            toOffset = toRowId,
-            refreshInterval = refreshInterval,
-            maxBufSize = maxBufSize,
-            writeJournalPluginId = writeJournalPluginId
-          ),
-          DefaultAttributes.actorPublisherSource,
-          shape("ActorPublisherSource-allEvents")
+      .setup { (mat, _) =>
+        Source.fromGraph(
+          EventsPublisherGraphStage.allEvents(fromRowId, toRowId, maxBufSize, writeJournalPluginId)(mat)
         )
-      )
+      }
+      .named(s"events-")
       .mapMaterializedValue(_ => NotUsed)
-      .named("events-")
 
   override def eventsByPersistenceId(
       persistenceId: String,
@@ -92,22 +71,14 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
       toSequenceNr: Long
   ): Source[EventEnvelope, NotUsed] =
     Source
-      .fromGraph(
-        new ActorPublisherSource(
-          EventsByPersistenceIdPublisher.props(
-            persistenceId = persistenceId,
-            fromOffset = fromSequenceNr,
-            toOffset = toSequenceNr,
-            refreshInterval = refreshInterval,
-            maxBufSize = maxBufSize,
-            writeJournalPluginId = writeJournalPluginId
-          ),
-          DefaultAttributes.actorPublisherSource,
-          shape(s"ActorPublisherSource-eventsByPersistenceId-${URLEncoder.encode(persistenceId, ByteString.UTF_8)}")
+      .setup { (mat, _) =>
+        Source.fromGraph(
+          EventsPublisherGraphStage
+            .byPersistenceId(fromSequenceNr, toSequenceNr, maxBufSize, writeJournalPluginId, persistenceId)(mat)
         )
-      )
-      .mapMaterializedValue(_ => NotUsed)
+      }
       .named(s"eventsByPersistenceId-${URLEncoder.encode(persistenceId, ByteString.UTF_8)}")
+      .mapMaterializedValue(_ => NotUsed)
 
   override def currentEventsByTags(
       tags: Set[EventTag],
@@ -136,7 +107,7 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
       .map(persistentReprToEventEnvelope)
 
   def cancelAll(): Unit =
-    Persistence(system).journalFor(writeJournalPluginId) ! Cancel
+    Persistence(system).journalFor(writeJournalPluginId) ! CancelSubscribers
 
   private def adaptEvents(repr: PersistentRepr): List[PersistentRepr] = {
     val adapter = eventAdapters.get(repr.payload.getClass)
