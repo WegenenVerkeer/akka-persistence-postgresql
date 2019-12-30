@@ -28,12 +28,6 @@ scalacOptions in ThisBuild := {
         "-Ywarn-adapted-args", // Warn if an argument list is modified to match the receiver,
         "-Ywarn-inaccessible"
       )
-    case v: String if v startsWith "2.11" =>
-      Seq(
-        "-Ywarn-adapted-args", // Warn if an argument list is modified to match the receiver
-        "-Ywarn-inaccessible",
-        "-Ybackend:GenBCode"
-      )
   }
 
   commonOptions ++ scalaVersionSpecificOptions
