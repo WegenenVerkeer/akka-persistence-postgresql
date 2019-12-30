@@ -16,8 +16,6 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.typesafe.config.Config
 
-import scala.concurrent.duration._
-
 class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
     extends ReadJournal
     with ReadJournalStore
@@ -30,7 +28,6 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
     with CurrentEventsByPersistenceIdQuery
     with CurrentPersistenceIdsQuery {
 
-  private val refreshInterval              = config.getDuration("refresh-interval", MILLISECONDS).millis
   private val writeJournalPluginId: String = config.getString("write-plugin")
   private val maxBufSize: Int              = config.getInt("max-buffer-size")
   private val eventAdapters                = Persistence(system).adaptersFor(writeJournalPluginId)
@@ -46,7 +43,7 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
   ): Source[EventEnvelope, NotUsed] = {
     val encodedTags = URLEncoder.encode(tags.mkString("-"), ByteString.UTF_8)
     Source
-      .setup { (mat, _) =>
+      .fromMaterializer { (mat, _) =>
         Source.fromGraph(
           EventsPublisherGraphStage.byTags(fromRowId, toRowId, maxBufSize, writeJournalPluginId, tags)(mat)
         )
@@ -57,7 +54,7 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
 
   override def allEvents(fromRowId: Long, toRowId: Long = Long.MaxValue): Source[EventEnvelope, NotUsed] =
     Source
-      .setup { (mat, _) =>
+      .fromMaterializer { (mat, _) =>
         Source.fromGraph(
           EventsPublisherGraphStage.allEvents(fromRowId, toRowId, maxBufSize, writeJournalPluginId)(mat)
         )
@@ -71,7 +68,7 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
       toSequenceNr: Long
   ): Source[EventEnvelope, NotUsed] =
     Source
-      .setup { (mat, _) =>
+      .fromMaterializer { (mat, _) =>
         Source.fromGraph(
           EventsPublisherGraphStage
             .byPersistenceId(fromSequenceNr, toSequenceNr, maxBufSize, writeJournalPluginId, persistenceId)(mat)
