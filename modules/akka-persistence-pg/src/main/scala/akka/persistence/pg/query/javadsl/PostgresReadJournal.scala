@@ -13,7 +13,6 @@ import akka.persistence.query.javadsl.{
   ReadJournal
 }
 import akka.stream.javadsl.Source
-import akka.stream.scaladsl
 
 import scala.collection.JavaConverters._
 

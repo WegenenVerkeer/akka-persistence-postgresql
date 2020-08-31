@@ -7,10 +7,10 @@ import akka.pattern._
 import akka.persistence.JournalProtocol.{RecoverySuccess, ReplayMessagesFailure}
 import akka.persistence.journal.AsyncWriteJournal
 import akka.persistence.pg.journal.PgAsyncWriteJournal._
+import akka.persistence.pg.streams.EventsPublisherStageLogic.CancelEventsStage
 import akka.persistence.pg.{EventTag, PgConfig, PgExtension, PluginConfig}
 import akka.persistence.{AtomicWrite, PersistentRepr}
 import akka.serialization.{Serialization, SerializationExtension}
-import akka.stream.actor.ActorPublisherMessage.Cancel
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.stream.scaladsl.{Keep, Sink, Source}
 import slick.jdbc.{ResultSetConcurrency, ResultSetType}
@@ -147,7 +147,7 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgCon
 
   override def receivePluginInternal: Receive = {
 
-    case Cancel => cancelSubscribers()
+    case CancelSubscribers => cancelSubscribers()
 
     // requested to send events containing given tags between from and to rowId
     case ReplayTaggedMessages(fromRowId, toRowId, max, tags, replyTo) =>
@@ -321,10 +321,10 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgCon
     notifyEventsAdded()
   }
 
-  def cancelSubscribers() = {
-    persistenceIdSubscribers.foreach { _._2.foreach(_ ! Cancel) }
-    tagSubscribers.foreach { _._2.foreach(_ ! Cancel) }
-    allEventsSubscribers.foreach { _ ! Cancel }
+  def cancelSubscribers(): Unit = {
+    persistenceIdSubscribers.foreach { _._2.foreach(_ ! CancelEventsStage) }
+    tagSubscribers.foreach { _._2.foreach(_ ! CancelEventsStage) }
+    allEventsSubscribers.foreach { _ ! CancelEventsStage }
   }
 
   private val persistenceIdSubscribers = new mutable.HashMap[String, mutable.Set[ActorRef]]
@@ -423,4 +423,5 @@ object PgAsyncWriteJournal {
   //events by persistenceId
   final case class SubscribePersistenceId(persistenceId: String) extends SubscriptionCommand
 
+  case object CancelSubscribers
 }
