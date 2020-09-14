@@ -21,7 +21,7 @@ class PgSnapshotStoreSpec
 
   import driver.api._
 
-  override def beforeAll() {
+  override def beforeAll(): Unit = {
     database.run(recreateSchema.andThen(snapshots.schema.create)).futureValue
     super.beforeAll()
   }

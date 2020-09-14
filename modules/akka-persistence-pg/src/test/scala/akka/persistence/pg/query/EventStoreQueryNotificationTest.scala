@@ -5,7 +5,6 @@ import java.util.concurrent.TimeUnit
 import akka.NotUsed
 import akka.actor.ActorRef
 import akka.persistence.pg._
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{RunnableGraph, Sink}
 import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory}
@@ -24,8 +23,7 @@ class EventStoreQueryNotificationTest extends AbstractEventStoreTest with PgConf
 
   override implicit val patienceConfig = PatienceConfig(timeout = Span(20, Seconds), interval = Span(100, Milliseconds))
 
-  implicit val materializer = ActorMaterializer()
-  implicit val timeOut      = Timeout(1, TimeUnit.MINUTES)
+  implicit val timeOut = Timeout(1, TimeUnit.MINUTES)
 
   val expected                      = 2000
   val numActors                     = 100

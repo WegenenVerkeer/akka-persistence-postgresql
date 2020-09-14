@@ -33,9 +33,7 @@ private[pg] abstract class EventsPublisherStageLogic(
     with OutHandler {
   import EventsPublisherStageLogic._
 
-  val journal: ActorRef = Persistence(
-    ActorMaterializerHelper.downcast(materializer).system
-  ).journalFor(writeJournalPluginId)
+  val journal: ActorRef = Persistence(materializer.system).journalFor(writeJournalPluginId)
 
   implicit protected lazy val sender: ActorRef = stageActor.ref
 

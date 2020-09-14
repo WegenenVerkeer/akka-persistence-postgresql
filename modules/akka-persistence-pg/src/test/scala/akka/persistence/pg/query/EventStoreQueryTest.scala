@@ -3,7 +3,6 @@ package akka.persistence.pg.query
 import akka.actor.Props
 import akka.persistence.pg.TestActor._
 import akka.persistence.pg._
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
@@ -17,8 +16,6 @@ import scala.concurrent.Future
 class EventStoreQueryTest extends AbstractEventStoreTest with Eventually {
 
   override lazy val config = ConfigFactory.load("pg-eventstore-rowid.conf")
-
-  implicit val materializer = ActorMaterializer()
 
   test("query tagged events (tagged with 'Altered')") {
 

@@ -10,14 +10,16 @@ import akka.persistence.pg.perf.PersistAllActor
 import akka.persistence.pg.util.{CreateTables, RecreateSchema}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import org.scalatest._
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Milliseconds, Seconds, Span}
 
 import scala.util.Random
 
 class PersistAllTest
-    extends FunSuite
+    extends AnyFunSuite
     with BeforeAndAfterEach
     with Matchers
     with BeforeAndAfterAll
@@ -83,7 +85,7 @@ class PersistAllTest
     waitUntilEventsWritten(expected, received)
   }
 
-  override def beforeAll() {
+  override def beforeAll(): Unit = {
     PersistAllActor.reset()
     database.run(recreateSchema.andThen(createTables)).futureValue
     actors = 1 to numActors map { i =>

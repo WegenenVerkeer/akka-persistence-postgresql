@@ -35,7 +35,7 @@ with PgConfig {
   private val pgExtension: PgExtension = PgExtension(system)
   override lazy val pluginConfig = pgExtension.pluginConfig
 
-  override def beforeAll() {
+  override def beforeAll():Unit = {
     database.run(recreateSchema
       .andThen(createTables)).futureValue
     super.beforeAll()

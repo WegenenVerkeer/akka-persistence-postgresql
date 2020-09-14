@@ -8,6 +8,7 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import com.typesafe.config.Config
 import org.scalatest._
+import org.scalatest.funsuite.FixtureAnyFunSuiteLike
 import slick.jdbc.JdbcBackend
 
 import scala.concurrent.Await
@@ -19,7 +20,7 @@ import scala.util.Try
   * db sessions are rolled back after each test, maintaining a clean db state
   * This also means the actorsystem needs to be recreated for each test
   */
-trait PersistentActorTest extends fixture.FunSuiteLike with BeforeAndAfterEach {
+trait PersistentActorTest extends FixtureAnyFunSuiteLike with BeforeAndAfterEach {
 
   def config: Config
 

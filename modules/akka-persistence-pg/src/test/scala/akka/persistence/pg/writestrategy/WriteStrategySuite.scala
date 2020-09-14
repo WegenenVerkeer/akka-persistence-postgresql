@@ -14,8 +14,10 @@ import akka.persistence.pg.util.{CreateTables, RecreateSchema}
 import akka.persistence.pg.{PgConfig, PgExtension, PluginConfig, WaitForEvents}
 import akka.util.Timeout
 import com.typesafe.config.Config
-import org.scalatest._
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Milliseconds, Seconds, Span}
 
 import scala.concurrent.Await
@@ -25,9 +27,9 @@ import scala.util.Random
 import scala.util.control.NonFatal
 
 abstract class WriteStrategySuite(config: Config)
-    extends FunSuite
-    with BeforeAndAfterEach
+    extends AnyFunSuite
     with Matchers
+    with BeforeAndAfterEach
     with BeforeAndAfterAll
     with JournalTable
     with SnapshotTable
@@ -81,7 +83,7 @@ abstract class WriteStrategySuite(config: Config)
 
   override implicit val patienceConfig = PatienceConfig(timeout = Span(10, Seconds), interval = Span(100, Milliseconds))
 
-  override def beforeAll() {
+  override def beforeAll(): Unit = {
     database
       .run(
         recreateSchema.andThen(journals.schema.create).andThen(snapshots.schema.create)

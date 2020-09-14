@@ -18,8 +18,9 @@ import akka.persistence.{PersistentActor, SnapshotOffer}
 import akka.persistence.pg.util.{CreateTables, PersistentActorTest, RecreateSchema}
 import akka.serialization.SerializerWithStringManifest
 import com.typesafe.config.{Config, ConfigFactory}
-import org.scalatest.{BeforeAndAfterAll, Matchers}
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Seconds, Span}
 
 class CustomSerializationTest
@@ -43,7 +44,7 @@ class CustomSerializationTest
   /**
     * recreate schema and tables before running the tests
     */
-  override def beforeAll() {
+  override def beforeAll(): Unit = {
     database.run(recreateSchema.andThen(createTables)).futureValue
     ()
   }

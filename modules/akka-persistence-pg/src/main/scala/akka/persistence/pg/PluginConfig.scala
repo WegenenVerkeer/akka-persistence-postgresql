@@ -28,9 +28,9 @@ class PluginConfig(systemConfig: Config) {
   private val config = systemConfig.getConfig("pg-persistence")
 
   val schema: Option[String] = PluginConfig.asOption(config.getString("schemaName"))
-  val schemaName: String     = schema.fold("")(n => '"' + n + '"')
+  val schemaName: String     = schema.fold("")(n => s""""$n"""")
 
-  def getFullName(partialName: String): String = schema.fold(partialName)('"' + _ + '"' + '.' + partialName)
+  def getFullName(partialName: String): String = schema.fold(partialName)(s => s""""$s".$partialName""")
 
   val journalTableName: String     = config.getString("journalTableName")
   val fullJournalTableName: String = getFullName(journalTableName)

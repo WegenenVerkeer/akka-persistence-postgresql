@@ -10,15 +10,17 @@ import akka.persistence.pg.perf.ReadModelUpdateActor
 import akka.persistence.pg.util.{CreateTables, RecreateSchema}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import org.scalatest._
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Milliseconds, Seconds, Span}
 
 import scala.collection.JavaConverters._
 import scala.util.Random
 
 class ExtraDBIOSupportTest
-    extends FunSuite
+    extends AnyFunSuite
     with BeforeAndAfterEach
     with Matchers
     with BeforeAndAfterAll
@@ -78,7 +80,7 @@ class ExtraDBIOSupportTest
 
   }
 
-  override def beforeAll() {
+  override def beforeAll(): Unit = {
     ReadModelUpdateActor.reset()
     database
       .run(

@@ -80,8 +80,8 @@ object PgPluginTestUtil {
 
     override def close(): Unit = {}
 
-    def endInTransaction(f: => Unit): Unit = {}
-    def startInTransaction: Unit           = {}
+    override def endInTransaction(f: => Unit): Unit = {}
+    override def startInTransaction: Unit           = {}
 
   }
 

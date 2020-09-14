@@ -112,11 +112,12 @@ class PostgresReadJournal(system: ExtendedActorSystem, config: Config)
   }
 
   private def persistentReprToEventEnvelope(persistentRepr: PersistentRepr) =
-    EventEnvelope(
+    new EventEnvelope(
       Offset.sequence(persistentRepr.sequenceNr),
       persistentRepr.persistenceId,
       persistentRepr.sequenceNr,
-      persistentRepr.payload
+      persistentRepr.payload,
+      0L
     )
 }
 

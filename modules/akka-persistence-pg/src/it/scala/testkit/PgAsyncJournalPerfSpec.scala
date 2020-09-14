@@ -28,7 +28,7 @@ with PgConfig {
   override def eventsCount = 5000
   override def awaitDurationMillis: Long = 30.seconds toMillis
 
-  override def beforeAll() {
+  override def beforeAll():Unit = {
     database.run(recreateSchema
       .andThen(createTables)).futureValue
     super.beforeAll()

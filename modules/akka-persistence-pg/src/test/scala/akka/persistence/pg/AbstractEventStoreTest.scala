@@ -11,14 +11,16 @@ import akka.persistence.query.PersistenceQuery
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import com.typesafe.config.{Config, ConfigFactory}
-import org.scalatest._
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Milliseconds, Seconds, Span}
 
 import scala.reflect.ClassTag
 
 abstract class AbstractEventStoreTest
-    extends FunSuite
+    extends AnyFunSuite
     with BeforeAndAfterEach
     with Matchers
     with BeforeAndAfterAll

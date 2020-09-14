@@ -23,11 +23,12 @@ private[pg] class AllEventsPublisherStageLogic(
 
     case ReplayedEventMessage(persistentRepr, offset) =>
       currentOffset = offset + 1
-      EventEnvelope(
+      new EventEnvelope(
         offset = Offset.sequence(offset),
         persistenceId = persistentRepr.persistenceId,
         sequenceNr = persistentRepr.sequenceNr,
-        event = persistentRepr.payload
+        event = persistentRepr.payload,
+        timestamp = 0L
       )
 
   }

@@ -24,11 +24,12 @@ private[pg] class EventsByPersistenceIdPublisherStageLogic(
   override def replaying: PartialFunction[Any, EventEnvelope] = {
     case ReplayedMessage(p) =>
       currentOffset = p.sequenceNr + 1
-      EventEnvelope(
+      new EventEnvelope(
         offset = Offset.sequence(p.sequenceNr),
         persistenceId = persistenceId,
         sequenceNr = p.sequenceNr,
-        event = p.payload
+        event = p.payload,
+        timestamp = 0L
       )
   }
 

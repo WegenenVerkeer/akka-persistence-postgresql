@@ -1,8 +1,8 @@
 package akka.persistence.pg
 
 import java.util.concurrent.TimeUnit
-import javax.naming.{Context, InitialContext}
 
+import javax.naming.{Context, InitialContext}
 import akka.actor._
 import akka.persistence.pg.TestActor.{Alter, GetState, TheState}
 import akka.persistence.pg.journal.JournalTable
@@ -11,12 +11,14 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory}
 import org.postgresql.ds.PGSimpleDataSource
-import org.scalatest._
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Milliseconds, Seconds, Span}
 
 class PersistUsingJndiTest
-    extends FunSuite
+    extends AnyFunSuite
     with Matchers
     with BeforeAndAfterAll
     with JournalTable
@@ -53,7 +55,7 @@ class PersistUsingJndiTest
     database.run(journals.size.result).futureValue shouldBe 2
   }
 
-  override def beforeAll() {
+  override def beforeAll(): Unit = {
     System.setProperty(Context.INITIAL_CONTEXT_FACTORY, "tyrex.naming.MemoryContextFactory")
     System.setProperty(Context.PROVIDER_URL, "/")
 

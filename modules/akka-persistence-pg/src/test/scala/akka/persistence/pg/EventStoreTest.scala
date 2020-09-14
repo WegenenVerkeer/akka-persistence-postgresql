@@ -4,7 +4,6 @@ import java.time.format.DateTimeFormatter
 
 import akka.actor.Props
 import akka.persistence.pg.TestActor._
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import org.scalatest.concurrent.Eventually
 
@@ -16,7 +15,7 @@ class EventStoreTest extends AbstractEventStoreTest with Eventually {
 
   import driver.api._
 
-  implicit val materializer = ActorMaterializer()
+  implicit val materializer = system
 
   test("generate events") {
     val test = system.actorOf(Props(new TestActor(testProbe.ref)))

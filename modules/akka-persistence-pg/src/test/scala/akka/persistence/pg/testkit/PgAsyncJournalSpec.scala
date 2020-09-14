@@ -23,7 +23,7 @@ class PgAsyncJournalSpec
 
   import driver.api._
 
-  override def beforeAll() {
+  override def beforeAll(): Unit = {
     pluginConfig.database
       .run(
         recreateSchema
