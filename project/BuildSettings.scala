@@ -35,6 +35,11 @@ object BuildSettings {
         Some("releases" at nexus + "service/local/staging/deploy/maven2")
     },
     pomExtra := <url>https://github.com/WegenenVerkeer/akka-persistence-postgresql</url>
+      <scm>
+        <url>https://github.com/WegenenVerkeer/akka-persistence-postgresql</url>
+        <connection>git@github.com:WegenenVerkeer/akka-persistence-postgresql.git</connection>
+        <developerConnection>git@github.com:WegenenVerkeer/akka-persistence-postgresql.git</developerConnection>
+      </scm>
       <licenses>
         <license>
           <name>MIT licencse</name>
