@@ -134,10 +134,17 @@ trait JournalStore extends JournalTable {
     */
   protected def tagsFilter(tags: Set[EventTag]): JournalTable => Rep[Boolean] = { table: JournalTable =>
     {
-      tags
-        .map { case (tagKey, tagValue) => table.tags @> Map(tagKey -> tagValue.value).bind }
-        .reduceLeftOption(_ || _)
-        .getOrElse(false: Rep[Boolean])
+      if (self.pluginConfig.hstoreEquals) {
+        tags
+          .map { case (tagKey, tagValue) => (table.tags +> tagKey) === tagValue }
+          .reduceLeftOption(_ || _)
+          .getOrElse(false: Rep[Boolean])
+      } else {
+        tags
+          .map { case (tagKey, tagValue) => table.tags @> Map(tagKey -> tagValue.value).bind }
+          .reduceLeftOption(_ || _)
+          .getOrElse(false: Rep[Boolean])
+      }
     }
   }
 
