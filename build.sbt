@@ -3,9 +3,13 @@ import Dependencies._
 
 organization := "be.wegenenverkeer"
 
-concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
+Global / concurrentRestrictions += Tags.limit(Tags.Test, 1)
 
-scalacOptions in ThisBuild := {
+lazy val scala212               = "2.12.16"
+lazy val scala213               = "2.13.8"
+ThisBuild / crossScalaVersions := Seq(scala212, scala213)
+
+ThisBuild / scalacOptions := {
   val commonOptions = Seq(
     "-target:jvm-1.8",
     "-encoding",
@@ -13,12 +17,13 @@ scalacOptions in ThisBuild := {
     "-deprecation",         // warning and location for usages of deprecated APIs
     "-feature",             // warning and location for usages of features that should be imported explicitly
     "-unchecked",           // additional warnings where generated code depends on assumptions
-    "-Xlint",               // recommended additional warnings
+    "-Xlint:-infer-any",    // recommended additional warnings
     "-Ywarn-value-discard", // Warn when non-Unit expression results are unused
     //  "-Ywarn-dead-code",
     //  "-Xfatal-warnings",
     "-language:reflectiveCalls",
-    "-Ydelambdafy:method"
+    "-Ydelambdafy:method",
+    //"-Wconf:cat=lint-multiarg-infix:s" // mute warning on Slick <> operator: https://contributors.scala-lang.org/t/multiarg-infix-application-considered-warty/4490
   )
 
   val scalaVersionSpecificOptions = scalaVersion.value match {
@@ -36,7 +41,6 @@ scalacOptions in ThisBuild := {
 lazy val akkaPersistencePgModule = {
 
   val mainDeps = Seq(
-    scalaJava8Compat,
     slick,
     slickHikariCp,
     postgres,
@@ -57,14 +61,20 @@ lazy val akkaPersistencePgModule = {
   ).configs(It)
     .settings(Defaults.coreDefaultSettings ++ commonSettings ++ publishSettings)
     .settings(Defaults.itSettings: _*)
-    .settings(crossScalaVersions := (crossScalaVersions in ThisBuild).value)
+    .settings(crossScalaVersions := (ThisBuild / crossScalaVersions).value)
     .settings(libraryDependencies ++= mainDeps ++ mainTestDependencies)
+    .settings(libraryDependencies ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2,n)) if n <= 12 => Seq("org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0")
+        case _ => Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
+      }
+    })
 
 }
 
 lazy val benchmarkModule = {
 
-  val mainDeps = Seq(scalaJava8Compat, gatling % "it", gatlinHighcharts % "it")
+  //val mainDeps = Seq(scalaJava8Compat, gatling % "it", gatlinHighcharts % "it")
 
   import _root_.io.gatling.sbt.GatlingPlugin
 
@@ -74,8 +84,8 @@ lazy val benchmarkModule = {
   ).dependsOn(akkaPersistencePgModule % "it->test;test->test;compile->compile")
     .enablePlugins(GatlingPlugin)
     .configs(GatlingIt)
-    .settings(Defaults.coreDefaultSettings ++ commonSettings ++ Seq(skip in publish := true))
-    .settings(crossScalaVersions := (crossScalaVersions in ThisBuild).value.filter(_ startsWith "2.13"))
+    .settings(Defaults.coreDefaultSettings ++ commonSettings ++ Seq(publish / skip := true))
+    .settings(crossScalaVersions := (ThisBuild / crossScalaVersions).value.filter(_ startsWith "2.13"))
     .settings(scalaVersion := crossScalaVersions.value.last)
 
 }

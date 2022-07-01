@@ -40,7 +40,7 @@ class RowIdUpdater(pluginConfig: PluginConfig) extends Actor with Stash with Act
   override def receive: Receive = initializing
 
   def initializing: Receive = {
-    case IsBusy          => sender ! true
+    case IsBusy          => sender() ! true
     case UpdateRowIds(_) => stash()
     case Init =>
       findMaxRowId() map { MaxRowId } pipeTo self
@@ -56,11 +56,11 @@ class RowIdUpdater(pluginConfig: PluginConfig) extends Actor with Stash with Act
       notifiers = notifiers.enqueue(notifier)
       self ! Marker
       context become ignoreUntilMarker
-    case IsBusy => sender ! false
+    case IsBusy => sender() ! false
   }
 
   def ignoreUntilMarker: Receive = {
-    case IsBusy => sender ! true
+    case IsBusy => sender() ! true
     case UpdateRowIds(notifier) =>
       notifiers = notifiers.enqueue(notifier)
     case Marker =>
@@ -73,7 +73,7 @@ class RowIdUpdater(pluginConfig: PluginConfig) extends Actor with Stash with Act
   }
 
   def updateRunning: Receive = {
-    case IsBusy => sender ! true
+    case IsBusy => sender() ! true
     case Done =>
       unstashAll()
       notifyEventsAvailable()

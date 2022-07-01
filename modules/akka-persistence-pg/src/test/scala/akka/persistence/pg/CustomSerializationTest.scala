@@ -179,15 +179,15 @@ object CustomSerializationTest {
       case StringCommand(message) =>
         persist(StringEvent(message)) { e =>
           data = data.copy(string = message)
-          sender ! message
+          sender() ! message
         }
       case IntCommand(message) =>
         persist(IntEvent(message)) { e =>
           data = data.copy(int = message)
-          sender ! message
+          sender() ! message
         }
 
-      case GetData      => sender ! data
+      case GetData      => sender() ! data
       case TakeSnapshot => saveSnapshot(data)
     }
 

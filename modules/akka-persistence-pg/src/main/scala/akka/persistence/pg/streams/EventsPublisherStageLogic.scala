@@ -7,7 +7,7 @@ import akka.persistence.JournalProtocol.{RecoverySuccess, ReplayMessagesFailure}
 import akka.persistence.Persistence
 import akka.persistence.pg.journal.PgAsyncWriteJournal.NewEventAppended
 import akka.persistence.query.EventEnvelope
-import akka.stream.{ActorMaterializerHelper, Materializer, SourceShape}
+import akka.stream.{Materializer, SourceShape}
 import akka.stream.stage.GraphStageLogic.StageActor
 import akka.stream.stage.{GraphStageLogic, OutHandler, StageLogging}
 

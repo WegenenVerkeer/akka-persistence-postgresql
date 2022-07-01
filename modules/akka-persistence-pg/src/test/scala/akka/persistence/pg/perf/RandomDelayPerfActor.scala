@@ -34,7 +34,7 @@ class RandomDelayPerfActor(driver: PgPostgresProfile, pid: Option[String]) exten
 
         override def event: Altered = Altered(txt, System.currentTimeMillis())
       }) { _ =>
-        sender ! txt
+        sender() ! txt
       }
   }
 

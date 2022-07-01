@@ -19,7 +19,7 @@ class PersistAllActor(id: Int) extends PersistentActor with ActorLogging {
         Altered(s"${txt}_$i", created)
       }
       persistAll(events) { _ =>
-        sender ! txt
+        sender() ! txt
       }
   }
 

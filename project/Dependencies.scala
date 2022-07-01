@@ -2,8 +2,8 @@ import sbt._
 
 object Dependencies {
 
-  val akkaVersion    = "2.6.5"
-  val slickVersion   = "3.3.2"
+  val akkaVersion    = "2.6.19"
+  val slickVersion   = "3.3.3"
   val gatlingVersion = "2.2.4"
 
   val scalaJava8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0"
@@ -28,7 +28,7 @@ object Dependencies {
   val gatlinHighcharts = "io.gatling.highcharts" % "gatling-charts-highcharts" % gatlingVersion
   val gatling          = "io.gatling"            % "gatlin"                    % gatlingVersion
 
-  val postgres = "org.postgresql" % "postgresql" % "42.2.6"
+  val postgres = "org.postgresql" % "postgresql" % "42.4.0"
 
   val mainTestDependencies = Seq(
     scalaTest,

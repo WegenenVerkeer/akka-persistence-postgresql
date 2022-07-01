@@ -15,7 +15,7 @@ object PgExtension extends ExtensionId[PgExtension] with ExtensionIdProvider {
 
   override def createExtension(system: ExtendedActorSystem): PgExtension = new PgExtension(system)
 
-  override def lookup() = PgExtension
+  override def lookup = PgExtension
 
 }
 

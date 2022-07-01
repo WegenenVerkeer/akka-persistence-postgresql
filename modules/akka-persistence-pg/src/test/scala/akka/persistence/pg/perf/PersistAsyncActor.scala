@@ -15,7 +15,7 @@ class PersistAsyncActor(override val persistenceId: String) extends PersistentAc
         Altered(s"${txt}_$i", created)
       }
       persistAllAsync(events) { _ =>
-        sender ! txt
+        sender() ! txt
       }
   }
 

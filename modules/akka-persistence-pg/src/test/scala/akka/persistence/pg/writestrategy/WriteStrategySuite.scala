@@ -132,7 +132,7 @@ abstract class WriteStrategySuite(config: Config)
         self ! Retrieve(max)
       case "stop" =>
         running = false
-        sender ! ids
+        sender() ! ids
     }
 
   }

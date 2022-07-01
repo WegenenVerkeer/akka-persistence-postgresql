@@ -42,7 +42,7 @@ class TestActor(testProbe: ActorRef, id: Option[String] = None) extends Persiste
     case Snap                     => saveSnapshot(state)
     case msg: SaveSnapshotFailure => testProbe ! "f"
     case msg: SaveSnapshotSuccess => testProbe ! "s"
-    case GetState                 => sender ! state
+    case GetState                 => sender() ! state
   }
 }
 
