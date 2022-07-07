@@ -20,7 +20,13 @@ object PluginConfig {
   def asOption(s: String): Option[String] = if (s.isEmpty) None else Some(s)
 
   def newInstance[T](clazz: String): T =
-    Thread.currentThread().getContextClassLoader.loadClass(clazz).asInstanceOf[Class[_ <: T]].newInstance()
+    Thread
+      .currentThread()
+      .getContextClassLoader
+      .loadClass(clazz)
+      .asInstanceOf[Class[_ <: T]]
+      .getDeclaredConstructor()
+      .newInstance()
 
 }
 

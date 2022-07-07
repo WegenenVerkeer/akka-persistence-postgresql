@@ -15,7 +15,7 @@ class PerfActor extends PersistentActor with ActorLogging {
   override def receiveCommand: Receive = {
     case Alter(txt) =>
       persist(Altered(txt, System.currentTimeMillis())) { _ =>
-        sender ! txt
+        sender() ! txt
       }
   }
 

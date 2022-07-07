@@ -43,11 +43,11 @@ class ReadModelUpdateActor(driver: PgPostgresProfile, fullTableName: String, id:
               sqlu"""update #$fullTableName set txt = $txt, cnt=$i where id = $id"""
             }
 
-        override def failureHandler = { case t: PSQLException if t.getSQLState == "23505" => sender ! TextNotUnique }
+        override def failureHandler = { case t: PSQLException if t.getSQLState == "23505" => sender() ! TextNotUnique }
 
         override def event: Altered = Altered(txt, System.currentTimeMillis())
       }) { _ =>
-        sender ! txt
+        sender() ! txt
       }
   }
 

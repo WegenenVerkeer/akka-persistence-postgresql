@@ -11,7 +11,6 @@ import akka.persistence.pg.streams.EventsPublisherStageLogic.CancelEventsStage
 import akka.persistence.pg.{EventTag, PgConfig, PgExtension, PluginConfig}
 import akka.persistence.{AtomicWrite, PersistentRepr}
 import akka.serialization.{Serialization, SerializationExtension}
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.stream.scaladsl.{Keep, Sink, Source}
 import slick.jdbc.{ResultSetConcurrency, ResultSetType}
 
@@ -21,7 +20,7 @@ import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgConfig with JournalStore {
-
+  import context.system
   implicit val executionContext: ExecutionContextExecutor = context.system.dispatcher
 
   override val serialization: Serialization    = SerializationExtension(context.system)
@@ -87,10 +86,6 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgCon
       _.getOrElse(0)
     }
   }
-
-  implicit val materializer = ActorMaterializer(
-    Some(ActorMaterializerSettings(context.system).withInputBuffer(16, 1024))
-  )
 
   override def asyncReplayMessages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)(
       replayCallback: (PersistentRepr) => Unit
@@ -158,12 +153,12 @@ class PgAsyncWriteJournal extends AsyncWriteJournal with ActorLogging with PgCon
       handleReplayMessages(fromRowId, toRowId, max, replyTo)
 
     // subscribe sender to tag notification
-    case SubscribeTags(tags) => addTagSubscriber(sender, tags)
+    case SubscribeTags(tags) => addTagSubscriber(sender(), tags)
 
     //subscribe sender for all events
-    case SubscribeAllEvents => addSubscriber(sender)
+    case SubscribeAllEvents => addSubscriber(sender())
 
-    case SubscribePersistenceId(persistenceId) => addPersistenceIdSubscriber(sender, persistenceId)
+    case SubscribePersistenceId(persistenceId) => addPersistenceIdSubscriber(sender(), persistenceId)
 
     // unsubscribe terminated actor
     case Terminated(ref) => removeSubscriber(ref)

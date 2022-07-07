@@ -139,9 +139,9 @@ object ExamplePersistentActorTest {
       case Command(message) =>
         persist(Event(message)) { e =>
           currentMessage = Some(message)
-          sender ! message.reverse
+          sender() ! message.reverse
         }
-      case GetMessage   => sender ! currentMessage.getOrElse(sys.error("message is not yet set"))
+      case GetMessage   => sender() ! currentMessage.getOrElse(sys.error("message is not yet set"))
       case TakeSnapshot => saveSnapshot(currentMessage)
     }
 
