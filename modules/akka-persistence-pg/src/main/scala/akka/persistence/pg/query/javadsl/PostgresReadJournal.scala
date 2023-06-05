@@ -14,7 +14,7 @@ import akka.persistence.query.javadsl.{
 }
 import akka.stream.javadsl.Source
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 class PostgresReadJournal(journal: ScalaPostgresReadJournal)
     extends ReadJournal

@@ -5,13 +5,13 @@ organization := "be.wegenenverkeer"
 
 Global / concurrentRestrictions += Tags.limit(Tags.Test, 1)
 
-lazy val scala212               = "2.12.16"
-lazy val scala213               = "2.13.8"
+lazy val scala212               = "2.12.17"
+lazy val scala213               = "2.13.10"
 ThisBuild / crossScalaVersions := Seq(scala212, scala213)
 
 ThisBuild / scalacOptions := {
   val commonOptions = Seq(
-    "-target:jvm-1.8",
+    "-release:11",
     "-encoding",
     "UTF-8",
     "-deprecation",         // warning and location for usages of deprecated APIs
@@ -50,7 +50,8 @@ lazy val akkaPersistencePgModule = {
     akkaStreams,
     akkaTest,
     akkaPersistenceTestkit,
-    slf4jSimple
+    slf4jSimple,
+    scalaCollectionCompat
   )
 
   val It = config("it") extend Test

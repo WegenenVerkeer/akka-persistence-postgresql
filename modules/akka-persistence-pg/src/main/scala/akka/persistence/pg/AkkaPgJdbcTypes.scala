@@ -11,7 +11,7 @@ import slick.ast.{FieldSymbol, TypedType}
 import slick.jdbc.{JdbcType, JdbcTypesComponent, PostgresProfile}
 import slick.lifted.ExtensionMethods
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.language.implicitConversions
 import scala.reflect.ClassTag
 
