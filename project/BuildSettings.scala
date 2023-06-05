@@ -5,8 +5,8 @@ import org.scalafmt.sbt.ScalafmtPlugin.autoImport._
 object BuildSettings {
 
   def commonSettings = Seq(
-    parallelExecution in Test := false,
-    concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
+    Test / parallelExecution := false,
+    Global / concurrentRestrictions += Tags.limit(Tags.Test, 1),
     resolvers ++= Seq(
       "Local Maven" at Path.userHome.asFile.toURI.toURL + ".m2/repository",
       Resolver.typesafeRepo("releases")

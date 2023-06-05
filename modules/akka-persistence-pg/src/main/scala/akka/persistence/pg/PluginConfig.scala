@@ -10,7 +10,7 @@ import org.postgresql.ds.PGSimpleDataSource
 import slick.jdbc.JdbcBackend
 import slick.util.AsyncExecutor
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 object PluginConfig {
   def apply(system: ActorSystem) = new PluginConfig(system.settings.config)
