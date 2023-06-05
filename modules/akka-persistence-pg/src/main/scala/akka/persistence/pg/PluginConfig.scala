@@ -58,6 +58,8 @@ class PluginConfig(systemConfig: Config) {
     case a: String => sys.error(s"unsupported value for pgjson '$a'. Only 'json' or 'jsonb' supported")
   })
 
+  val hstoreEquals: Boolean = config.getBoolean("hstoreEquals")
+
   lazy val database: JdbcBackend.DatabaseDef = createDatabase
 
   lazy val dbConfig: Config = config.getConfig("db")

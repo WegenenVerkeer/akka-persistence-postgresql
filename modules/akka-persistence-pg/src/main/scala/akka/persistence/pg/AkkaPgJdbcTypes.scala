@@ -110,11 +110,15 @@ trait AkkaPgJdbcTypes extends JdbcTypesComponent { driver: PostgresProfile =>
       extends ExtensionMethods[Map[String, String], P1] {
 
     val Contains = new SqlOperator("@>")
+    val On       = new SqlOperator("->")
 
     protected implicit def b1Type: TypedType[Map[String, String]] = implicitly[TypedType[Map[String, String]]]
 
     def @>[P2, R](c2: Rep[P2])(implicit om: o#arg[Map[String, String], P2]#to[Boolean, R]): Rep[R] =
       om.column(Contains, n, c2.toNode)
+
+    def +>[P2, R](c2: Rep[P2])(implicit om: o#arg[String, P2]#to[String, R]): Rep[R] =
+      om.column(On, n, c2.toNode)
   }
 
 }
