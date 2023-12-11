@@ -9,6 +9,7 @@ import akka.persistence.pg.{EventTag, JsonString, PgConfig, PgExtension}
 import akka.serialization.{Serialization, Serializers}
 
 import scala.util.Try
+import akka.persistence.journal.Tagged
 
 /**
   * The journal/event store: it stores persistent messages.
@@ -64,6 +65,7 @@ trait JournalStore extends JournalTable {
       messages map { message =>
         val event = message.payload match {
           case w: EventWrapper[_] => w.event
+          case w: Tagged          => w.payload
           case _                  => message.payload
         }
         val tags: Map[String, String] = eventTagger.tags(message.payload)
